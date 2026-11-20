@@ -1,6 +1,6 @@
 # Developer guide
 
-![Kotlin 2.4.21](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF) ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4) ![minSdk 31](https://img.shields.io/badge/minSdk-31-3DDC84) ![Milestone M0 (debug only)](https://img.shields.io/badge/milestone-M0%20%28debug%20only%29-5B9DD9)
+![Kotlin 2.4.21](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF) ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4) ![minSdk 31](https://img.shields.io/badge/minSdk-31-3DDC84) ![Non-UI code: M0–M4 (debug only)](https://img.shields.io/badge/non--UI%20code-M0%E2%80%93M4%20%28debug%20only%29-5B9DD9)
 
 This guide is for people working on MagicHandy Mobile: how it's built, where it stands and how to contribute. The [README](../README.md) describes the app for the people who use it.
 
@@ -50,11 +50,12 @@ The thick arrow is the safety rule: Stop never waits behind UI state, an intent 
 
 ## Current status
 
-As of 2026-11-19, the project is at **M0**:
+As of 2026-11-20, the non-UI code for all five milestones (M0–M4) is in place. There's no release yet: the app runs as a debug build, and the release build still needs testing on a phone.
 
-- **Working in debug builds:** the full Compose UI wired to the real M0 core, with in-memory stores, five simulated device families (including a simulated Handy running the real Bluetooth RPC session against an in-memory peer), a canned text model, five-locale typed Stop, Stop receipts, manual motion, finite motor tests and interrupted-run recovery.
-- **Verified automatically:** `./gradlew check` passes ktfmt formatting, Android Lint (warnings as errors), debug and release compiles, and **105 JVM tests** (44 in `:core`, 59 in `:transport` and 2 UI boundary tests).
-- **Not built yet:** the Android platform layer (`CoreService`, Android GATT, Room database, Keystore vault, browser OAuth callback, notification and Quick Settings tile), continuous motion/retargeting, Advanced motion chat, Autopilot planning, OpenRouter, LAN model providers and physical device drivers beyond the M0 Handy protocol spike.
+- **Working in debug builds:** the full Compose UI on the real core, with five simulated device families and canned model replies. The simulated Handy runs the real Bluetooth RPC session against an in-memory peer. Debug builds also use the real foreground service and its notification.
+- **Built for release, with phone testing still to do:** the foreground service and its notification, Stop from the notification and from a Quick Settings tile, Android Bluetooth (GATT), Room storage, the on-disk run journal, the Keystore vault, ChatGPT sign-in through a Custom Tab, network monitoring and diagnostics. The [phone checklist](backend/device-checklist.md) lists what only a phone can prove.
+- **Verified automatically:** `./gradlew check` passes ktfmt formatting, Android Lint (warnings as errors), debug and release builds, and **342 JVM tests** (223 in `:core`, 103 in `:transport` and 16 in `:app`, including Robolectric tests that build the release graph). The Kotlin motion compiler matches all 135 desktop atlas cases.
+- **Still to build in the UI:** offering the Quick Settings tile from App settings, the diagnostics share row, and the other four locales. See the [frontend status](frontend/status.md).
 
 <details>
 <summary>v1 milestones (M0–M4), planned devices, model providers and out-of-scope features</summary>
@@ -65,11 +66,11 @@ v1 ships as a whole once M0–M4 are complete; milestones only order the work ([
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **M0: Fixtures and spike** | Exported desktop verification fixtures, 3-module Gradle setup, 21-case bounded-ramp sampler, Stop and run-journal core, Handy protocol spike, hosted Responses/OAuth spike, debug wiring and Compose UI | Backend checkpoints and Compose UI complete; Android platform spike and Pixel measurements pending |
-| **M1: Engine, The Handy, hosted chat** | Full motion engine (remaining 114 atlas cases), Handy Cloud and real Bluetooth GATT, Advanced motion chat with repair and memory, ChatGPT and OpenRouter, Android service, Room, Keystore, notification and Quick Settings tile | Not started |
-| **M2: Autopilot** | Hosted planner with auto timing (ADR 0072), check-ins, optional finish target, background runs and Recent changes on Live | Not started |
-| **M3: LAN models and other devices** | Ollama and `llama.cpp` servers added by address (Simple and Intermediate contracts), Intiface vibrators, multiple Handys, DG-LAB Coyote 3.0, Autoblow Ultra, linked sessions and Edge | Not started |
-| **M4: VacuGlide and hardening** | VacuGlide with phone safeguards and timed check-ins, chaos testing, five locales (`en`, `es`, `pt-BR`, `ja`, `zh-Hans`), palette contrast checks and release packaging | Not started |
+| **M0: Fixtures and spike** | Exported desktop verification fixtures, 3-module Gradle setup, 21-case bounded-ramp sampler, Stop and run-journal core, Handy protocol spike, hosted Responses/OAuth spike, debug wiring and Compose UI | Complete; the Pixel measurements are on the phone checklist |
+| **M1: Engine, The Handy, hosted chat** | Full motion engine (all 135 atlas cases), Handy Cloud and real Bluetooth GATT, Advanced motion chat with repair and memory, ChatGPT and OpenRouter, Android service, Room, Keystore, notification and Quick Settings tile | Non-UI code complete; phone testing pending |
+| **M2: Autopilot** | Hosted planner with auto timing (ADR 0072), check-ins, optional finish target, background runs and Recent changes on Live | Non-UI code complete; phone testing pending |
+| **M3: LAN models and other devices** | Ollama and `llama.cpp` servers added by address (Simple and Intermediate contracts), Intiface vibrators, multiple Handys, DG-LAB Coyote 3.0, Autoblow Ultra, linked sessions and Edge | Non-UI code complete; phone testing pending |
+| **M4: VacuGlide and hardening** | VacuGlide with phone safeguards and timed check-ins, chaos testing, five locales (`en`, `es`, `pt-BR`, `ja`, `zh-Hans`), palette contrast checks and release packaging | VacuGlide safeguards and simulated failure tests complete; locales, contrast checks and release packaging remain |
 | **After v1** | On-device inference (Qualcomm and Tensor) in an isolated `:inference` process | Planned after v1 |
 
 ### v1 devices and providers

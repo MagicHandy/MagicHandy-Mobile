@@ -34,10 +34,13 @@ public sealed interface UserIntent {
     /** Starts a run with the devices marked for it. Refusals arrive as [Banner.StartRefused]. */
     public data object StartMotion : UserIntent
 
-    /** Stops the current motion run and leaves further motion under explicit user control. */
+    /**
+     * Holds the current phase and roster. A device whose halt is unconfirmed requires
+     * reconciliation.
+     */
     public data object PauseMotion : UserIntent
 
-    /** An explicit motion start with the current limits applied. */
+    /** Continues a confirmed paused run on a fresh stream, applying the latest saved limits. */
     public data object ResumeMotion : UserIntent
 
     /** Turns the gentle hold on or off. */
@@ -117,7 +120,8 @@ public sealed interface UserIntent {
     ) : UserIntent
 
     /** Adds Intiface Central at [address], on this phone or on the local network. */
-    public data class AddIntiface(public val address: String) : UserIntent
+    public data class AddIntiface(public val address: String, public val deviceIndex: Int? = null) :
+        UserIntent
 
     /** Connecting ends at Connected and idle. It never starts motion. */
     public data class Connect(public val device: DeviceId) : UserIntent
@@ -135,7 +139,10 @@ public sealed interface UserIntent {
     /** Changes the display name of a saved device. */
     public data class Rename(public val device: DeviceId, public val name: String) : UserIntent
 
-    /** Selects the mounting direction for subsequent device output. */
+    /**
+     * Saves the Handy mounting for its next Start or Resume. Buffered points keep their stream's
+     * orientation.
+     */
     public data class SetReversed(public val device: DeviceId, public val isReversed: Boolean) :
         UserIntent
 

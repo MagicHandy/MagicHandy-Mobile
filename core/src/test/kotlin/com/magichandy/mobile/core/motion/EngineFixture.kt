@@ -37,6 +37,12 @@ internal fun MotionEngine.admit(expected: Epoch, owners: List<DeviceTransport>):
         ),
     )
 
+internal suspend fun MotionEngine.write(
+    expected: Epoch,
+    owner: DeviceTransport,
+    batch: MotionBatch,
+): WriteResult = write(stream(expected), owner, batch)
+
 internal val batch =
     MotionBatch(
         listOf(MotionFrame(0, Percent(50))),

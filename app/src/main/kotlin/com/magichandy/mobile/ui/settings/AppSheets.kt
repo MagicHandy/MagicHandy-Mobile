@@ -18,6 +18,7 @@ import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.ChangeFrequency
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.CoreCalls
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.CardRow
 import com.magichandy.mobile.ui.components.SettingRow
@@ -45,11 +46,12 @@ fun BoxScope.AppSheets(
     state: AppState,
     nav: AppNavigator,
     onIntent: (UserIntent) -> Unit,
+    calls: CoreCalls,
     exits: SheetExits,
 ) {
     val page = nav.sheet ?: return
     val isNested = nav.sheets.size > 1
-    val title = sheetTitle(page)
+    val title = sheetTitle(page, state)
     SheetOverlay(title = title, onDismiss = nav::closeSheet, onBack = nav::sheetBack) {
         SheetHeader(
             title = title,
@@ -58,9 +60,14 @@ fun BoxScope.AppSheets(
             // Back names the page it returns to, such as Autopilot from the planner model.
             backDescription =
                 nav.sheets.getOrNull(nav.sheets.size - 2)?.let {
-                    stringResource(R.string.back_to_page, sheetTitle(it))
+                    stringResource(R.string.back_to_page, sheetTitle(it, state))
                 },
-            subtitle = if (page == SheetPage.MotionMode) motionModeSubtitle(state) else null,
+            subtitle =
+                when (page) {
+                    SheetPage.MotionMode -> motionModeSubtitle(state)
+                    SheetPage.RefusalFallback -> refusalSubtitle(state)
+                    else -> null
+                },
         )
         when (page) {
             SheetPage.Chats -> ChatsPage(state, onIntent, nav::closeSheet)
@@ -70,7 +77,8 @@ fun BoxScope.AppSheets(
             SheetPage.Autopilot -> AutopilotPage(state, nav, onIntent)
             SheetPage.PlannerModel -> PlannerModelPage(state, onIntent)
             SheetPage.Persona -> PersonaPage(state, onIntent)
-            SheetPage.ChatModel -> ChatModelPage(state, onIntent, exits)
+            SheetPage.ChatModel -> ChatModelPage(state, nav, onIntent, exits)
+            SheetPage.RefusalFallback -> RefusalFallbackPage(state, calls.setRefusalFallback)
             SheetPage.Memory -> MemoryPage(state, onIntent)
             SheetPage.DeviceType -> DeviceTypeList(exits.addDevice)
         }
@@ -78,21 +86,26 @@ fun BoxScope.AppSheets(
 }
 
 @Composable
-private fun sheetTitle(page: SheetPage): String =
-    stringResource(
-        when (page) {
-            SheetPage.Chats -> R.string.chats_title
-            SheetPage.Settings -> R.string.settings_title
-            SheetPage.MotionMode -> R.string.settings_motion_mode
-            SheetPage.Style -> R.string.settings_style
-            SheetPage.Autopilot -> R.string.settings_autopilot
-            SheetPage.PlannerModel -> R.string.autopilot_planner
-            SheetPage.Persona -> R.string.settings_persona
-            SheetPage.ChatModel -> R.string.settings_chat_model
-            SheetPage.Memory -> R.string.settings_memory
-            SheetPage.DeviceType -> R.string.device_type_title
-        }
-    )
+private fun sheetTitle(page: SheetPage, state: AppState): String =
+    when (page) {
+        SheetPage.Chats -> stringResource(R.string.chats_title)
+        SheetPage.Settings -> stringResource(R.string.settings_title)
+        SheetPage.MotionMode -> stringResource(R.string.settings_motion_mode)
+        SheetPage.Style -> stringResource(R.string.settings_style)
+        SheetPage.Autopilot -> stringResource(R.string.settings_autopilot)
+        SheetPage.PlannerModel -> stringResource(R.string.autopilot_planner)
+        SheetPage.Persona -> stringResource(R.string.settings_persona)
+        SheetPage.ChatModel -> stringResource(R.string.settings_chat_model)
+        SheetPage.RefusalFallback ->
+            chatConnection(state)?.let { stringResource(R.string.refusal_row, it.name) }
+                ?: stringResource(R.string.refusal_title_generic)
+        SheetPage.Memory -> stringResource(R.string.settings_memory)
+        SheetPage.DeviceType -> stringResource(R.string.device_type_title)
+    }
+
+@Composable
+private fun refusalSubtitle(state: AppState): String? =
+    chatConnection(state)?.let { stringResource(R.string.refusal_desc, it.name) }
 
 @Composable
 private fun motionModeSubtitle(state: AppState): String {

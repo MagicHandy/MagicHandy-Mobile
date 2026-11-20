@@ -17,6 +17,9 @@ public data class DevicesState(
     public val hasAcknowledgedCoyoteNotes: Boolean,
 )
 
+/** A vibration-capable endpoint reported by the named Intiface server. */
+public data class IntifaceChoice(public val deviceIndex: Int, public val name: String)
+
 /**
  * One saved device.
  *
@@ -47,6 +50,12 @@ public enum class DeviceFamily {
     Coyote,
     AutoblowUltra,
     VacuGlide,
+}
+
+/** Independent Coyote strength channels. Strength belongs exclusively to the person. */
+public enum class CoyoteChannel {
+    A,
+    B,
 }
 
 /** How the phone reaches a device. */
@@ -104,17 +113,21 @@ public sealed interface DeviceOutput {
 }
 
 /** Settings that belong to one device, edited on its page. */
+@kotlinx.serialization.Serializable
 public sealed interface DeviceSettings {
     /** [model] sets travel and speed limits; [isReversed] is for a Handy mounted upside down. */
+    @kotlinx.serialization.Serializable
     public data class Handy(public val model: String, public val isReversed: Boolean) :
         DeviceSettings
 
+    @kotlinx.serialization.Serializable
     public data class Vibrator(public val maxLevel: Percent) : DeviceSettings
 
+    @kotlinx.serialization.Serializable
     public data class Coyote(public val maxStrengthA: Int, public val maxStrengthB: Int) :
         DeviceSettings
 
-    public data object AutoblowUltra : DeviceSettings
+    @kotlinx.serialization.Serializable public data object AutoblowUltra : DeviceSettings
 
     /**
      * @property tempoRange the slowest to fastest the motor may run, in percent.
@@ -122,7 +135,9 @@ public sealed interface DeviceSettings {
      *   per session.
      * @property checkInEvery how often a check-in is due while it runs; null when off.
      */
+    @kotlinx.serialization.Serializable
     public data class VacuGlide(
+        @kotlinx.serialization.Serializable(with = RangeSerializer::class)
         public val tempoRange: IntRange,
         public val mayStepValve: Boolean,
         public val checkInEvery: Duration?,

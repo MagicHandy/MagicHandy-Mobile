@@ -235,6 +235,7 @@ internal class DebugBackendTest {
                                     HandyTransport(
                                         saved.first { it.ref.id == device }.ref,
                                         wire,
+                                        initiallyStopped = true,
                                     )
                             }
                     )

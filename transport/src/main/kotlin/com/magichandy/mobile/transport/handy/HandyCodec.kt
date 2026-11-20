@@ -1,4 +1,4 @@
-// Ported from internal/handyble/{codec,wire}.go at 9a4c36cf.
+// Ported from internal/handyble/{codec,wire}.go at 1b80d72e.
 package com.magichandy.mobile.transport.handy
 
 import java.io.ByteArrayOutputStream
@@ -125,7 +125,12 @@ internal fun fields(bytes: ByteArray): List<ProtoField> {
     }
 }
 
-internal data class RpcReply(val id: Long, val method: Int?, val rejected: Boolean)
+internal data class RpcReply(
+    val id: Long,
+    val method: Int?,
+    val rejected: Boolean,
+    val deviceTimeMillis: Long? = null,
+)
 
 internal fun decodeReply(bytes: ByteArray): RpcReply? {
     val outer = fields(bytes)
@@ -136,9 +141,18 @@ internal fun decodeReply(bytes: ByteArray): RpcReply? {
     val reply = fields(body)
     val id = reply.lastOrNull { it.number == 1 }?.value ?: 0
     if (id !in 0..0xffff_ffffL) throw IOException("Invalid Handy response ID")
+    val method = reply.singleOrNull { it.number > 10 && it.data != null }
+    val deviceTime =
+        if (method?.number == HandyCommand.ClockGet.method)
+            fields(requireNotNull(method.data))
+                .singleOrNull { it.number == 1 }
+                ?.value
+                ?.takeIf { it in 0..0xffff_ffffL }
+        else null
     return RpcReply(
         id,
-        reply.singleOrNull { it.number > 10 && it.data != null }?.number,
+        method?.number,
         reply.any { it.number == 2 && it.data != null },
+        deviceTime,
     )
 }

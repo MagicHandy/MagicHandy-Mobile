@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>If the chat model refuses</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.dim{flex:1;padding:16px;opacity:.3;font-weight:600;font-size:17px}
+.sheet{background:#16181b;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:4px 16px 12px;display:flex;flex-direction:column;gap:8px}
+.sh{display:flex;align-items:center;gap:4px;min-height:52px}
+.back{width:48px;height:48px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;margin-left:-12px}
+.sh b{font-size:18px;flex:1}
+.sub{margin:-6px 0 4px;color:#9aa1a9;font-size:13px;line-height:1.45}
+.opt{display:grid;grid-template-columns:1fr 24px;gap:3px 12px;align-items:center;padding:12px 0;border-top:1px solid #262a30}
+.opt:first-of-type{border-top:0}
+.on{font-weight:600}
+.od{color:#9aa1a9;font-size:13px;line-height:1.4;grid-column:1}
+.chk{grid-row:span 2;grid-column:2;display:grid;place-items:center}
+.note{margin:4px 0 0;color:#9aa1a9;font-size:12px;line-height:1.45}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px 12px;background:#121417;border-top:1px solid #262a30}
+.tab{height:52px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500}
+.tab.open{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+.stopbar{background:#121417;padding:0 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="dim" aria-hidden="true">Evening</div>
+  <section class="sheet" role="dialog" aria-label="If the chat model refuses">
+    <div class="sh"><button class="back" type="button" aria-label="Back to Chat model"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button><b>If Terra refuses</b></div>
+    <p class="sub">Terra runs online and can refuse a message. MagicHandy can then send that message, once, to a server you added on your network.</p>
+    <div role="radiogroup" aria-label="Retry a refused message on">
+      <div class="opt" role="radio" aria-checked="true" tabindex="0"><span class="on">Off</span><span class="chk"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#5b9dd9" stroke-width="2" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></span><span class="od">Show the refusal. Nothing is sent anywhere else.</span></div>
+      <div class="opt" role="radio" aria-checked="false" tabindex="-1"><span class="on">Home server</span><span class="chk"></span><span class="od">Ollama · llama3.1:8b · Intermediate</span></div>
+      <div class="opt" role="radio" aria-checked="false" tabindex="-1"><span class="on">Desk PC</span><span class="chk"></span><span class="od">llama.cpp · Qwen3 14B · Advanced</span></div>
+    </div>
+    <p class="note">Only servers on your network are listed; ChatGPT and OpenRouter never are. Choosing Off cancels a retry that hasn't finished.</p>
+  </section>
+  <nav class="tabs" aria-label="Main"><button class="tab" type="button">Chat</button><button class="tab" type="button">Devices</button><button class="tab open" type="button" aria-haspopup="dialog" aria-expanded="true">Settings</button></nav>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

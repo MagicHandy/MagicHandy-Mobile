@@ -15,8 +15,27 @@ public data class ChatArchive(
     public val memory: Map<PersonaId, List<String>> = emptyMap(),
 )
 
+/** Alpha.89 admits at most 200 distinct durable facts. A duplicate consumes no additional slot. */
+public fun newMemories(existing: List<String>, proposed: List<String>): List<String> {
+    if (proposed.isEmpty() || existing.size >= 200) return emptyList()
+    val known = existing.toMutableSet()
+    return proposed
+        .asSequence()
+        .filter { it.isNotBlank() && known.add(it) }
+        .take(200 - existing.size)
+        .toList()
+}
+
 /** One transaction commits a validated assistant turn together with its memory changes. */
 public interface ChatStore {
+    /** Load the named chat's bounded transcript when its screen opens. */
+    public suspend fun loadPage(chat: ChatId) {}
+
+    /**
+     * Release older cached messages under memory pressure. Durable messages and run state survive.
+     */
+    public suspend fun trimPages() {}
+
     /**
      * Latest committed snapshot. The Room adapter can present a bounded page of each transcript.
      */

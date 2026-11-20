@@ -4,7 +4,7 @@ import com.magichandy.mobile.core.api.DeviceId
 import kotlin.time.Instant
 
 /** Unique across process restarts so delayed acknowledgements can only reconcile their own run. */
-@JvmInline public value class RunId(public val value: String)
+@kotlinx.serialization.Serializable @JvmInline public value class RunId(public val value: String)
 
 /** Last intended state recorded at a run boundary. */
 public enum class RunIntent {
@@ -14,6 +14,7 @@ public enum class RunIntent {
 }
 
 /** Durable recovery record. Stable device references and intended state carry no secrets. */
+@kotlinx.serialization.Serializable
 public data class RunJournal(
     public val runId: RunId,
     public val devices: List<DeviceRef>,
@@ -38,6 +39,12 @@ public interface RunJournalStore {
     public suspend fun armIfEmpty(record: RunJournal): Boolean
 
     /**
+     * Durably update the intent and time of the matching run and exact roster. Reject missing,
+     * replaced or partially reconciled records. A transition must never recreate a cleared journal.
+     */
+    public suspend fun transition(record: RunJournal): Boolean
+
+    /**
      * Atomically remove devices acknowledged by the device or checked locally by the person, only
      * if [runId] still matches. Clear an empty record.
      */
@@ -57,6 +64,10 @@ public fun interface RunHost {
  * stream.
  */
 public fun interface RecoveryStops {
+    /** Observe the return of a saved persistent device while there is still recovery work. */
+    public fun reachableAgain(device: DeviceRef): kotlinx.coroutines.flow.Flow<Unit> =
+        kotlinx.coroutines.flow.emptyFlow()
+
     /**
      * Resolve the saved cloud target and attempt Stop, or return evidence of the actual failure.
      */

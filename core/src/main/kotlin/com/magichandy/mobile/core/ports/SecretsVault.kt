@@ -3,7 +3,9 @@ package com.magichandy.mobile.core.ports
 import com.magichandy.mobile.core.api.Secret
 
 /** Stable opaque reference. Its value must contain no credential material. */
-@JvmInline public value class SecretHandle(public val value: String)
+@kotlinx.serialization.Serializable
+@JvmInline
+public value class SecretHandle(public val value: String)
 
 /** Keystore-backed storage in release builds. An unusable key fails closed or requires sign-in. */
 public interface SecretsVault {

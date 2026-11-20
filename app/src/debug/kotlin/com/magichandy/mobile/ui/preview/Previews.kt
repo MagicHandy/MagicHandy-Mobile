@@ -1,7 +1,10 @@
 package com.magichandy.mobile.ui.preview
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -10,6 +13,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.CapabilityLevel
 import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.IntifaceChoice
 import com.magichandy.mobile.core.api.Palette
 import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.ServerCheck
@@ -21,6 +25,8 @@ import com.magichandy.mobile.ui.components.SheetOverlay
 import com.magichandy.mobile.ui.devices.AddDeviceScreen
 import com.magichandy.mobile.ui.devices.DeviceDetailScreen
 import com.magichandy.mobile.ui.devices.DevicesScreen
+import com.magichandy.mobile.ui.devices.VibratorSearch
+import com.magichandy.mobile.ui.devices.VibratorSetup
 import com.magichandy.mobile.ui.live.LiveScreen
 import com.magichandy.mobile.ui.models.AddServerScreen
 import com.magichandy.mobile.ui.models.ChatGptScreen
@@ -32,6 +38,7 @@ import com.magichandy.mobile.ui.settings.ChatsPage
 import com.magichandy.mobile.ui.settings.MemoryPage
 import com.magichandy.mobile.ui.settings.MotionModePage
 import com.magichandy.mobile.ui.settings.PersonaPage
+import com.magichandy.mobile.ui.settings.RefusalFallbackPage
 import com.magichandy.mobile.ui.settings.SystemAccess
 import com.magichandy.mobile.ui.settings.SystemLinks
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
@@ -85,14 +92,80 @@ private fun BeforeYouStart(@PreviewParameter(PaletteProvider::class) palette: Pa
 @Composable
 private fun Live(@PreviewParameter(PaletteProvider::class) palette: Palette) =
     InFrame(palette) {
-        LiveScreen(SampleStates.playing, onIntent = {}, onBack = {}, onOpenAutopilotSettings = {})
+        LiveScreen(
+            SampleStates.playing,
+            onIntent = {},
+            onStepCoyote = { _, _, _ -> },
+            onBack = {},
+            onOpenAutopilotSettings = {},
+        )
+    }
+
+/** Board V-CoyoteLive: a playing Coyote's channel strengths and their limits. */
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun LiveWithCoyote(@PreviewParameter(PaletteProvider::class) palette: Palette) =
+    InFrame(palette) {
+        LiveScreen(
+            SampleStates.coyotePlaying,
+            onIntent = {},
+            onStepCoyote = { _, _, _ -> },
+            onBack = {},
+            onOpenAutopilotSettings = {},
+        )
+    }
+
+/** Board V-CoyotePage: a disconnected Coyote, whose limits can change. */
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun CoyotePage(@PreviewParameter(PaletteProvider::class) palette: Palette) =
+    InFrame(palette) {
+        DeviceDetailScreen(
+            device = SampleDevices.coyoteDisconnected,
+            isBatteryUnrestricted = true,
+            hasAcknowledgedCoyoteNotes = true,
+            onIntent = {},
+            onSetCoyoteLimits = { _, _, _ -> },
+            onBack = {},
+            onOpenBatterySettings = {},
+        )
+    }
+
+/** Board V-AddVibrator: two vibrators found at the bridge, the first one picked. */
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun AddVibratorFound(@PreviewParameter(PaletteProvider::class) palette: Palette) =
+    InFrame(palette) {
+        val choices =
+            listOf(IntifaceChoice(0, "Bullet vibrator"), IntifaceChoice(1, "Wand massager"))
+        Column(
+            Modifier.padding(horizontal = MagicHandyTheme.dimens.m),
+            verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.cozy),
+        ) {
+            VibratorSetup(
+                address = "127.0.0.1:12345",
+                search = VibratorSearch.Found("127.0.0.1:12345", choices),
+                selected = choices.first(),
+                onAddressChange = {},
+                onFind = {},
+                onSelect = {},
+                onConnect = { _, _ -> },
+            )
+        }
     }
 
 @Preview(widthDp = 390, heightDp = 844)
 @Composable
 private fun Devices(@PreviewParameter(PaletteProvider::class) palette: Palette) =
     InFrame(palette) {
-        DevicesScreen(SampleStates.playing, onIntent = {}, onOpenDevice = {}, onAddDevice = {})
+        DevicesScreen(
+            SampleStates.playing,
+            system = SystemAccess(areNotificationsAllowed = true, isBatteryUnrestricted = true),
+            onIntent = {},
+            onOpenDevice = {},
+            onAddDevice = {},
+            onOpenNotificationSettings = {},
+        )
     }
 
 @Preview(widthDp = 390, heightDp = 844)
@@ -102,7 +175,9 @@ private fun VacuGlidePage(@PreviewParameter(PaletteProvider::class) palette: Pal
         DeviceDetailScreen(
             device = SampleDevices.vacuGlide,
             isBatteryUnrestricted = true,
+            hasAcknowledgedCoyoteNotes = true,
             onIntent = {},
+            onSetCoyoteLimits = { _, _, _ -> },
             onBack = {},
             onOpenBatterySettings = {},
         )
@@ -162,9 +237,11 @@ private fun DevicesWithLoss(@PreviewParameter(PaletteProvider::class) palette: P
     InFrame(palette) {
         DevicesScreen(
             SampleStates.connectionLost,
+            system = SystemAccess(areNotificationsAllowed = false, isBatteryUnrestricted = true),
             onIntent = {},
             onOpenDevice = {},
             onAddDevice = {},
+            onOpenNotificationSettings = {},
         )
     }
 
@@ -175,7 +252,9 @@ private fun HandyPage(@PreviewParameter(PaletteProvider::class) palette: Palette
         DeviceDetailScreen(
             device = SampleDevices.handy,
             isBatteryUnrestricted = false,
+            hasAcknowledgedCoyoteNotes = true,
             onIntent = {},
+            onSetCoyoteLimits = { _, _, _ -> },
             onBack = {},
             onOpenBatterySettings = {},
         )
@@ -189,6 +268,7 @@ private fun AddHandy(@PreviewParameter(PaletteProvider::class) palette: Palette)
             DeviceFamily.Handy,
             SampleStates.playing,
             onIntent = {},
+            findVibrators = { emptyList() },
             onBack = {},
             onDone = {},
         )
@@ -202,7 +282,14 @@ private fun AddCoyote(@PreviewParameter(PaletteProvider::class) palette: Palette
             it.copy(devices = it.devices.copy(hasAcknowledgedCoyoteNotes = false))
         }
     InFrame(palette) {
-        AddDeviceScreen(DeviceFamily.Coyote, state, onIntent = {}, onBack = {}, onDone = {})
+        AddDeviceScreen(
+            DeviceFamily.Coyote,
+            state,
+            onIntent = {},
+            findVibrators = { emptyList() },
+            onBack = {},
+            onDone = {},
+        )
     }
 }
 
@@ -264,7 +351,15 @@ private fun PersonaSheet(@PreviewParameter(PaletteProvider::class) palette: Pale
 @Preview(widthDp = 390, heightDp = 844)
 @Composable
 private fun MemorySheet(@PreviewParameter(PaletteProvider::class) palette: Palette) =
-    SheetPreview(palette, "Memory") { MemoryPage(SampleStates.playing, onIntent = {}) }
+    SheetPreview(palette, "Memory") { MemoryPage(SampleStates.withMemories, onIntent = {}) }
+
+/** Board V-RefusalFallback: Off, or one of the servers on the local network. */
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun RefusalFallbackSheet(@PreviewParameter(PaletteProvider::class) palette: Palette) =
+    SheetPreview(palette, "If Terra refuses") {
+        RefusalFallbackPage(SampleStates.playing, onSet = {})
+    }
 
 @Preview(widthDp = 390, heightDp = 844)
 @Composable

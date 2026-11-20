@@ -60,6 +60,23 @@ object SampleDevices {
             afterLoss = AfterLossBehaviour.GoesSilent,
         )
 
+    /** A Coyote that isn't connected, so its limits can change (board V-CoyotePage). */
+    val coyoteDisconnected =
+        coyote.copy(
+            status = DeviceStatus.NotConnected,
+            membership = RunMembership.NotInRun,
+            settings = DeviceSettings.Coyote(maxStrengthA = 40, maxStrengthB = 25),
+        )
+
+    /** A Coyote leading a run, with both channels reported (board V-CoyoteLive). */
+    val coyotePlaying =
+        coyote.copy(
+            status = DeviceStatus.Playing,
+            membership = RunMembership.InRun(isLead = true),
+            output = DeviceOutput.Channels(strengthA = 12, strengthB = 8),
+            settings = DeviceSettings.Coyote(maxStrengthA = 40, maxStrengthB = 25),
+        )
+
     val ultra =
         DeviceSummary(
             id = DeviceId("ultra"),

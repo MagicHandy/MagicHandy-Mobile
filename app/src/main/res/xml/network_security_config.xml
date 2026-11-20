@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- User-entered private LAN origins are enforced at DNS resolution, socket selection and redirect boundaries. -->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <!-- Android domain-config cannot express IP ranges or validate DNS answers. LocalAddress
+         checks the named origin before connect and the socket route before sending a request. -->
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration" />
+</network-security-config>

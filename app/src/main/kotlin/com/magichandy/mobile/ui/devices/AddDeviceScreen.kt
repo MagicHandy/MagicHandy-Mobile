@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.IntifaceChoice
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.ui.components.AppButton
@@ -41,14 +42,17 @@ import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /**
- * Setup for one device family (boards V-AddHandy and V-Coyote). Connecting ends at Connected and
- * idle; it never starts motion. [onDone] returns to Devices once the device is added.
+ * Setup for one device family (boards V-AddHandy, V-Coyote and V-AddVibrator). Connecting ends at
+ * Connected and idle; it never starts motion. [onDone] returns to Devices once the device is added.
+ *
+ * @param findVibrators asks an Intiface bridge which vibrators it has, without moving any.
  */
 @Composable
 fun AddDeviceScreen(
     family: DeviceFamily,
     state: AppState,
     onIntent: (UserIntent) -> Unit,
+    findVibrators: suspend (address: String) -> List<IntifaceChoice>,
     onBack: () -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
@@ -79,7 +83,7 @@ fun AddDeviceScreen(
         when (family) {
             DeviceFamily.Handy -> AddHandy(state, onIntent, onDone)
             DeviceFamily.Coyote -> AddCoyote(state, onIntent, onDone)
-            DeviceFamily.Vibrator -> AddVibrator(onIntent, onDone)
+            DeviceFamily.Vibrator -> AddVibrator(findVibrators, onIntent, onDone)
             DeviceFamily.AutoblowUltra,
             DeviceFamily.VacuGlide -> AddAutoblow(family, onIntent, onDone)
         }

@@ -238,7 +238,6 @@ object SampleStates {
     private fun connected(device: DeviceSummary) =
         device.copy(status = DeviceStatus.Connected, output = null)
 
-    /** First launch: nothing set up yet (board V-Onboarding). */
     /** Chat at rest: nothing playing and no reply on the way. */
     val idle =
         playing.copy(
@@ -250,6 +249,27 @@ object SampleStates {
     /** Chat with no chat model set up yet: the composer says what's missing. */
     val noChatModel = idle.copy(chat = idle.chat.copy(sendBlockedBy = SendBlock.NoChatModel))
 
+    /** Memory on, with three saved details, newest first. */
+    val withMemories =
+        playing.copy(
+            settings =
+                playing.settings.copy(
+                    isMemoryOn = true,
+                    memoryEntries = 3,
+                    memories =
+                        listOf(
+                            "Prefers to be called Sam",
+                            "Likes a slow build with long pauses",
+                            "Wants a check-in before anything faster",
+                        ),
+                )
+        )
+
+    /** A run with only the Coyote in it (board V-CoyoteLive). */
+    val coyotePlaying =
+        playing.copy(devices = playing.devices.copy(devices = listOf(SampleDevices.coyotePlaying)))
+
+    /** First launch: nothing set up yet (board V-Onboarding). */
     val firstRun =
         playing.copy(
             firstRun = FirstRunState(hasAcknowledgedAdultsOnly = false),

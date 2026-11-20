@@ -1,4 +1,4 @@
-// Ported from internal/{chatapp/workspace,httpapi/chat}.go at 9a4c36cf.
+// Ported from internal/{chatapp/workspace,httpapi/chat}.go at 1b80d72e.
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
@@ -11,6 +11,7 @@ import com.magichandy.mobile.core.api.ChatSummary
 import com.magichandy.mobile.core.api.EntryId
 import com.magichandy.mobile.core.api.InterruptCause
 import com.magichandy.mobile.core.api.ReplyState
+import com.magichandy.mobile.core.chat.ConversationWindow
 import com.magichandy.mobile.core.motion.MotionEngine
 import com.magichandy.mobile.core.motion.WorkKind
 import com.magichandy.mobile.core.ports.DiagnosticKind
@@ -37,10 +38,16 @@ internal class ChatTurns(
     private val d: CoreDependencies,
     private val engine: MotionEngine,
     private val ui: MutableStateFlow<AppState>,
+    private val proposals: ChatProposal,
 ) {
     private sealed interface TurnState
 
-    private class Turn(val chat: ChatId, val epoch: Epoch) : TurnState
+    private class Turn(
+        val chat: ChatId,
+        val epoch: Epoch,
+        val message: String,
+        val memoryOn: Boolean,
+    ) : TurnState
 
     private class Committing(val turn: Turn, val replyId: EntryId) : TurnState
 
@@ -61,7 +68,8 @@ internal class ChatTurns(
         ui.update { it.copy(chat = it.chat.copy(reply = ReplyState.Idle)) }
     }
 
-    fun open(id: ChatId) {
+    suspend fun open(id: ChatId) {
+        d.chats.loadPage(id)
         if (id !in d.chats.state.value.chats) return
         interrupt(InterruptCause.MotionStopped)
         ui.update { it.copy(chat = it.chat.copy(chatId = id, reply = ReplyState.Idle)) }
@@ -77,7 +85,9 @@ internal class ChatTurns(
         }
         ui.update { s ->
             val archive = d.chats.state.value
-            val chat = archive.chats[s.chat.chatId]
+            val chat =
+                archive.chats[s.chat.chatId]
+                    ?: archive.chats.values.maxByOrNull { it.summary.lastActivity }
             s.copy(
                 chat =
                     s.chat.copy(
@@ -99,7 +109,8 @@ internal class ChatTurns(
                     ),
                 settings =
                     s.settings.copy(
-                        memoryEntries = archive.memory[defaultPersona.id].orEmpty().size
+                        memoryEntries = archive.memory[defaultPersona.id].orEmpty().size,
+                        memories = archive.memory[defaultPersona.id].orEmpty().asReversed(),
                     ),
             )
         }
@@ -136,18 +147,22 @@ internal class ChatTurns(
                 }
         val message = messageText(text, retry) ?: return
         val chat = ui.value.chat.chatId ?: newChat(message.take(48))
+        d.chats.loadPage(chat)
+        if (engine.epoch != expected) return
         if (!retry && !saveUserMessage(chat, message)) return
-        val turn = Turn(chat, expected)
+        val turn = Turn(chat, expected, message, ui.value.settings.isMemoryOn)
+        val authority = engine.state.value
         active.value = turn
         ui.update { it.copy(chat = it.chat.copy(reply = ReplyState.Streaming(""))) }
         if (engine.epoch != expected) {
             interrupt(InterruptCause.MotionStopped)
             return
         }
-        val history = history()
+        val window = ConversationWindow.named(model.info.capability, model.contextTokens)
+        val history = history(chat, window, message)
         job =
             engine.launchWork(expected, WorkKind.Turn, d.dispatchers.io) {
-                stream(turn, provider, history)
+                stream(turn, provider, history, model, authority)
             }
     }
 
@@ -170,34 +185,76 @@ internal class ChatTurns(
         return true
     }
 
-    private fun history(): List<TextMessage> =
-        ui.value.chat.entries.filterIsInstance<ChatEntry.Message>().takeLast(16).map {
-            TextMessage(if (it.author == Author.You) TextRole.User else TextRole.Assistant, it.text)
-        }
+    private fun history(
+        chat: ChatId,
+        window: ConversationWindow,
+        message: String,
+    ): List<TextMessage> {
+        val newest =
+            d.chats.state.value.chats[chat]
+                ?.messages
+                .orEmpty()
+                .asReversed()
+                .asSequence()
+                .filterIsInstance<ChatEntry.Message>()
+        // The current message was already committed, including on Send again.
+        val previous =
+            newest
+                .dropWhile { it.author != Author.You }
+                .drop(1)
+                .map {
+                    TextMessage(
+                        if (it.author == Author.You) TextRole.User else TextRole.Assistant,
+                        it.text,
+                    )
+                }
+        return window.recent(previous) + TextMessage(TextRole.User, message)
+    }
 
-    private suspend fun stream(turn: Turn, provider: ModelProvider, history: List<TextMessage>) {
+    private suspend fun stream(
+        turn: Turn,
+        provider: ModelProvider,
+        history: List<TextMessage>,
+        model: com.magichandy.mobile.core.ports.SavedModel,
+        authority: com.magichandy.mobile.core.motion.EngineState,
+    ) {
         try {
             val buffer = StringBuilder()
             var lastUpdate = -Duration.INFINITE
-            val result =
-                provider.stream(history) { delta ->
-                    buffer.append(delta)
-                    val now = d.clock.elapsed()
-                    if (now - lastUpdate >= 34.milliseconds && valid(turn)) {
-                        val preview = buffer.toString()
-                        ui.update {
-                            if (valid(turn))
-                                it.copy(chat = it.chat.copy(reply = ReplyState.Streaming(preview)))
-                            else it
-                        }
-                        lastUpdate = now
+            val preview: (String) -> Unit = { delta ->
+                buffer.append(delta)
+                val now = d.clock.elapsed()
+                if (now - lastUpdate >= 34.milliseconds && valid(turn)) {
+                    val preview = buffer.toString()
+                    ui.update {
+                        if (valid(turn))
+                            it.copy(chat = it.chat.copy(reply = ReplyState.Streaming(preview)))
+                        else it
                     }
+                    lastUpdate = now
                 }
-            finish(turn, result)
+            }
+            if (provider is com.magichandy.mobile.core.ports.StructuredProvider) {
+                val reply =
+                    proposals.complete(
+                        provider,
+                        model,
+                        history,
+                        authority,
+                        { valid(turn) },
+                        preview,
+                    )
+                if (reply != null && valid(turn)) commitReply(turn, reply)
+                else markInterrupted(turn, InterruptCause.ProviderError)
+            } else finish(turn, provider.stream(history, preview))
         } catch (cancelled: CancellationException) {
             markInterrupted(turn, InterruptCause.MotionStopped)
             throw cancelled
         } catch (_: IOException) {
+            DiagnosticReporter.record(DiagnosticKind.ProviderUnavailable)
+            markInterrupted(turn, InterruptCause.ProviderError)
+        } catch (_: RuntimeException) {
+            // A malformed provider response must release the turn owner as well.
             DiagnosticReporter.record(DiagnosticKind.ProviderUnavailable)
             markInterrupted(turn, InterruptCause.ProviderError)
         }
@@ -226,10 +283,15 @@ internal class ChatTurns(
             var claimed = false
             val saved =
                 try {
-                    d.chats.append(turn.chat, reply, defaultPersona.id, emptyList()) {
+                    val memory =
+                        if (turn.memoryOn && d.settings.state.value.values.memoryOn)
+                            com.magichandy.mobile.core.chat.requestedMemory(turn.message)
+                        else emptyList()
+                    d.chats.append(turn.chat, reply, defaultPersona.id, memory) {
                         if (!claimed)
                             claimed =
                                 valid(turn) &&
+                                    (memory.isEmpty() || d.settings.state.value.values.memoryOn) &&
                                     active.compareAndSet(turn, committing) &&
                                     engine.commitTurn(turn.epoch, worker)
                         claimed

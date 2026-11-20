@@ -1,4 +1,4 @@
-// Ported from internal/{transport/types,motion/engine}.go at 9a4c36cf.
+// Ported from internal/{transport/types,motion/engine}.go at 1b80d72e.
 package com.magichandy.mobile.core.ports
 
 import com.magichandy.mobile.core.api.AfterLossBehaviour
@@ -9,9 +9,11 @@ import com.magichandy.mobile.core.api.Limits
 import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.UnconfirmedCause
 import com.magichandy.mobile.core.motion.MotionFrame
+import com.magichandy.mobile.core.motion.hasIncreasingTimes
 import kotlin.time.Duration
 
 /** Stable device identity and recovery information. Contains no address, credential or payload. */
+@kotlinx.serialization.Serializable
 public data class DeviceRef(
     public val id: DeviceId,
     public val name: String,
@@ -35,7 +37,12 @@ public data class DeviceRef(
 
 /** Drivers consult this fence at enqueue and immediately before each individual mutating write. */
 public class OutputFence
-internal constructor(public val epoch: Epoch, private val check: () -> Boolean) {
+internal constructor(
+    public val epoch: Epoch,
+    /** A fresh stream after Resume, within the same Stop epoch and journaled run. */
+    public val streamGeneration: Long = 0,
+    private val check: () -> Boolean,
+) {
     /** True while this motion lease or this exact outstanding Stop attempt can still write. */
     public fun isCurrent(): Boolean = check()
 }
@@ -46,12 +53,11 @@ public data class MotionBatch(
     public val pace: Percent,
     public val limits: Limits,
     public val isFirst: Boolean,
+    /** Prepare and append this first batch, holding Play until every linked buffer is ready. */
+    public val deferPlay: Boolean = false,
 ) {
     init {
-        require(
-            frames.isNotEmpty() &&
-                frames.zipWithNext().all { (a, b) -> a.timeMillis < b.timeMillis }
-        )
+        require(frames.isNotEmpty() && frames.hasIncreasingTimes())
         require(
             limits.strokeLow.value < limits.strokeHigh.value && pace.value <= limits.topSpeed.value
         )
@@ -68,6 +74,12 @@ public enum class WriteResult {
     Uncertain,
 }
 
+/** Connection verification can send Stop only. The caller cannot obtain a motion fence. */
+public suspend fun DeviceTransport.confirmIdleForConnection(): StopEvidence {
+    val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+    return stop(OutputFence(Epoch(-1)) { job?.isActive != false })
+}
+
 /** Stop evidence is attributed to the device or describes why the result is unresolved. */
 public sealed interface StopEvidence {
     /** The target device acknowledged the correlated Stop. */
@@ -79,6 +91,26 @@ public sealed interface StopEvidence {
 
 /** One device owner. All output enters here from the single motion engine. */
 public interface DeviceTransport {
+    /** Optional read-only check of the attached generation or remote device state. */
+    public val checkConnection: (suspend () -> Boolean)?
+        get() = null
+
+    /** The latest device-reported or actually submitted output, when the owner can expose it. */
+    public val feedback:
+        kotlinx.coroutines.flow.StateFlow<com.magichandy.mobile.core.api.DeviceOutput?>?
+        get() = null
+
+    /** Buffered owners capable of a separate aligned Play expose this port. */
+    public val linkedStart: LinkedStart?
+        get() = null
+
+    /**
+     * Optional slider startup operations. The engine finishes all owners' lead-ins before normal
+     * playback.
+     */
+    public val startupPosition: StartupPosition?
+        get() = null
+
     /** Stable identity used to match a saved device and its confirmation. */
     public val device: DeviceRef
     /** Maximum elapsed time allowed for a Stop acknowledgement. */
@@ -94,4 +126,9 @@ public interface DeviceTransport {
      * Preempt queued work. This operation must suspend independently of an occupied motion queue.
      */
     public suspend fun stop(fence: OutputFence): StopEvidence
+}
+
+/** Play an already prepared neutral buffer at an offset from the shared monotonic origin. */
+public fun interface LinkedStart {
+    public suspend fun play(offsetMillis: Long, fence: OutputFence): WriteResult
 }

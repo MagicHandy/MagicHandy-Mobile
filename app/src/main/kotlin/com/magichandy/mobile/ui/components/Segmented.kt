@@ -26,15 +26,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import com.magichandy.mobile.R
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /** One choice of a [Segmented] control. */
@@ -153,7 +160,14 @@ fun <T> ValueMenu(
     }
 }
 
-/** A minus, value, plus stepper row, one-handed (plan §16). */
+/**
+ * A minus, value, plus stepper row, one-handed (plan §16).
+ *
+ * @param outOf the most [value] can reach, shown after it in a quieter style, such as a Coyote
+ *   channel's limit.
+ * @param canDown false when stepping down can't do anything, such as at zero.
+ * @param canUp false when stepping up can't do anything, such as at a limit.
+ */
 @Composable
 fun StepperRow(
     label: String,
@@ -164,6 +178,9 @@ fun StepperRow(
     onUp: () -> Unit,
     isFirst: Boolean,
     modifier: Modifier = Modifier,
+    outOf: String? = null,
+    canDown: Boolean = true,
+    canUp: Boolean = true,
 ) {
     CardRow(
         isFirst = isFirst,
@@ -172,27 +189,50 @@ fun StepperRow(
         verticalPadding = MagicHandyTheme.dimens.xs,
     ) {
         Text(label, style = MagicHandyTheme.type.body, modifier = Modifier.weight(1f))
-        StepKey(AppIcons.Minus, downDescription, onDown)
+        StepKey(AppIcons.Minus, downDescription, canDown, onDown)
+        val readout =
+            if (outOf == null) {
+                AnnotatedString(value)
+            } else {
+                buildAnnotatedString {
+                    append(value)
+                    withStyle(
+                        SpanStyle(
+                            color = MagicHandyTheme.colors.muted,
+                            fontSize = MagicHandyTheme.type.small.fontSize,
+                            fontWeight = FontWeight.Normal,
+                        )
+                    ) {
+                        append(stringResource(R.string.out_of, outOf))
+                    }
+                }
+            }
         Text(
-            value,
+            readout,
             style = MagicHandyTheme.type.monoValue,
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(min = MagicHandyTheme.dimens.readoutWidth),
         )
-        StepKey(AppIcons.Plus, upDescription, onUp)
+        StepKey(AppIcons.Plus, upDescription, canUp, onUp)
     }
 }
 
 @Composable
-private fun StepKey(icon: ImageVector, description: String, onClick: () -> Unit) {
+private fun StepKey(
+    icon: ImageVector,
+    description: String,
+    isEnabled: Boolean,
+    onClick: () -> Unit,
+) {
     val colors = MagicHandyTheme.colors
     val shape = MagicHandyTheme.shapes.control
     Box(
         Modifier.size(MagicHandyTheme.dimens.touch)
+            .alpha(if (isEnabled) 1f else DISABLED_ALPHA)
             .clip(shape)
             .background(colors.raised)
             .border(MagicHandyTheme.dimens.hairline, colors.strongLine, shape)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = isEnabled, role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {

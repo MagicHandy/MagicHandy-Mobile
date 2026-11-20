@@ -16,6 +16,19 @@ public class InMemoryRunJournal(initial: RunJournal? = null) : RunJournalStore {
     override suspend fun armIfEmpty(record: RunJournal): Boolean =
         current.compareAndSet(null, record.copy(devices = record.devices.toList()))
 
+    override suspend fun transition(record: RunJournal): Boolean {
+        while (true) {
+            val old = current.value ?: return false
+            if (
+                old.runId != record.runId ||
+                    old.devices != record.devices ||
+                    old.version != record.version
+            )
+                return false
+            if (current.compareAndSet(old, record.copy(devices = old.devices))) return true
+        }
+    }
+
     override suspend fun reconcile(runId: RunId, confirmed: Set<DeviceId>) {
         current.update { old ->
             if (old == null || old.runId != runId) old

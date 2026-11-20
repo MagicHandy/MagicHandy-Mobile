@@ -24,11 +24,10 @@ Talk to an AI companion that sets the pace, or let Autopilot run the session, wi
 ## Safety comes first
 
 - **Stop is always one tap away.** A red Stop bar sits at the bottom of every screen, and stays just above the keyboard while you type. Typing "stop" in the chat works too, and TalkBack offers a "Stop all motion" action on any screen.
+- **Stop works outside the app too.** While a device is connected, its notification has a Stop button, on the lock screen as well, and you can add a Stop tile to Quick Settings.
 - **Stop reaches every device at once, and tells you what happened.** You see, device by device, whether Stop was confirmed. If a device couldn't confirm it, the app says so, and tells you what to check.
 - **Nothing starts on its own.** Connecting a device never starts motion. If the app is closed mid-session, it never restarts motion or Autopilot when you reopen it. Instead, it shows what's known and what to check.
 - **You rehearse Stop first.** On first launch, you confirm you're an adult and try Stop with nothing connected.
-
-Still to come for v1: Stop from the lock screen notification and from a Quick Settings tile.
 
 ## Supported devices
 

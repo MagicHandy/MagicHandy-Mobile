@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.IntifaceChoice
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.ui.components.AppButton
@@ -38,7 +40,9 @@ import com.magichandy.mobile.ui.components.Card
 import com.magichandy.mobile.ui.components.Hint
 import com.magichandy.mobile.ui.components.TextInput
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.settings.ChoiceList
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun AddCoyote(state: AppState, onIntent: (UserIntent) -> Unit, onDone: () -> Unit) {
@@ -146,9 +150,72 @@ internal fun CheckBox(isChecked: Boolean) {
     }
 }
 
+/** How far finding the vibrators at an Intiface address has got. */
+internal sealed interface VibratorSearch {
+    data object NotStarted : VibratorSearch
+
+    data object Finding : VibratorSearch
+
+    /** What the bridge at [address] reported; empty when it couldn't be reached. */
+    data class Found(val address: String, val choices: List<IntifaceChoice>) : VibratorSearch
+}
+
+/**
+ * Adds a vibrator through Intiface Central (board V-AddVibrator). The person finds the vibrators at
+ * an address, then connects the one they pick; a bridge with one vibrator has it picked already.
+ * Finding only asks the bridge, and never moves anything.
+ */
 @Composable
-internal fun AddVibrator(onIntent: (UserIntent) -> Unit, onDone: () -> Unit) {
+internal fun AddVibrator(
+    findVibrators: suspend (address: String) -> List<IntifaceChoice>,
+    onIntent: (UserIntent) -> Unit,
+    onDone: () -> Unit,
+) {
     var address by rememberSaveable { mutableStateOf(DEFAULT_INTIFACE_ADDRESS) }
+    var search by remember { mutableStateOf<VibratorSearch>(VibratorSearch.NotStarted) }
+    var selected by remember { mutableStateOf<IntifaceChoice?>(null) }
+    val scope = rememberCoroutineScope()
+    VibratorSetup(
+        address = address,
+        search = search,
+        selected = selected,
+        onAddressChange = {
+            address = it
+            search = VibratorSearch.NotStarted
+            selected = null
+        },
+        onFind = {
+            val target = address.trim()
+            search = VibratorSearch.Finding
+            selected = null
+            scope.launch {
+                val choices = findVibrators(target)
+                // Editing the address meanwhile makes this answer stale.
+                if (search == VibratorSearch.Finding) {
+                    search = VibratorSearch.Found(target, choices)
+                    selected = choices.singleOrNull()
+                }
+            }
+        },
+        onSelect = { selected = it },
+        onConnect = { found, choice ->
+            onIntent(UserIntent.AddIntiface(found.address, choice.deviceIndex))
+            onDone()
+        },
+    )
+}
+
+/** The stateless content of [AddVibrator], for a given [search] and choice. */
+@Composable
+internal fun VibratorSetup(
+    address: String,
+    search: VibratorSearch,
+    selected: IntifaceChoice?,
+    onAddressChange: (String) -> Unit,
+    onFind: () -> Unit,
+    onSelect: (IntifaceChoice) -> Unit,
+    onConnect: (VibratorSearch.Found, IntifaceChoice) -> Unit,
+) {
     Text(
         stringResource(R.string.add_vibrator_desc),
         style = MagicHandyTheme.type.small,
@@ -156,21 +223,53 @@ internal fun AddVibrator(onIntent: (UserIntent) -> Unit, onDone: () -> Unit) {
     )
     TextInput(
         address,
-        { address = it },
+        onAddressChange,
         stringResource(R.string.field_intiface_address),
         placeholder = stringResource(R.string.field_intiface_address_hint),
         keyboardType = KeyboardType.Uri,
     )
+    val found = search as? VibratorSearch.Found
     AppButton(
-        stringResource(R.string.add_vibrator_connect),
-        {
-            onIntent(UserIntent.AddIntiface(address.trim()))
-            onDone()
-        },
-        kind = ButtonKind.Primary,
-        isEnabled = address.isNotBlank(),
+        stringResource(
+            when (search) {
+                VibratorSearch.NotStarted -> R.string.vibrator_find
+                VibratorSearch.Finding -> R.string.vibrator_finding
+                is VibratorSearch.Found -> R.string.vibrator_find_again
+            }
+        ),
+        onFind,
+        kind = if (found == null) ButtonKind.Primary else ButtonKind.Outline,
+        isEnabled = address.isNotBlank() && search != VibratorSearch.Finding,
         modifier = Modifier.fillMaxWidth(),
     )
+    if (found != null && found.choices.isEmpty()) {
+        Banner(
+            tone = BannerTone.Warn,
+            title = stringResource(R.string.vibrator_none_title),
+            body = stringResource(R.string.vibrator_none_body),
+        )
+    } else if (found != null) {
+        Card(caption = stringResource(R.string.vibrator_found, found.choices.size)) {
+            ChoiceList(
+                options = found.choices,
+                selected = selected,
+                label = { it.name },
+                description = { stringResource(R.string.vibrator_device, it.deviceIndex) },
+                onSelect = onSelect,
+            )
+        }
+    }
+    Hint(stringResource(R.string.vibrator_find_hint))
+    if (found != null && found.choices.isNotEmpty()) {
+        AppButton(
+            selected?.let { stringResource(R.string.vibrator_connect, it.name) }
+                ?: stringResource(R.string.action_connect),
+            { selected?.let { onConnect(found, it) } },
+            kind = ButtonKind.Primary,
+            isEnabled = selected != null,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 @Composable

@@ -8,7 +8,10 @@ import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UnconfirmedCause
 import com.magichandy.mobile.core.motion.EngineFixture
 import com.magichandy.mobile.core.motion.FakeOwner
+import com.magichandy.mobile.core.motion.PlaybackPosition
+import com.magichandy.mobile.core.motion.WorkKind
 import com.magichandy.mobile.core.motion.batch
+import com.magichandy.mobile.core.motion.write
 import com.magichandy.mobile.core.ports.RecoveryStops
 import com.magichandy.mobile.core.ports.RunHost
 import com.magichandy.mobile.core.ports.RunId
@@ -28,6 +31,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -62,6 +66,127 @@ internal class RunSafetyTest {
             return safety.start(engine.epoch, listOf(owner), intended)
         }
     }
+
+    @Test
+    fun `Stop crosses a suspended Resume journal transition and a late commit cannot reopen output`() =
+        runTest {
+            val s = Scenario(this)
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val store =
+                object : RunJournalStore by s.store {
+                    override suspend fun transition(record: RunJournal): Boolean {
+                        if (record.intended == RunIntent.Start) {
+                            entered.complete(Unit)
+                            release.await()
+                        }
+                        return s.store.transition(record)
+                    }
+                }
+            val safety = s.safety(store)
+            assertEquals(StartDecision.Admitted, s.arm(safety))
+            val epoch = s.engine.epoch
+            val old = s.engine.stream(epoch)
+            safety.pause(epoch, PlaybackPosition(0.375))
+            runCurrent()
+            assertEquals(WriteResult.Stale, s.engine.write(old, s.owner, batch))
+            val resuming = async { safety.resume(epoch) }
+            entered.await()
+            safety.emergencyStop(StopSource.Notification)
+            runCurrent()
+            assertTrue(s.engine.state.value.receipt?.isAllConfirmed == true)
+            assertEquals(2, s.owner.stops)
+            release.complete(Unit)
+            assertEquals(StartDecision.Superseded, resuming.await())
+            runCurrent()
+            assertEquals(WriteResult.Stale, s.engine.write(old, s.owner, batch))
+            assertEquals(0, s.owner.writes)
+            assertNull(s.store.read())
+        }
+
+    @Test
+    fun `Resume requires a fresh durable transition and the service even after a confirmed Pause`() =
+        runTest {
+            for (serviceFails in listOf(false, true)) {
+                val s = Scenario(this)
+                var serviceReady = true
+                val store =
+                    object : RunJournalStore by s.store {
+                        override suspend fun transition(record: RunJournal): Boolean =
+                            record.intended != RunIntent.Start && s.store.transition(record)
+                    }
+                val safety = s.safety(store, RunHost { serviceReady })
+                assertEquals(StartDecision.Admitted, s.arm(safety))
+                val epoch = s.engine.epoch
+                safety.pause(epoch, PlaybackPosition(0.5))
+                runCurrent()
+                serviceReady = !serviceFails
+                assertEquals(
+                    StartDecision.Refused(
+                        if (serviceFails) StartRefusal.ServiceUnavailable
+                        else StartRefusal.JournalUnavailable
+                    ),
+                    safety.resume(epoch),
+                )
+                assertEquals(RunIntent.Paused, s.store.read()?.intended)
+                assertEquals(WriteResult.Stale, s.engine.write(epoch, s.owner, batch))
+                assertEquals(0, s.owner.writes)
+                safety.emergencyStop(StopSource.QuickSettingsTile)
+                runCurrent()
+            }
+        }
+
+    @Test
+    fun `a paused output job cannot write into a resumed stream and Pause leaves unrelated turns admitted`() =
+        runTest {
+            val s = Scenario(this)
+            val safety = s.safety()
+            assertEquals(StartDecision.Admitted, s.arm(safety))
+            val epoch = s.engine.epoch
+            val old = s.engine.stream(epoch)
+            val turn =
+                s.engine.launchWork(
+                    epoch,
+                    WorkKind.Turn,
+                    s.fixture.dispatcher,
+                ) {
+                    awaitCancellation()
+                }
+            safety.pause(epoch, PlaybackPosition(0.31))
+            runCurrent()
+            assertTrue(turn.isActive)
+            assertEquals(StartDecision.Admitted, safety.resume(epoch))
+            assertEquals(WriteResult.Stale, s.engine.write(old, s.owner, batch))
+            assertEquals(
+                WriteResult.Accepted,
+                s.engine.write(s.engine.stream(epoch), s.owner, batch),
+            )
+            safety.emergencyStop(StopSource.AppFooter)
+            runCurrent()
+            assertTrue(turn.isCancelled)
+        }
+
+    @Test
+    fun `a boundary update cannot restore removed devices or recreate a cleared journal`() =
+        runTest {
+            val s = Scenario(this)
+            val other = FakeOwner("second")
+            val record =
+                RunJournal(
+                    RunId("original"),
+                    listOf(s.owner.device, other.device),
+                    RunIntent.Start,
+                    false,
+                    s.fixture.clock.now(),
+                )
+            assertTrue(s.store.armIfEmpty(record))
+            s.store.reconcile(record.runId, setOf(other.device.id))
+            assertFalse(s.store.transition(record.copy(intended = RunIntent.Paused)))
+            assertEquals(listOf(s.owner.device), s.store.read()?.devices)
+            s.store.reconcile(record.runId, setOf(s.owner.device.id))
+            assertFalse(s.store.transition(record))
+            assertNull(s.store.read())
+        }
 
     @Test
     fun `the service and durable journal precede every motion capable write including test motor`() =

@@ -1,74 +1,158 @@
-// Ported from internal/motion/{engine,content}.go at 9a4c36cf.
+// Ported from internal/motion/{engine,content,plan}.go at 1b80d72e.
 package com.magichandy.mobile.core.motion
 
 import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.Limits
 import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.ports.DeviceTransport
-import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.MotionBatch
 import com.magichandy.mobile.core.ports.WriteResult
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Manual output uses the verified bounded-ramp sampler for both ordinary runs and motor tests. */
 internal class ManualPlayback(private val d: CoreDependencies, private val engine: MotionEngine) {
+    private data class Playing(
+        val stream: PlaybackStream,
+        val initialPosition: PlaybackPosition,
+        val timeline: ScoreTimeline? = null,
+        val origin: Duration = Duration.ZERO,
+    )
+
+    private val playing = MutableStateFlow<Playing?>(null)
+
+    fun position(stream: PlaybackStream): PlaybackPosition {
+        val live = playing.value?.takeIf { it.stream == stream } ?: return PlaybackPosition()
+        return live.timeline?.positionAt((d.clock.elapsed() - live.origin).inWholeMilliseconds)
+            ?: live.initialPosition
+    }
+
     fun play(
-        expected: Epoch,
+        stream: PlaybackStream,
         owners: List<DeviceTransport>,
-        limits: Limits,
+        model: HandyModel,
         test: Boolean,
-        started: (Percent) -> Unit,
+        position: PlaybackPosition,
+        commanded: (MotionBatch, ManualTarget) -> Unit,
     ) {
-        val pace = Percent(minOf(if (test) 10 else 25, limits.topSpeed.value))
-        if (pace.value == 0) {
-            engine.stop(null, expected)
-            return
-        }
-        if (test) scheduleMotorStop(expected)
-        engine.launchWork(expected, WorkKind.Output, d.dispatchers.output) {
-            stream(expected, owners, limits, pace, test, started)
+        if (test) scheduleMotorStop(stream)
+        val initialPosition = Playing(stream, position)
+        playing.value = initialPosition
+        val output =
+            engine.launchWork(stream.epoch, WorkKind.Output, d.dispatchers.output) {
+                val initial =
+                    ManualTarget.from(
+                            d.settings.state.value.values.limits,
+                            test,
+                            engine.state.value.edgeRequested,
+                        )
+                        .pace
+                if (initial.value == 0) engine.stop(null, stream = stream)
+                else
+                    send(
+                        initialPosition,
+                        owners,
+                        ScoreTimeline(initial.value, model, position),
+                        test,
+                        commanded,
+                    )
+            }
+        output.invokeOnCompletion {
+            playing.value?.takeIf { it.stream == stream }?.let { playing.compareAndSet(it, null) }
         }
     }
 
-    private fun scheduleMotorStop(expected: Epoch) {
+    private fun scheduleMotorStop(stream: PlaybackStream) {
         // A device can already be moving while the first write is awaiting its reply.
-        engine.launchWork(expected, WorkKind.Output, d.dispatchers.stop) {
+        engine.launchWork(stream.epoch, WorkKind.Output, d.dispatchers.stop) {
             delay(1500.milliseconds)
-            engine.stop(null, expected)
+            engine.stop(null, stream = stream)
         }
     }
 
-    private suspend fun stream(
-        expected: Epoch,
+    private suspend fun send(
+        initialPosition: Playing,
         owners: List<DeviceTransport>,
-        limits: Limits,
-        pace: Percent,
+        timeline: ScoreTimeline,
         test: Boolean,
-        started: (Percent) -> Unit,
+        commanded: (MotionBatch, ManualTarget) -> Unit,
     ) {
-        val knots = (0..12).map { i -> CurvePoint(i * 550L, if (i % 2 == 0) 0.0 else 100.0) }
-        val sampler = BufferedSampler(MotionPlan(knots, pace.value, HandyModel.Original))
-        var first = true
+        val stream = initialPosition.stream
+        val sampler = BufferedSampler(timeline)
+        val timed =
+            TimedPlayback(
+                d,
+                engine,
+                stream,
+                owners.filterIsInstance<com.magichandy.mobile.core.ports.TimedDevice>(),
+                FollowTempo(timeline, timeline.maximumVelocity),
+            )
+        val buffered = owners.filterNot { it is com.magichandy.mobile.core.ports.TimedDevice }
+        var previous: Limits? = null
+        var previousTarget: ManualTarget? = null
         var origin = d.clock.elapsed()
-        while (engine.epoch == expected) {
-            val batch = nextBatch(sampler, first, limits, pace, test)
-            if (!sendToOwners(expected, owners, batch) || engine.epoch != expected) {
-                engine.stop(null, expected)
+        while (engine.state.value.plays(stream)) {
+            val limits = d.settings.state.value.values.limits
+            val target =
+                timeline.update(
+                    engine.state.value,
+                    limits,
+                    test,
+                    sampler.nextSampleMillis,
+                    (d.clock.elapsed() - origin).inWholeMilliseconds,
+                ) ?: return engine.stop(null, stream = stream)
+            val batch =
+                try {
+                    nextBatch(sampler, previous == null, limits, target.pace, test)
+                } catch (_: IllegalArgumentException) {
+                    com.magichandy.mobile.core.ports.DiagnosticReporter.record(
+                        com.magichandy.mobile.core.ports.DiagnosticKind.TransportWriteFailed
+                    )
+                    return engine.stop(null, stream = stream)
+                }
+            if (
+                batch.isFirst &&
+                    !sendToOwners(stream, owners.filter { it.startupPosition != null }, batch, true)
+            )
+                return engine.stop(null, stream = stream)
+            val linked = batch.isFirst && owners.size > 1 && buffered.any { it.linkedStart != null }
+            if (
+                linked &&
+                    !sendToOwners(
+                        stream,
+                        buffered.filter { it.linkedStart != null },
+                        batch.copy(deferPlay = true),
+                    )
+            )
+                return engine.stop(null, stream = stream)
+            if (linked) origin = d.clock.elapsed()
+            if (
+                !sendToOwners(stream, buffered, batch, origin = origin.takeIf { linked }) ||
+                    !engine.state.value.plays(stream)
+            ) {
+                engine.stop(null, stream = stream)
                 return
             }
-            if (first) {
-                origin = d.clock.elapsed()
-                started(pace)
-                first = false
+            if (previous == null) {
+                if (!linked) origin = d.clock.elapsed()
+                playing.compareAndSet(
+                    initialPosition,
+                    initialPosition.copy(timeline = timeline, origin = origin),
+                )
             }
+            timed.append(batch, origin)
+            if (previous != limits || previousTarget != target) commanded(batch, target)
+            previousTarget = target
+            previous = limits
             if (test) return
             val lead = batch.frames.last().timeMillis.milliseconds - (d.clock.elapsed() - origin)
             if (lead <= 0.milliseconds) {
-                engine.stop(null, expected)
+                engine.stop(null, stream = stream)
                 return
             }
             delay((lead - 1500.milliseconds).coerceAtLeast(0.milliseconds))
@@ -95,12 +179,20 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
     }
 
     private suspend fun sendToOwners(
-        epoch: Epoch,
+        stream: PlaybackStream,
         owners: List<DeviceTransport>,
         batch: MotionBatch,
+        prepare: Boolean = false,
+        origin: Duration? = null,
     ): Boolean = coroutineScope {
         owners
-            .map { owner -> async(d.dispatchers.io) { engine.write(epoch, owner, batch) } }
+            .map { owner ->
+                async(d.dispatchers.io) {
+                    if (origin != null && owner.linkedStart != null)
+                        engine.startBuffered(stream, owner, origin)
+                    else engine.write(stream, owner, batch, prepare)
+                }
+            }
             .awaitAll()
             .all { it == WriteResult.Accepted }
     }

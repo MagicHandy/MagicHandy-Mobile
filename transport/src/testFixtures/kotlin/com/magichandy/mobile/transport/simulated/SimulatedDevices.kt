@@ -7,6 +7,7 @@ import com.magichandy.mobile.core.api.DeviceSettings
 import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.ScanResultId
 import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.Clock
 import com.magichandy.mobile.core.ports.DeviceDirectory
 import com.magichandy.mobile.core.ports.DeviceRef
 import com.magichandy.mobile.core.ports.DeviceTransport
@@ -40,50 +41,106 @@ public data class SimulatedOutput(
  * Keep this object across simulated process death to preserve the physical device's independent
  * state.
  */
-public class SimulatedDevices : DeviceDirectory {
+public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirectory {
     override val bluetoothOn: StateFlow<Boolean> = MutableStateFlow(true).asStateFlow()
-    override val saved: List<SavedDevice> =
-        listOf(
-            item(
-                "handy",
-                "The Handy",
-                DeviceFamily.Handy,
-                ConnectionKind.Bluetooth,
-                DeviceSettings.Handy("handy_original", false),
-            ),
-            item(
-                "vibrator",
-                "Vibrator",
-                DeviceFamily.Vibrator,
-                ConnectionKind.IntifaceOnPhone,
-                DeviceSettings.Vibrator(Percent(70)),
-            ),
-            item(
-                "coyote",
-                "Coyote 3.0",
-                DeviceFamily.Coyote,
-                ConnectionKind.Bluetooth,
-                DeviceSettings.Coyote(0, 0),
-            ),
-            item(
-                "ultra",
-                "Autoblow Ultra",
-                DeviceFamily.AutoblowUltra,
-                ConnectionKind.AutoblowCloud,
-                DeviceSettings.AutoblowUltra,
-            ),
-            item(
-                "vacuglide",
-                "VacuGlide",
-                DeviceFamily.VacuGlide,
-                ConnectionKind.AutoblowCloud,
-                DeviceSettings.VacuGlide(5..100, false, 15.minutes),
-            ),
+    private val catalog =
+        MutableStateFlow(
+            listOf(
+                item(
+                    "handy",
+                    "The Handy",
+                    DeviceFamily.Handy,
+                    ConnectionKind.Bluetooth,
+                    DeviceSettings.Handy("handy_original", false),
+                ),
+                item(
+                    "vibrator",
+                    "Vibrator",
+                    DeviceFamily.Vibrator,
+                    ConnectionKind.IntifaceOnPhone,
+                    DeviceSettings.Vibrator(Percent(70)),
+                ),
+                item(
+                    "coyote",
+                    "Coyote 3.0",
+                    DeviceFamily.Coyote,
+                    ConnectionKind.Bluetooth,
+                    DeviceSettings.Coyote(0, 0),
+                ),
+                item(
+                    "ultra",
+                    "Autoblow Ultra",
+                    DeviceFamily.AutoblowUltra,
+                    ConnectionKind.AutoblowCloud,
+                    DeviceSettings.AutoblowUltra,
+                ),
+                item(
+                    "vacuglide",
+                    "VacuGlide",
+                    DeviceFamily.VacuGlide,
+                    ConnectionKind.AutoblowCloud,
+                    DeviceSettings.VacuGlide(5..100, false, 15.minutes),
+                ),
+            )
         )
+    override val saved: List<SavedDevice>
+        get() = catalog.value
+
+    override val configuration: com.magichandy.mobile.core.ports.DeviceConfiguration =
+        object : com.magichandy.mobile.core.ports.DeviceConfiguration {
+            override suspend fun intifaceVibrators(address: String) =
+                listOf(com.magichandy.mobile.core.api.IntifaceChoice(0, "Simulated vibrator"))
+
+            override val rows = catalog.asStateFlow()
+
+            override suspend fun save(row: SavedDevice) {
+                catalog.update { list ->
+                    if (list.any { it.ref.id == row.ref.id })
+                        list.map { if (it.ref.id == row.ref.id) row else it }
+                    else list + row
+                }
+                outputs.update {
+                    if (row.ref.id in it) it else it + (row.ref.id to SimulatedOutput())
+                }
+            }
+
+            override suspend fun remove(id: DeviceId) {
+                catalog.update { list -> list.filterNot { it.ref.id == id } }
+                outputs.update { it - id }
+            }
+
+            override fun scan(family: DeviceFamily) =
+                kotlinx.coroutines.flow.flow {
+                    emit(
+                        com.magichandy.mobile.core.api.ScanResult(
+                            ScanResultId("sim-" + family.name),
+                            "Simulated " + family.name,
+                            -50,
+                            com.magichandy.mobile.core.api.ScanResultStatus.Found,
+                        )
+                    )
+                }
+
+            override fun address(result: ScanResultId) =
+                result.value.takeIf { it.startsWith("sim-") }
+        }
+
+    override suspend fun setHandyReversed(device: DeviceId, isReversed: Boolean): Boolean {
+        while (true) {
+            val all = catalog.value
+            val row = all.firstOrNull { it.ref.id == device } ?: return false
+            val settings = row.settings as? DeviceSettings.Handy ?: return false
+            val updated = row.copy(settings = settings.copy(isReversed = isReversed))
+            if (catalog.compareAndSet(all, all.map { if (it == row) updated else it })) return true
+        }
+    }
+
     private val outputs = MutableStateFlow(saved.associate { it.ref.id to SimulatedOutput() })
     /** Inspect independent device state without going through UI projections. */
     public val output: StateFlow<Map<DeviceId, SimulatedOutput>> = outputs.asStateFlow()
     private val lost = MutableSharedFlow<DeviceId>(extraBufferCapacity = 16)
+    private val restored = MutableSharedFlow<DeviceId>(extraBufferCapacity = 16)
+    override val returns: kotlinx.coroutines.flow.Flow<DeviceId> = restored
     override val losses: kotlinx.coroutines.flow.Flow<DeviceId> = lost
     private val unavailable = MutableStateFlow<Set<DeviceId>>(emptySet())
     private val connections = MutableStateFlow<Map<DeviceId, Owner>>(emptyMap())
@@ -100,8 +157,13 @@ public class SimulatedDevices : DeviceDirectory {
         val savedDevice = saved.firstOrNull { it.ref.id == device } ?: return null
         if (device in unavailable.value) return null
         val radio =
-            if (savedDevice.ref.family == DeviceFamily.Handy)
-                SimulatedHandyLink { rememberStop(device) }
+            if (
+                savedDevice.ref.family == DeviceFamily.Handy &&
+                    savedDevice.ref.connection == ConnectionKind.Bluetooth
+            )
+                SimulatedHandyLink({ clock?.elapsed()?.inWholeMilliseconds ?: 0 }) {
+                    rememberStop(device)
+                }
             else null
         val session = radio?.let { link ->
             HandyBluetoothSession.connect(
@@ -109,7 +171,10 @@ public class SimulatedDevices : DeviceDirectory {
                 ScanResultId(device.value),
                 BluetoothConnector { _, _, _ -> link },
                 ownerScope,
-            )
+                clock,
+            ) {
+                (saved.first { it.ref.id == device }.settings as DeviceSettings.Handy).isReversed
+            }
         }
         val owner = Owner(savedDevice, session, radio)
         connections.update { it + (device to owner) }
@@ -133,6 +198,7 @@ public class SimulatedDevices : DeviceDirectory {
     /** Restore reachability. The core must still explicitly reconnect or issue a recovery Stop. */
     public fun restoreLink(id: DeviceId) {
         unavailable.update { it - id }
+        restored.tryEmit(id)
     }
 
     /** Simulate loss of host-owned connections. Persistent devices continue independently. */
@@ -191,6 +257,12 @@ public class SimulatedDevices : DeviceDirectory {
         val radio: SimulatedHandyLink?,
     ) : DeviceTransport {
         override val device = selected.ref
+        override val linkedStart
+            get() = session?.linkedStart
+
+        override val startupPosition
+            get() = session?.startupPosition
+
         override val stopTimeout = session?.stopTimeout ?: 900.milliseconds
 
         override suspend fun write(batch: MotionBatch, fence: OutputFence): WriteResult {

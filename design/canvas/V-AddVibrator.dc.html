@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Add a vibrator: choose one</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:4px 12px 10px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.nav{display:flex;align-items:center;gap:4px;color:#9aa1a9;font-size:13px}
+.back{width:48px;height:48px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center}
+.hd{display:flex;align-items:center;gap:12px}
+.tile{width:44px;height:44px;border-radius:6px;background:#1d2024;display:grid;place-items:center;flex:none}
+h1{margin:0;font-size:22px;font-weight:600}
+.sub{font-size:13px;color:#9aa1a9;margin-top:2px}
+.desc{margin:0;font-size:13px;color:#c9c6c0;line-height:1.45}
+.lbl{font-size:13px;font-weight:500;margin-top:2px}
+.inp{height:48px;box-sizing:border-box;border:1px solid #4b5159;border-radius:6px;background:#0b0c0e;padding:0 12px;display:flex;align-items:center;font-size:14px}
+.sec{height:48px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:4px 12px}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;padding:8px 0 2px}
+.opt{display:grid;grid-template-columns:1fr 24px;gap:3px 12px;align-items:center;padding:12px 0;border-top:1px solid #262a30}
+.cap + div .opt:first-child{border-top:0}
+.on{font-weight:600;font-size:15px}
+.od{color:#9aa1a9;font-size:13px;line-height:1.4;grid-column:1}
+.chk{grid-row:span 2;grid-column:2;display:grid;place-items:center}
+.hint{margin:0;font-size:12px;color:#9aa1a9;line-height:1.45}
+.pri{height:48px;border:0;border-radius:6px;background:#5b9dd9;color:#0b131c;font-weight:600;font-size:15px;margin-top:auto}
+.stopbar{background:#121417;border-top:1px solid #262a30;padding:10px 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <div class="nav"><button class="back" type="button" aria-label="Back to Devices"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button>Devices › Add</div>
+    <div class="hd"><span class="tile"><svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.3" aria-hidden="true"><rect x="6" y="1.5" width="4" height="13" rx="2"></rect><path d="M3 5.5v5M13 5.5v5"></path></svg></span><div><h1>Vibrator</h1><div class="sub">Connect a vibrator</div></div></div>
+    <p class="desc">Vibrators connect through Intiface Central. Run it on this phone, or on a computer on the same network.</p>
+    <div class="lbl">Intiface address</div>
+    <div class="inp mono">127.0.0.1:12345</div>
+    <button class="sec" type="button">Find vibrators again</button>
+    <div class="card">
+      <div class="cap">Found at this address · 2</div>
+      <div role="radiogroup" aria-label="Vibrator to connect">
+        <div class="opt" role="radio" aria-checked="true" tabindex="0"><span class="on">Bullet vibrator</span><span class="chk"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#5b9dd9" stroke-width="2" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></span><span class="od">Intiface device 0</span></div>
+        <div class="opt" role="radio" aria-checked="false" tabindex="-1"><span class="on">Wand massager</span><span class="chk"></span><span class="od">Intiface device 1</span></div>
+      </div>
+    </div>
+    <p class="hint">Finding only asks Intiface what's connected. Nothing moves until a run starts. When Intiface reports one vibrator, it's chosen for you.</p>
+    <button class="pri" type="button">Connect Bullet vibrator</button>
+  </div>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

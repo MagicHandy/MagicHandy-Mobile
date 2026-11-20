@@ -211,6 +211,1428 @@
       "stream_start_ms": 0
     },
     {
+      "case_id": "free-roaming-mixed-reach-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_original-10.json",
+      "sha256": "e96419ff2e169ba8e585003967bb7bf69eec73af0bb03df10eb3c169fd3fbb73",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_original-10.json",
+      "sha256": "5cad09bcb05eaf0f656bd0dece396fe0d9237dd353d5e424909df7e9a446104b",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_original-10.json",
+      "sha256": "a444d08e92b8f65c34223eec40b10276d5fb5a653706c6c316257aa4a38008f2",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_original-10.json",
+      "sha256": "bf2f35257ac9bad8cf6523b087fdc7d60d9f9fe85dc30ca95d9bd489b42f0d44",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_original-10.json",
+      "sha256": "7ae4e02208ab19be723a502df511d983b08c439af1a2ec20a00e0b15fded855d",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_original-10.json",
+      "sha256": "8931bd78fd903121f65ebd471d24e2920274f7f3a1518ccf5a6bc22d96f72dd8",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_original-10.json",
+      "sha256": "bbec2b2cb520e60342607d9cdffd8534798431418a56b59109913f7f3dc44d64",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_original-10.json",
+      "sha256": "1ad7c3634ab2da394d342f487f4001820684e8ed17f4e3ce38cc4060e546e7a1",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_original-10.json",
+      "sha256": "c7d77a4446244e2df4fb0f22bedaa2b7f82fd6885a2d0c19f265c45f49bbdda3",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_original-10.json",
+      "sha256": "799e1f8173ae7a73ab5b208c8c68e330420281ad09c0aee3df5c96cad4df6256",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_original-10.json",
+      "sha256": "1b3e974530c36d9b77da21b41e91eb56b9dfa30dede2b320a4ad69fea8acc478",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_original-10.json",
+      "sha256": "2b5c5f77aa0bf070971140a4e54fb03ee61145e1efae5ef3f5bb45a44a7e1d31",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_original-10.json",
+      "sha256": "64aae57377ff70365572cf8ea930bc057b99b73a885e5f9897326b225b37e0c0",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_original-10.json",
+      "sha256": "1e419f9089b9b3bb5bb9f312cc57075daa58238b2d8cf95f0141480c3eb41625",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_original-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_original-10.json",
+      "sha256": "1fc50217f8604f72dd508758878f10f29ddadc2308eac41b26273d3e3d1b0d2e",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_original-45.json",
+      "sha256": "b54d1ac1b69ab8016aec462ed9d7a4823a1cd6c2987731bb24cdea1bffc33fd9",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_original-45.json",
+      "sha256": "337b11554efa18d55285c77f86ec9cb1d94ce8061084683ce6270db8a72115d5",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_original-45.json",
+      "sha256": "6023221fc5af2d604d9374a882d8bbd7b5060b1134a0849eca58a323553f369d",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_original-45.json",
+      "sha256": "0c0fb4cf1ab9db935d81f9c7bbb9ad20420ca2c425d155af1d6e4c8f8aaba4d5",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_original-45.json",
+      "sha256": "52aab31c91d2200dd2d1fbe88638e6a4d8da35f82fbe86405e19110113bdfb19",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_original-45.json",
+      "sha256": "50632710a4cf0cb791ad5806f1e5237eb7400bee3d507ddbf042c88254258640",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_original-45.json",
+      "sha256": "f70ff68203b63d97657ff307374227bd429e17faa7b0dbe2c8cd44321ba4a78d",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_original-45.json",
+      "sha256": "bdbf9f4d806d45afd2a6a8eeeabbd7906a4679c66b9b8c8e332c0a6fd82e2701",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_original-45.json",
+      "sha256": "81e9f61504491bb28a3a5ae872672d9d4bd4696616a263f20d4f4beb0030b160",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_original-45.json",
+      "sha256": "52ccacad595288ceacb0de21c0ffb79e08cba0a85c515215b5164f1c1fea0436",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_original-45.json",
+      "sha256": "8b897d8e5a935e3fa3190ab1cd95c69d054ee98675dae6d7880d8be6870ad3f9",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_original-45.json",
+      "sha256": "fc778149e538e3ab96f0d00f744abed887e610d361386ced7558311ad371b273",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_original-45.json",
+      "sha256": "8efb408e6fd53d5f5af8bbaf37aedf1a8037f3f31a15815696f71d197b8adfa2",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_original-45.json",
+      "sha256": "964241bfb704ba55e90ca76e46bd26b265f223a023bf40d7e83f18ea086fc666",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_original-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_original-45.json",
+      "sha256": "d106e69cec4ad05c026af27f0258f6ab6b66bd1cc06962116ed8c53c8135fb3b",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_original-85.json",
+      "sha256": "a25acf5885289d4835c9b6a3c310ad19c5978854229e2b663d0deb96bc317cab",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_original-85.json",
+      "sha256": "8030f290b69573232bd5ffd901549b5add25be9aebd63066dbd8e301b132c910",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_original-85.json",
+      "sha256": "3f54b48cb949845ec7ac10756e4c759afa873650772736761f96b4dc4764b5ff",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_original-85.json",
+      "sha256": "af50891c21ff084ff69b1582e937d123784e13f329492afb11b480efebc09c55",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_original-85.json",
+      "sha256": "f7fe95468860b8be7bb9feaefa75d834c79a930b907cde86683a8725d399ae3f",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_original-85.json",
+      "sha256": "6eafa6d076d8d87f644fe84f2d46f63ea383c43fb78751e985cfae25bc5d2591",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_original-85.json",
+      "sha256": "93f8e75c60022e1b6179c0b7f5439b5e0cc0567c3f42a9126f0492eac1f31d84",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_original-85.json",
+      "sha256": "5b05aaa2a85f72794b84f7b78b11e373df1f6e902a184645897f92b61d059d1b",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_original-85.json",
+      "sha256": "4d8491813a53793f1287afaa144ae3fadd77f3000c4169631acd94373865d40a",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_original-85.json",
+      "sha256": "24598ca4bd2156333e55ec3166aa36f23c8679b88c9fbc1fb7e53da79724baed",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_original-85.json",
+      "sha256": "a04c061b8ea2de2207fee2227f715254dc8130b4ee083423ba4c33f392742cd5",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_original-85.json",
+      "sha256": "35a2b1acea005b62d1db19592b246bef538e4d29748ae3bb91768f8730fab821",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_original-85.json",
+      "sha256": "182637e9d29c6babd5f423c2dd34a39dd7e9a7225125339999ba4e82298691ac",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_original-85.json",
+      "sha256": "d99feed1cf5d923fe6fed50fd37b369fbf679357d8984db5dfeac6a3ff7bb498",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_original-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_original-85.json",
+      "sha256": "4970ddb07c443a374387bcf43a2c8a0684c07d1d19929cc35be9b94e72af56eb",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_2_standard-10.json",
+      "sha256": "89d8c1e827a4881d4fc0f886d98e28231647a278d1c1159469147b9fb73a3a68",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_2_standard-10.json",
+      "sha256": "f51a8f750aa6525c21fe925a76369affcc4992f650c4ce752968b68830f4f384",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_2_standard-10.json",
+      "sha256": "5427401f3b5cb4b5eaed663ba6ca5f8bed32268f27b5ae615c2d13ae79de9aef",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_2_standard-10.json",
+      "sha256": "15ed91448b55d4b91460b4ef878f98d3f33205ffff5ddfc7787ebae27c287f65",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_2_standard-10.json",
+      "sha256": "da21ce39bf6320855ff448c3e1b8b4dcf506de60003ea0e352a74ae4eeaa74e6",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_2_standard-10.json",
+      "sha256": "e5465b28dd716f5fcfecb80e4f941cc8ec01afe0e09d7b02001ff4e3f0318749",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_2_standard-10.json",
+      "sha256": "3729d82c92f55b748d0ab3e04382305e182cf1f5202cb8b63a5a21527bac3b62",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_2_standard-10.json",
+      "sha256": "530df91e2149263c10a7f983222a4f4a679327e19d9437c291e3ccbd54664abd",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_2_standard-10.json",
+      "sha256": "9f026c2e14401f99d562593395857860f7390ea377848350ee843d1bdb1f64ab",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_2_standard-10.json",
+      "sha256": "bc953df34df2b6634c1d8500e7ad2c5f0fd6ae1c1c61ed29dd5ace1ba14f0aa1",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_2_standard-10.json",
+      "sha256": "df203cbb2d6c368ab062d80a807b52e84b0b2da9f351863acd6863538436a59c",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_2_standard-10.json",
+      "sha256": "a18cf86bf9bce135c7514b138b7c07a392eb92ae31af3c6bec009805758c36be",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_2_standard-10.json",
+      "sha256": "2d9513c40799a6776b868a65b7d334f88b65e43b5c5eb73a93e77af1e0150ec8",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_2_standard-10.json",
+      "sha256": "48479f511d9e557de2fa12620cec7e15340e6b362a6cd0da0194d7868f50a910",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_2_standard-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_2_standard-10.json",
+      "sha256": "2eecc0d520f2d9bd2e0df450d7857751a0447c985aadb6f3a09ec350f0ccb85e",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_2_standard-45.json",
+      "sha256": "a6d34e2931adb783bb11347877a0657514c9da92872a8fa3dfa17dc4d15afad2",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_2_standard-45.json",
+      "sha256": "a82c859f687ccf767a4465e34081bb3eba79453a27d70d705885e7007aad6b71",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_2_standard-45.json",
+      "sha256": "a11bc247e6e74deaba541bd20af05f03a9ebef3147e49ea115e8acf62c5fbdda",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_2_standard-45.json",
+      "sha256": "8a0be438838d7d1feb0cb7b425d3d0685da362bc0b328b7f2ee924670705cca5",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_2_standard-45.json",
+      "sha256": "82acb4d632ad5c6c643da8fe5e1550e43d6d2210015b01821d33b1412b16b1db",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_2_standard-45.json",
+      "sha256": "c814737ff63ac0a1aa567e414d2b3c68d080a7e2f5cd648c19ed3a2d8d61b600",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_2_standard-45.json",
+      "sha256": "e8d42ce12946deeb198e7d9edc14efbf04c43dfb58530c165b90e809fe4e3599",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_2_standard-45.json",
+      "sha256": "b29f3485ad09dea0a16915838b86362b3e6ca6cebc66d819cb10d57cb2175758",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_2_standard-45.json",
+      "sha256": "2b3c8fbc095ba08bc59643e23c43bc432410128b3a40bf12e7675a3867a7fca5",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_2_standard-45.json",
+      "sha256": "92951d04fee0f87d52ce2725d79e726f41fd62580888c1028d72290386f3f300",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_2_standard-45.json",
+      "sha256": "08755d9a0e71715bd4c9c55cb0481fc32e1b11c0850f2621d512cf01973a3240",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_2_standard-45.json",
+      "sha256": "23ddc82a99a837ba967c137a35c3784c9984504ec609ddfa935bc91d9a9dccab",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_2_standard-45.json",
+      "sha256": "8b81b699a17f207e309214fd9b1293870b6168121e1a04129bc65ae678fe9a91",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_2_standard-45.json",
+      "sha256": "692f665e9eabc67d5c5021fca8605938333296222450f8efdb2d12d37ffe8c42",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_2_standard-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_2_standard-45.json",
+      "sha256": "57769f3004c72543655ebb993adb8a36bc6e8546a59e9ea6eed8f446a7d23e3a",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_2_standard-85.json",
+      "sha256": "f7f4f8e3689da5b5ffc48ab5cb5db1a257fb70528ba8265efd15b14c34910d12",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_2_standard-85.json",
+      "sha256": "eca360c3955931a8c78fb537ba8177f693fdd076b66c51e6eba5443d5c67ce40",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_2_standard-85.json",
+      "sha256": "4c4bf28af30aaff6e44b4f4768ef8c43922fe8c546e18d62bc667e4a87aee842",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_2_standard-85.json",
+      "sha256": "9117b0d964498085da104c094ea2281d6f5f9ea753a01f17bd9445424316f784",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_2_standard-85.json",
+      "sha256": "8e4a7225a5cc86a0b81c4c03c63772c4f410a2fd5408b47a61186804bc39d344",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_2_standard-85.json",
+      "sha256": "fb4ddddb8d083ca239856d3c7e0b65b7337fbf369a33f9a93c02c7b66c4a8912",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_2_standard-85.json",
+      "sha256": "7dcee56b30e5f6b361ac5f64c14fd2d4df8bcee29fe5014ed544ff8d9d794711",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_2_standard-85.json",
+      "sha256": "eb444ce442dcaf777fda391809132ac0f61d655d551684d52e4e7bb0225cb9bc",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_2_standard-85.json",
+      "sha256": "616ee729b6e9db1bae4bcf7dc4c86c295913095f8e7c3493c5e39ff9336759dd",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_2_standard-85.json",
+      "sha256": "7de6863aa390fa1ab9511d8d11edb792d09a55e0b3c2fae5dd9c39518fdfe776",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_2_standard-85.json",
+      "sha256": "a4f1b31c86abce34eb3e9010eae078c2745e983d8402a0d6a2ba1d9ac7316756",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_2_standard-85.json",
+      "sha256": "976a845eb3af9744574e090db00000d0763aff9c2e0007ca87b054cbdd879a3c",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_2_standard-85.json",
+      "sha256": "21b3e8dc87c26dd87edc105d721ddbf7cc6c1891f6ccb236978d95ea8b935e2f",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_2_standard-85.json",
+      "sha256": "26e29481482f373864433b1dea39017e76ff0c3abdcb056a00fa8688792354a7",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_2_standard-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_2_standard-85.json",
+      "sha256": "cd8b61218e4dd43188c8a3739d9e1671d804c1c4915963284db83f9085c8edc8",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_2_pro-10.json",
+      "sha256": "83ce98fa973a91ee23d66d5b8b49511adc307156be18de2063cd555e04a17af8",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_2_pro-10.json",
+      "sha256": "e171e9cbe77405a47bf47a34f77f5df36fab10cafa5e888216208e1bd42d2891",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_2_pro-10.json",
+      "sha256": "707691f60ca42bf7e7d1f33ed2f87a9db325668a63dd6af288ed7d2766436b8d",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_2_pro-10.json",
+      "sha256": "9ea1bf76874a28134a97dbed2682a2921120809e0625e0ced6ce922f9cbdac22",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_2_pro-10.json",
+      "sha256": "905dc3603af89eab6530448d4b10d5c86a5314270303a28fed9356fb67b479ae",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_2_pro-10.json",
+      "sha256": "4d91b4089197f023d6e9b818e33b8ab4ea286f9524ad3e575e9165020ca1f05e",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_2_pro-10.json",
+      "sha256": "138c551db48e4e6bf108c3b62eb224ff94e1071ac5c0b363661639c18330dd2c",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_2_pro-10.json",
+      "sha256": "4b3f1d11b0294829634b6ff5edb2f58d6b9252098e791ac0928b879e8e6419c4",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_2_pro-10.json",
+      "sha256": "fea8dad4c2b398b7eb6d129e6e56e815f2a763e802050cb385413e1cf59cfc90",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_2_pro-10.json",
+      "sha256": "e6da9de005f9585338f5fc3cc31ed5acc694f8a51cf2c7f9b89558b1efa11af2",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_2_pro-10.json",
+      "sha256": "d52f8cb10ed959648c200b6b175f6344f0aefd1a10cc631057f3328ac5d2af76",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_2_pro-10.json",
+      "sha256": "1d7cf910a23173d6c0ec64c51a6ddc0c5bf6595b38de188928f94791728e7d51",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_2_pro-10.json",
+      "sha256": "a1e8dd95235eed67043cde39840b940efdc156e63a5c2a23338561600b7be460",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_2_pro-10.json",
+      "sha256": "33dd9f08d6364a93ad05adfb5832bc6d5797488dbe15a73e0c3f9199756a4d34",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_2_pro-10",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_2_pro-10.json",
+      "sha256": "02fc935eb67a6b8521b2e0f119fbe68671a0ff02750c0964f2c63564f2b3c6b7",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_2_pro-45.json",
+      "sha256": "7d3fd358a3c3e1c7ef9d821b157ccdb0c8be4318d1d47c85efdbbaf06a48d535",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_2_pro-45.json",
+      "sha256": "70c9b0b78e6a8f606ef42ec0ab4886da17ba7ecbac273b6d74da8c907425c5a8",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_2_pro-45.json",
+      "sha256": "b4c0a48d8c130b5a8ae38c0449b15b149d7cdf0b1b5df6c87e80caa556e3823a",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_2_pro-45.json",
+      "sha256": "2c5efe1134b484f1129d65205a679150e02138be0a550bcaadf6b6a18eb53b9e",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_2_pro-45.json",
+      "sha256": "f21d84b6acd3da1fa2872c6c082b1b596e7ac9d03eca86a405f7ea1c6fbafbef",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_2_pro-45.json",
+      "sha256": "e774dba515c06841e932a853255787d4f32cc28f94a8b565eeaaeaa954b11df9",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_2_pro-45.json",
+      "sha256": "043e9aa51f6470837099ca16b3570ac9ad4f56424d80c41ee99ef092d6348df7",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_2_pro-45.json",
+      "sha256": "b7adc4ca7eb7fa4eadecc35b8fe0a9ec69b2014691816c8e4e3038661c40b230",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_2_pro-45.json",
+      "sha256": "61f2e3e6cec0ac002ebaec5b38a7d86714565222a5df69a35ed75d91a2b16ca8",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_2_pro-45.json",
+      "sha256": "9823ede94b4e8ceabfac5a83f80f2e5e5714ecc7b52431e71c31af147714ecfe",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_2_pro-45.json",
+      "sha256": "b7348643d7954b02fd93f3b0e2451c1c721b916bd3465ee7d4122db0db00c807",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_2_pro-45.json",
+      "sha256": "12a710586a40f10b856f29f501265711f39fd43d633a1b0779916102a1060f55",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_2_pro-45.json",
+      "sha256": "518f70a9aecd0d72b4af07fe762174a41be7dbf81dfaa9ae16e046ae7cb978e2",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_2_pro-45.json",
+      "sha256": "443af744d9fa9629820ee2fbb5a48dec4bcaa08fd78cee26958c3ba85fea7508",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_2_pro-45",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_2_pro-45.json",
+      "sha256": "89253d54729412069c3b99f07f28981133d79531889404c0f72e5cb2420d49b2",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "free-roaming-mixed-reach-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/free-roaming-mixed-reach-handy_2_pro-85.json",
+      "sha256": "5a0923784a4dbdd312daf9c660825a60dca5fcfc18a9c000fc706fcad21ee727",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-narrow-strokes-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-narrow-strokes-handy_2_pro-85.json",
+      "sha256": "f47dcc45d3c81e4dc0ef4b5c012f0a958cc08fd9007695bd83cfd0a65b7874d3",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "roaming-with-directional-contrast-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/roaming-with-directional-contrast-handy_2_pro-85.json",
+      "sha256": "24e63e8d84a03b84f26fa890f1a2113febf318ef2473410204f130be39c44d67",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "even-full-strokes-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/even-full-strokes-handy_2_pro-85.json",
+      "sha256": "7e1f5eb254ba25c819f5044e3d2e52283d4a4ddd461bc2ee7b37933eb1b3c138",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "irregular-mixed-excursions-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/irregular-mixed-excursions-handy_2_pro-85.json",
+      "sha256": "178bcf79d40112a929c013b25a9f6f79b5760331bf47b2c805c2aa552d561dcc",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-tip-sweeps-with-slow-return-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-tip-sweeps-with-slow-return-handy_2_pro-85.json",
+      "sha256": "e188ce02d1b32923b536f09959f29dde428881cad953afc1006544f53c8d1363",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "fast-base-sweeps-with-slow-return-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/fast-base-sweeps-with-slow-return-handy_2_pro-85.json",
+      "sha256": "c9df3fa9960f45352b38cbd4d3bf56675422b3a0e947676891a8624208724fe5",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "middle-work-among-full-strokes-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/middle-work-among-full-strokes-handy_2_pro-85.json",
+      "sha256": "f0964ba75d35888e8e65205f5982ed63ccb78182e560e8bcaa8435c624238327",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "base-rebounds-and-full-strokes-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/base-rebounds-and-full-strokes-handy_2_pro-85.json",
+      "sha256": "8efab4575ba3bc3e97c26f5536f10e7e0a2ab4ba23d4bf3b49c19ad64b6a586e",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tip-rebounds-and-full-strokes-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/tip-rebounds-and-full-strokes-handy_2_pro-85.json",
+      "sha256": "bf661d584d3cf49209331808b42dbd571e2a446615d6c184780cfc0ae22b84c6",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "narrow-band-and-truncated-rebound-tails-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/narrow-band-and-truncated-rebound-tails-handy_2_pro-85.json",
+      "sha256": "5a553b730eb68e497cd395d0ede2c2a1360a6ef87289a140794ccae2ee650a61",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "maximum-combined-character-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/maximum-combined-character-handy_2_pro-85.json",
+      "sha256": "cbba157c0c88b0c8a76beed9998ca84467033fc9c9b1e3a51576c1e39b16072e",
+      "mode": "creative-v2",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-17-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-17-handy_2_pro-85.json",
+      "sha256": "424740f5f7f118de458e6f9f50250d3ad878894a51c31c2001487ea117bcea98",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-23681-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-23681-handy_2_pro-85.json",
+      "sha256": "267da995d8b785fcd35c524059b3f72328c4953c5e9565e86e7b7da7e18fff30",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "original-1763268511-handy_2_pro-85",
+      "role": "creative-atlas",
+      "path": "motion/atlas/original-1763268511-handy_2_pro-85.json",
+      "sha256": "77c69ba67ee2b75ec7f78b85fabb8889516c5b4a0d9206678a3f17c8a0bb0299",
+      "mode": "creative-original",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "layered-field",
+      "role": "layered-score",
+      "path": "motion/layered/field.json",
+      "sha256": "ef701ce6f983c08f60644fbb24aee051f0783a25cae932bbf41b6993a5c2e9cc",
+      "mode": "layered",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "layered-counted",
+      "role": "layered-score",
+      "path": "motion/layered/counted.json",
+      "sha256": "70e04389cf04e7de4be7b8675b60d13caab8deb5a93ea3d473777bd9706f3734",
+      "mode": "layered",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "layered-regional",
+      "role": "layered-score",
+      "path": "motion/layered/regional.json",
+      "sha256": "0b894c2f21eec604cce8523bdbe7607f084ed29deafd906e77712495aae4a8e6",
+      "mode": "layered",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tempo-slow-build",
+      "role": "tempo",
+      "path": "motion/tempo/slow-build.json",
+      "sha256": "52000fd479f531388b1888792337eccd5e5e85557529e89ecd41c8f2ffda0efb",
+      "mode": "routine"
+    },
+    {
+      "case_id": "tempo-swells",
+      "role": "tempo",
+      "path": "motion/tempo/swells.json",
+      "sha256": "5229d78070cb7622f6ca0a684f0c889867e9ce656f310d8072b5acce4e07de09",
+      "mode": "routine"
+    },
+    {
+      "case_id": "tempo-bursts",
+      "role": "tempo",
+      "path": "motion/tempo/bursts.json",
+      "sha256": "1e0d20b7403d31264d7f28fab7559cdf0417b8a7e87bcc5f13552f8449436ca7",
+      "mode": "routine"
+    },
+    {
+      "case_id": "tempo-stairs",
+      "role": "tempo",
+      "path": "motion/tempo/stairs.json",
+      "sha256": "94c157003ee853c5522fb7554525a72ca0c694fce36505e34d7b7acb878b8cec",
+      "mode": "routine"
+    },
+    {
+      "case_id": "tempo-edge-and-release",
+      "role": "tempo",
+      "path": "motion/tempo/edge-and-release.json",
+      "sha256": "00b422a009c76ff5e33043884314b6760583ab018136ccfd1368dc70eec27f0f",
+      "mode": "routine"
+    },
+    {
+      "case_id": "tempo-wandering",
+      "role": "tempo",
+      "path": "motion/tempo/wandering.json",
+      "sha256": "b9e1d54f016d50674f089214b7cf6b2435e61423d478b6b03d261f5c6819998f",
+      "mode": "routine"
+    },
+    {
       "case_id": "handy-ble-01",
       "role": "ble-wire",
       "path": "wire/handy-ble-01.json",
@@ -331,6 +1753,46 @@
       "settings_revision": 1
     },
     {
+      "case_id": "layered-history-named-32k",
+      "role": "local-history",
+      "path": "chat/history/layered-history-named-32k.json",
+      "sha256": "1bdde765227c823a757b5c0f50121186533d52848d7dbe153ea46ac38564086e",
+      "locale": "en",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "layered-history-managed-32k",
+      "role": "local-history",
+      "path": "chat/history/layered-history-managed-32k.json",
+      "sha256": "acb31cb5b3734332e909a8e89669c0a34cb88726df2d42c82d445226c7fbe526",
+      "locale": "en",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "layered-history-managed-16k",
+      "role": "local-history",
+      "path": "chat/history/layered-history-managed-16k.json",
+      "sha256": "17e8021208d57c8f871ce0eefa9a04d0bd224fbd17c9dedb89e3940c57a5f07f",
+      "locale": "en",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "layered-history-named-32k-verbose",
+      "role": "local-history",
+      "path": "chat/history/layered-history-named-32k-verbose.json",
+      "sha256": "69b40fa31701f591aaaf05838719d382620f749b7d9e4902d08f3dc5e94a4add",
+      "locale": "en",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
       "case_id": "translations-en",
       "role": "translations",
       "path": "content/locales/en.json",
@@ -397,5 +1859,5 @@
     }
   ],
   "format_version": 1,
-  "source_sha": "9a4c36cf41fa4ec6abeb4c72ae6b4790cab0430a"
+  "source_sha": "1b80d72ee4b90a5ab80a9bb3fe373b1640388f80"
 }

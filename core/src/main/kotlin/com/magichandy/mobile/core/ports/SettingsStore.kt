@@ -13,6 +13,7 @@ import kotlin.time.Duration
 import kotlinx.coroutines.flow.StateFlow
 
 /** The mobile settings document. All Stop and motion evidence lives outside this document. */
+@kotlinx.serialization.Serializable
 public data class Preferences(
     public val adultsOnly: Boolean = false,
     public val coyoteNotes: Boolean = false,
@@ -25,6 +26,8 @@ public data class Preferences(
     public val frequency: ChangeFrequency = ChangeFrequency(5),
     public val checkIns: CheckIns = CheckIns.Off,
     public val finishAfter: Duration? = null,
+    public val askedNotifications: Boolean = false,
+    public val refusalFallback: com.magichandy.mobile.core.api.ConnectionId? = null,
 )
 
 /** A field carries its typed update function and stable persisted name. */
@@ -35,6 +38,11 @@ private constructor(public val name: String, internal val set: (Preferences, T) 
 
     /** Fields accepted by revisioned patches. */
     public companion object {
+        public val AskedNotifications: PreferenceField<Boolean> =
+            PreferenceField("asked_notifications") { s, v -> s.copy(askedNotifications = v) }
+        /** Explicit local role for one hosted refusal retry. */
+        public val RefusalFallback: PreferenceField<com.magichandy.mobile.core.api.ConnectionId?> =
+            PreferenceField("refusal_fallback") { s, v -> s.copy(refusalFallback = v) }
         /** The onboarding acknowledgement. */
         public val AdultsOnly: PreferenceField<Boolean> =
             PreferenceField("adults_only") { s, v -> s.copy(adultsOnly = v) }
@@ -76,6 +84,7 @@ public class PreferenceEdit
 internal constructor(public val field: String, public val apply: (Preferences) -> Preferences)
 
 /** Last change revision per field allows disjoint stale patches to merge. */
+@kotlinx.serialization.Serializable
 public data class SettingsDocument(
     public val revision: Long = 0,
     public val values: Preferences = Preferences(),

@@ -18,6 +18,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.ModelConnection
+import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
@@ -27,6 +30,8 @@ import com.magichandy.mobile.ui.components.Hint
 import com.magichandy.mobile.ui.components.SettingRow
 import com.magichandy.mobile.ui.components.ToggleRow
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.navigation.AppNavigator
+import com.magichandy.mobile.ui.navigation.SheetPage
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 @Composable
@@ -43,21 +48,33 @@ internal fun PersonaPage(state: AppState, onIntent: (UserIntent) -> Unit) {
 }
 
 @Composable
-internal fun ChatModelPage(state: AppState, onIntent: (UserIntent) -> Unit, exits: SheetExits) {
-    val connections = state.models.connections
+internal fun ChatModelPage(
+    state: AppState,
+    nav: AppNavigator,
+    onIntent: (UserIntent) -> Unit,
+    exits: SheetExits,
+) {
+    val models = state.models
+    val connections = models.connections
+    val chat = chatConnection(state)
     ChoiceList(
         options = connections,
-        selected = connections.firstOrNull { it.id == state.models.chatConnection },
+        selected = chat,
         label = { it.name },
-        description = {
-            stringResource(
-                R.string.settings_chat_model_value,
-                it.shortName,
-                Words.capability(it.capability),
-            )
-        },
+        description = { connectionLine(it) },
         onSelect = { onIntent(UserIntent.SetChatConnection(it.id)) },
     )
+    // Only a model that runs online can refuse in a way a local server might not.
+    if (chat != null && !chat.provider.isLocal) {
+        SettingRow(
+            label = stringResource(R.string.refusal_row, chat.name),
+            value =
+                connections.firstOrNull { it.id == models.refusalFallback }?.name
+                    ?: stringResource(R.string.off),
+            onClick = { nav.pushSheet(SheetPage.RefusalFallback) },
+            isFirst = false,
+        )
+    }
     SettingRow(
         label = stringResource(R.string.chat_model_manage),
         value = null,
@@ -66,6 +83,46 @@ internal fun ChatModelPage(state: AppState, onIntent: (UserIntent) -> Unit, exit
         labelColor = MagicHandyTheme.colors.accent,
     )
 }
+
+/**
+ * Which server on the local network retries a message the online chat model refused (board
+ * V-RefusalFallback). Off is the default, and the core accepts only local connections.
+ */
+@Composable
+internal fun RefusalFallbackPage(state: AppState, onSet: (ConnectionId?) -> Unit) {
+    val models = state.models
+    val local = models.connections.filter { it.provider.isLocal }
+    ChoiceList(
+        options = listOf(null) + local,
+        selected = local.firstOrNull { it.id == models.refusalFallback },
+        label = { it?.name ?: stringResource(R.string.off) },
+        description = { connection ->
+            if (connection == null) stringResource(R.string.refusal_off_desc)
+            else connectionLine(connection)
+        },
+        onSelect = { onSet(it?.id) },
+    )
+    Hint(
+        stringResource(if (local.isEmpty()) R.string.refusal_none else R.string.refusal_note),
+        Modifier.padding(top = MagicHandyTheme.dimens.xs),
+    )
+}
+
+/** A connection's model and capability level, as the chat model choices show them. */
+@Composable
+private fun connectionLine(connection: ModelConnection): String =
+    stringResource(
+        R.string.settings_chat_model_value,
+        connection.shortName,
+        Words.capability(connection.capability),
+    )
+
+/** True for servers added by address on the local network; ChatGPT and OpenRouter run online. */
+private val ProviderKind.isLocal: Boolean
+    get() =
+        this == ProviderKind.Ollama ||
+            this == ProviderKind.LlamaCpp ||
+            this == ProviderKind.OpenAiCompatible
 
 @Composable
 internal fun MemoryPage(state: AppState, onIntent: (UserIntent) -> Unit) {
@@ -98,6 +155,16 @@ internal fun MemoryPage(state: AppState, onIntent: (UserIntent) -> Unit) {
             isEnabled = settings.memoryEntries > 0,
             height = MagicHandyTheme.dimens.compactControl,
         )
+    }
+    // The saved details themselves, newest first, so the person can see what will be recalled.
+    settings.memories.forEachIndexed { index, memory ->
+        CardRow(isFirst = index == 0) {
+            Text(
+                memory,
+                style = MagicHandyTheme.type.body,
+                modifier = Modifier.weight(1f).padding(vertical = MagicHandyTheme.dimens.s),
+            )
+        }
     }
     Hint(stringResource(R.string.memory_clear_note))
 }

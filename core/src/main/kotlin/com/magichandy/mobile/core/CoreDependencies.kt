@@ -69,4 +69,8 @@ public data class CoreDependencies(
     public val signInCredential: SecretHandle? = null,
     /** Display version supplied by the app composition root. */
     public val versionName: String = "development",
+    /** Resolves a local model server only after the person supplies its address. */
+    public val servers: com.magichandy.mobile.core.ports.ModelServers? = null,
+    /** User-triggered public release metadata check. */
+    public val releases: com.magichandy.mobile.core.ports.ReleaseFeed? = null,
 )

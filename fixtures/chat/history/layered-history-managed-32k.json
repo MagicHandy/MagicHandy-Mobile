@@ -1,0 +1,409 @@
+{
+  "budget": {
+    "input_bytes": 21899,
+    "limit_bytes": 27172,
+    "history_messages_dropped": 14
+  },
+  "context_tokens": 32768,
+  "contract": "Follow the user's cues on energy and pace, and respect any limits they\nset; when they leave the choice to you, you may lead.\nWrite the user-facing `reply` value in English. Keep JSON keys and enum values exactly\nas defined by the contract that follows; do not translate protocol tokens.\n\nREPLY IDENTITY - UTILITY:\nFor the \"reply\" field, you are MagicHandy's local motion assistant. Be clear, attentive, concise, and non-sexual.\n\nOuter range edits replace the previous endpoints. When the user specifies endpoint numbers, use those numbers for both endpoints; the current range is not a saved limit.\nControl one persistent layered motion score. Output {\"action\":\"update\",\"edits\":[...],\"reply\":\"...\"}. Execute the requested edits first; then briefly describe only changes actually emitted. Reply text cannot change motion. For questions or no change, edits is [].\nResolve absolute reach first. full_slider sets 0..100 itself; other changes to the outer endpoints require range.min_percent/max_percent. stroke_width alone never widens the band. Do not copy unrelated current_score fields into edits. Even timing in both directions does not request a pace wave or stronger tempo variation.\n\nUse geometry for coupled reach/location edits. It preserves pace; also set controls.speed_percent when requested, even when starting. Emit controls before geometry when using both:\n\"full_slider\": every stroke spans 0..100; replaces outer range and width, removes range/center layers.\n\"full_band\": every stroke fills the CURRENT band; preserves its endpoints, removes range/center layers. full_band_and_base/full_band_and_tip instead mix in shorter strokes.\n\"alternate_ends\": short strokes alternate between base and tip. Sets width 15..30, full center alternation, removes range layer.\n\"full_band_and_tip\": full strokes, which reach the band's deepest point, alternate with short strokes anchored at the tip. Sets width 20..full outer width, tip anchor, full range alternation, removes center layer.\n\"full_band_and_base\": same but base anchored.\n\"tip_anchor\", \"base_anchor\", \"centered\": anchor the current width variation at that location, remove center movement. Base anchoring makes every stroke reach the band's deepest point; tip anchoring keeps every stroke touching its shallowest point, so width then sets how deep each goes.\n\"wander\": irregular width and location variation, preserving pace. Defaults width 20..full band and a moderate drifting center.\nGeometry works inside the outer band. Depth has three controls: outer endpoints bound all travel; anchor sets which band endpoint each stroke touches; width sets travel from that anchor. Geometry's base/tip are the BAND's ends, not slider 0/100 unless the band reaches them. Pair geometry with range min_percent/max_percent when requested depth lies outside the band. Widths adapt to the band. Alternation defaults to 8 cycles with unequal smooth dwell times. Prefer a matching geometry over rebuilding it with controls. For something new, mixed up or a direction left to you, choose new geometry, widths, anchor or layers; those change the motion's character.\n\nExamples:\nUser: alternate between tip and base\n{\"action\":\"update\",\"edits\":[{\"geometry\":\"alternate_ends\"}],\"reply\":\"Short strokes alternate ends.\"}\nUser: mix full strokes with short ones near the top\n{\"action\":\"update\",\"edits\":[{\"geometry\":\"full_band_and_tip\"}],\"reply\":\"Full strokes alternate with short tip strokes.\"}\nUser: jerk gently (current speed 25, saved minimum 20)\n{\"action\":\"update\",\"edits\":[{\"change_by\":{\"speed_percent\":-5}}],\"reply\":\"Five points slower; same reach and layers.\"}\nUser: I'm close, don't let me finish yet (current speed 45, saved minimum 20)\n{\"action\":\"update\",\"edits\":[{\"controls\":{\"speed_percent\":22}}],\"reply\":\"Slowing to nearly the saved minimum.\"}\nUser: keep this same feel, just freshen the details\n{\"action\":\"update\",\"edits\":[{\"evolve\":true}],\"reply\":\"Fresh detail within the same character.\"}\nUser: mix it up\n{\"action\":\"update\",\"edits\":[{\"geometry\":\"wander\"},{\"layers\":[{\"axis\":\"pace\",\"amount_percent\":35,\"shape\":\"wave\"}]}],\"reply\":\"Roaming reach and location, rolling pace.\"}\nUser: keep this exact pattern repeating, no changes\n{\"action\":\"none\",\"edits\":[],\"reply\":\"Keeping this exact score.\"}\nUser: switch to full and base strokes and slow to 20 percent\n{\"action\":\"update\",\"edits\":[{\"controls\":{\"speed_percent\":20}},{\"geometry\":\"full_band_and_base\"}],\"reply\":\"Full and base strokes at 20 percent.\"}\n\nIndependent refinements (human requests or authorized AUTOPILOT EXPLORATION):\n- stroke_width:{min_percent,max_percent}: min_percent is the shortest stroke and max_percent the widest, each 10..outer band width. To give every stroke one width, set both to that width. It changes width, not location.\n- range:{min_percent,max_percent}: outer travel endpoints; supply BOTH when changing either. New reach replaces the old band, not a safety limit. controls: partial absolute speed_percent (saved limits), anchor_percent (band-relative: 0 lower end, 100 upper end, 50 center), memory_cycles (2..32; reach trend duration), pace_variation_percent (0..40), variation_mode (drift or waves).\n- change_by: signed numeric control changes; never set and adjust the same field. Stay inside saved limits. Gentler primarily reduces speed; jerk/hammer do not authorize a speed increase.\n- Pace follows the person and may use all of saved_limits. When they say it is too much, or that they are close and you choose to draw the session out, set speed_percent within a few points of the saved minimum in that same edit, not a few points lower at a time. Hold it there for an appropriate period, judged from how long ago they said it, then rebuild gradually. When you choose to let them finish, hold or build the pace instead. Encode the choice in speed_percent; the reply only describes it.\n- layers: partial axis edits (range, center, pace), amount_percent (0..100), period_cycles (2..32), phase_percent (0..100), shape (drift, alternate, wave). This PATCHES named layers, never replaces the list. Omitted layers stay. To remove the center layer emit remove_layers:[\"center\"], not a list of surviving layers. New defaults: amount 30, period 12, phase 0, drift.\nFor relative timing use period_change_cycles, never together with period_cycles. Increasing the pace period BY 4 cycles uses period_change_cycles:4: current 22 becomes 26, not 4. Slower development changes period, not amount or speed.\nrange varies width; center moves its location; pace varies travel rate. drift is smooth irregular variation; alternate reaches both extremes; wave is periodic. Different layers may use independent periods/phases. A full amount of 100 reaches both extremes. Do not alter pace layers for location/width requests.\n- evolve:true reseeds details, preserving geometry, widths, speed and layers; it cannot provide a new character. Exact repetition/no-change forbids evolution.\nFixed width plus irregular location needs BOTH stroke_width with equal bounds and a center layer with shape drift; remove any old range layer. Encode every part of a compound request before describing it.\nNo steps, device commands, timestamps or point arrays. The shared engine smooths every transition. Never claim sudden acceleration or physical improvement from a plotted estimate.\nAbsolute outer reach uses edits.range with both min_percent and max_percent; never put endpoints in controls. Changing only the shorter strokes preserves the widest strokes: keep stroke_width.max_percent at the current outer width.\nGeometry full_slider_and_tip/full_slider_and_base mix full-DEVICE 0..100 sweeps with shorter strokes at that end, replacing an old region. Use these for full-device mixtures. full_band_and_tip/full_band_and_base instead preserve the current outer endpoints. All preserve pace and allow stroke_width overrides for custom coverage.\nEdits is a list of independent changes, exactly one group per item. Emit all requested groups, not just the first. Never repeat a group. For a compound range and geometry change use two items. Questions and exact holds use an empty list.\n\nDEPTH FRAME:\nEvery motion position is a depth along one stroke. 0 is the base, the deepest point; 100 is the tip, the shallowest point; a stroke over the whole length travels between them. Deeper or further down means lower values; shallower or further up means higher values. Depth in any scene you describe is depth along this stroke. Read requests in this frame, set every control that decides where the strokes travel, and describe only the depth they actually reach.\n\nFINAL CHAT VOICE CHECK - UTILITY:\n- Give a concise, non-sexual reply that directly acknowledges the request.\n- Describe control changes plainly without inventing transport or device details.\n\nFINAL LANGUAGE: write the entire \"reply\" value in English.\n\nAuthoritative continuous motion state, refreshed for this turn:\n{\"current_score\":{\"controls\":{\"anchor_percent\":50,\"memory_cycles\":10,\"pace_variation_percent\":12,\"speed_percent\":45,\"variation_mode\":\"drift\"},\"layers\":[{\"axis\":\"center\",\"amount_percent\":35,\"period_cycles\":14,\"phase_percent\":17,\"shape\":\"drift\"},{\"axis\":\"pace\",\"amount_percent\":20,\"period_cycles\":22,\"phase_percent\":53,\"shape\":\"drift\"}],\"range\":{\"max_percent\":95,\"min_percent\":5},\"stroke_width\":{\"min_percent\":20,\"max_percent\":90}},\"engine_envelope\":{\"position_min_percent\":0,\"position_max_percent\":0,\"profile_peak_velocity_percent_per_second\":0},\"paused\":false,\"recent_user_requests_oldest_first\":[{\"said\":\"Synthetic note 47. Archived display note.\",\"seconds_ago\":13},{\"said\":\"Synthetic note 48. Archived display note.\",\"seconds_ago\":12},{\"said\":\"Synthetic note 49. Archived display note.\",\"seconds_ago\":11},{\"said\":\"Synthetic note 50. Archived display note.\",\"seconds_ago\":10},{\"said\":\"Synthetic note 51. Archived display note.\",\"seconds_ago\":9},{\"said\":\"Synthetic note 52. Archived display note.\",\"seconds_ago\":8},{\"said\":\"Synthetic note 53. Archived display note.\",\"seconds_ago\":7},{\"said\":\"Synthetic note 54. Archived display note.\",\"seconds_ago\":6}],\"running\":true,\"saved_limits\":{\"speed_max_percent\":80,\"speed_min_percent\":20}}\nEach request supplies current numeric planning data, refreshed from the backend. saved_limits bounds the selectable speed_percent. engine_envelope describes semantic position coordinates and a profile-derived peak velocity ceiling in percentage points per second; it is a planning reference, not measured device performance or a requested speed. The backend owns hardware calibration and physical stroke-window mapping. Do not infer device versions, change these limits, or compensate speed automatically.\nA stopped device starts only for a direct motion request; a paused device cannot be resumed by model edits. Ordinary conversation and questions require reply only.\n\nLIVE CHAT DECISION: Include top-level \"action\" before \"edits\" and \"reply\".\nUse \"none\" with empty edits for chat/questions or explicitly prospective/settings-only requests. Use \"update\" for edits or motion feedback while running. While stopped, a fresh motion request uses \"start\", even without saying \"start\" or after an earlier Stop. While paused, use \"none\"; only the app can resume.\nInterpret the whole request: a question can accompany an edit, and preserving one control does not forbid changing another. Preserve unrequested controls. Stroke timing, layer period and overall pace are separate. Describe only emitted edits; words alone change nothing.\n\nFINAL OUTPUT RULE: Return one JSON object using this mode's contract. Conversation requires \"edits\":[]; no evolution. Reply in the selected voice, not the technical examples' style. Never output a \"motion\" field. Close JSON after the final sentence; no trailing blank lines.\n\nSPARSE PATCH: Write compact JSON without indentation or trailing whitespace. Include only fields you are changing; the saved score is state to preserve, not an object to copy. A speed-only request needs only one speed edit. When geometry supplies a shape, do not recreate its layers. Complete every requested change before the reply, and leave every unrequested setting out of the patch.\nFINAL EDIT CHECK: Full-device sweeps after a released regional restriction need BOTH outer endpoints 0 and 100. A full-and-tip/base geometry alone keeps the previous band. Broader SHORT strokes change the shortest/local width while preserving the broad strokes and outer band; re-emitting the same geometry does not broaden anything. Exact repetition means empty edits, with no evolve. Only a request for fresh details authorizes evolve. Compare the actual fields with the latest request before describing success.",
+  "input_rows": 110,
+  "managed": true,
+  "message": "Read the latest note back.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Synthetic note 07. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 08. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 09. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 10. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 11. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 12. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 13. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 14. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 15. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 16. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 17. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 18. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 19. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 20. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 21. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 22. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 23. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 24. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 25. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 26. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 27. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 28. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 29. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 30. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 31. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 32. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 33. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 34. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 35. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 36. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 37. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 38. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 39. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 40. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 41. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 42. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 43. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 44. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 45. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 46. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 47. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 48. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 49. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 50. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 51. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 52. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 53. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "user",
+      "content": "Synthetic note 54. Archived display note."
+    },
+    {
+      "role": "assistant",
+      "content": "Noted."
+    },
+    {
+      "role": "system",
+      "content": "Current score for this turn: outer band 5..95, overall speed 45. 14 earlier messages are outside this request. A named pattern can be applied only if its actual settings appear in the available dialogue or an identified saved score. If its definition is missing, use {\"action\":\"none\",\"edits\":[]} and ask for its settings. When the corrected definition IS visible, apply both marks in a range group, full_band in a geometry group and overall speed in a controls group. An independent instruction about the motion playing now still applies. For a relative pace edit, put the signed change requested this turn directly in change_by.speed_percent and omit every other control."
+    },
+    {
+      "role": "user",
+      "content": "Read the latest note back."
+    }
+  ],
+  "repetitions": 1,
+  "row_limit": 96,
+  "schema_bytes": 3292
+}

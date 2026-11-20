@@ -31,8 +31,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Standalone JVM debug wiring before Android ports exist. The process scope owns all three
- * dedicated executors. Cancel it at teardown after completing the app's orderly Stop.
+ * Standalone JVM debug wiring for a simulated process. The process scope owns all three dedicated
+ * executors. Cancel it at teardown after completing the app's orderly Stop.
  */
 public fun simulatedDependencies(scope: CoroutineScope): CoreDependencies {
     val lifetime =
@@ -83,7 +83,7 @@ public fun simulatedDependencies(
     scope: CoroutineScope,
     dispatchers: CoreDispatchers,
     clock: Clock,
-    devices: SimulatedDevices = SimulatedDevices(),
+    devices: SimulatedDevices = SimulatedDevices(clock),
 ): CoreDependencies {
     val id = ConnectionId("simulated-model")
     val model =
@@ -113,6 +113,26 @@ public fun simulatedDependencies(
         InMemoryRunJournal(),
         InMemoryVault(),
         InMemoryDiagnostics(),
-        { saved -> if (saved.info.id == id) provider else null },
+        { provider },
+        servers =
+            com.magichandy.mobile.core.ports.ModelServers { address, selected, capability ->
+                val level = capability ?: CapabilityLevel.Simple
+                com.magichandy.mobile.core.api.ServerCheck.Found(
+                    address,
+                    ProviderKind.OpenAiCompatible,
+                    false,
+                    listOf("simulated-text"),
+                    selected ?: "simulated-text",
+                    level,
+                    level,
+                    65536,
+                    65536,
+                    Duration.ZERO,
+                )
+            },
+        releases =
+            com.magichandy.mobile.core.ports.ReleaseFeed {
+                com.magichandy.mobile.core.api.UpdateCheck.UpToDate
+            },
     )
 }

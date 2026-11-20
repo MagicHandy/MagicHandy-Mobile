@@ -80,7 +80,15 @@ internal constructor(
     override suspend fun signIn(): SignInFailure? =
         try {
             val completed =
-                withTimeoutOrNull(5.minutes) { serial.withLock { authorize() } } ?: false
+                withTimeoutOrNull(5.minutes) {
+                    serial.withLock {
+                        try {
+                            authorize()
+                        } finally {
+                            browser.close()
+                        }
+                    }
+                } ?: false
             if (completed) null else SignInFailure.Cancelled
         } catch (_: Rejected) {
             DiagnosticReporter.record(DiagnosticKind.AccountRejected)

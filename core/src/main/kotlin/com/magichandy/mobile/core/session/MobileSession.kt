@@ -1,23 +1,16 @@
-// Ported from internal/httpapi/{chat,motion,stop_admission}.go at 9a4c36cf.
+// Ported from internal/httpapi/{chat,motion,stop_admission}.go at 1b80d72e.
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.BackendNotice
-import com.magichandy.mobile.core.api.CapabilityLevel
 import com.magichandy.mobile.core.api.ConnectionId
-import com.magichandy.mobile.core.api.ConnectionKind
-import com.magichandy.mobile.core.api.ConnectionStatus
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.InterruptCause
 import com.magichandy.mobile.core.api.LimitKind
 import com.magichandy.mobile.core.api.MagicHandyCore
-import com.magichandy.mobile.core.api.ModelConnection
 import com.magichandy.mobile.core.api.MotionMode
 import com.magichandy.mobile.core.api.Percent
-import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.RunMembership
-import com.magichandy.mobile.core.api.SignInFailure
-import com.magichandy.mobile.core.api.SignInState
 import com.magichandy.mobile.core.api.StartRefusal
 import com.magichandy.mobile.core.api.StepDirection
 import com.magichandy.mobile.core.api.StopOutcome
@@ -30,7 +23,6 @@ import com.magichandy.mobile.core.ports.DiagnosticReporter
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.PreferenceEdit
 import com.magichandy.mobile.core.ports.PreferenceField
-import com.magichandy.mobile.core.ports.SavedModel
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -40,12 +32,19 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     private val parent = dependencies.scope.coroutineContext
+    private val reports =
+        Channel<Pair<kotlin.time.Instant, DiagnosticKind>>(
+            256,
+            kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
+        )
     private val d =
         dependencies.copy(
             scope =
@@ -63,14 +62,33 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     private val ui = MutableStateFlow(initialState(d))
     override val state = ui.asStateFlow()
     private val devices = Devices(d, engine, safety, ui, ::record)
-    private val chat = ChatTurns(d, engine, ui)
+    private val setup = DeviceSetup(d, ui, devices, engine)
+    private val servers = ServerSetup(d, ui)
+    private val checkIns = VacuCheckIns(d, ui, this)
+    private val autopilot = Autopilot(d, engine, devices, safety, ui)
+    private val chat =
+        ChatTurns(
+            d,
+            engine,
+            ui,
+            ChatProposal(d, engine, ui, devices, this, autopilot),
+        )
 
     private data class Queued(val epoch: Epoch, val intent: UserIntent)
 
-    private val queue = Channel<Queued>(Channel.UNLIMITED)
-    private var signIn: Job? = null
+    private val queue = Channel<Queued>(256)
+    private val accounts = ModelAccounts(d, ui, ::record, ::unavailable, ::storeFailed)
 
     init {
+        d.scope.launch(d.dispatchers.io) {
+            for ((at, kind) in reports) try {
+                d.diagnostics.record(at, kind)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                ui.update { it.copy(backendNotice = BackendNotice.StorageUnavailable) }
+            }
+        }
         d.scope.launch(d.dispatchers.session) {
             try {
                 for ((epoch, intent) in queue) {
@@ -95,6 +113,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             engine.state.collect { s ->
                 if (last != s.epoch) {
                     chat.stopEarlierThan(s.epoch)
+                    autopilot.epochChanged(s.epoch)
                     last = s.epoch
                 }
                 if (
@@ -118,21 +137,28 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             }
         }
         d.scope.launch(d.dispatchers.session) {
-            d.settings.state.collect { doc -> ui.update { it.preferences(doc.values) } }
-        }
-        d.scope.launch(d.dispatchers.session) {
-            d.models.state.collect { models -> ui.update { it.models(models) } }
-        }
-        d.scope.launch(d.dispatchers.session) { d.chats.state.collect { chat.showArchive() } }
-        d.scope.launch(d.dispatchers.session) {
-            d.devices.bluetoothOn.collect { on ->
-                ui.update { it.copy(devices = it.devices.copy(isBluetoothOn = on)) }
+            d.settings.state.collect { doc ->
+                ui.update { it.preferences(doc.values) }
+                autopilot.refresh()
             }
         }
         d.scope.launch(d.dispatchers.session) {
-            d.devices.losses.collect { devices.disconnect(it, lost = true) }
+            d.models.state.collect { models ->
+                ui.update { it.models(models, d.network.observe().value) }
+                autopilot.refresh()
+            }
         }
-        observeNetwork()
+        d.scope.launch(d.dispatchers.session) { d.chats.state.collect { chat.showArchive() } }
+        d.scope.launch(d.dispatchers.session) {
+            ui.map { it.chat.reply is com.magichandy.mobile.core.api.ReplyState.Streaming }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { autopilot.refresh() }
+        }
+        observeConnectivity(d, engine, devices, safety, ui, chat, autopilot)
+        d.devices.configuration?.let { cfg ->
+            d.scope.launch(d.dispatchers.session) { cfg.rows.collect(setup::refresh) }
+        }
     }
 
     override fun emergencyStop(source: StopSource) {
@@ -140,18 +166,62 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         record(DiagnosticKind.StopRequested)
     }
 
-    private fun record(kind: DiagnosticKind) {
-        val at = d.clock.now()
-        d.scope.launch(d.dispatchers.io) {
-            try {
-                d.diagnostics.record(at, kind)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                // The diagnostics sink itself is unavailable. Surface that without recursing.
-                ui.update { it.copy(backendNotice = BackendNotice.StorageUnavailable) }
-            }
+    override fun setRefusalFallback(connection: ConnectionId?) {
+        d.scope.launch(d.dispatchers.session) {
+            if (
+                connection == null ||
+                    d.models.state.value.models[connection]?.info?.provider in
+                        ChatProposal.localProviders
+            )
+                patch(PreferenceField.RefusalFallback.edit(connection))
         }
+    }
+
+    override fun updateSystemAccess(notificationsAllowed: Boolean, batteryUnrestricted: Boolean) {
+        ui.update {
+            it.copy(
+                app =
+                    it.app.copy(
+                        notificationsAllowed = notificationsAllowed,
+                        hasSystemAccessSnapshot = true,
+                        isBatteryUnrestricted = batteryUnrestricted,
+                    )
+            )
+        }
+    }
+
+    override fun notificationPermissionRequested() {
+        d.scope.launch(d.dispatchers.session) {
+            patch(PreferenceField.AskedNotifications.edit(true))
+        }
+    }
+
+    override fun appBackgrounded() {
+        d.scope.launch(d.dispatchers.session) {
+            if (engine.state.value.owners.isEmpty()) chat.interrupt(InterruptCause.AppInBackground)
+        }
+    }
+
+    override fun trimMemory() {
+        d.scope.launch(d.dispatchers.io) { d.chats.trimPages() }
+    }
+
+    override suspend fun intifaceVibrators(address: String) = setup.vibratorsAt(address)
+
+    override fun setCoyoteLimits(device: DeviceId, maximumA: Int, maximumB: Int) =
+        setup.setCoyoteLimits(device, maximumA, maximumB)
+
+    override fun stepCoyote(
+        device: DeviceId,
+        channel: com.magichandy.mobile.core.api.CoyoteChannel,
+        increase: Boolean,
+    ) = setup.stepCoyote(device, channel, increase)
+
+    override fun stepTempoRange(device: DeviceId, direction: StepDirection) =
+        setup.stepTempoRange(device, direction)
+
+    private fun record(kind: DiagnosticKind) {
+        reports.trySend(d.clock.now() to kind)
     }
 
     override fun dispatch(intent: UserIntent) {
@@ -165,26 +235,40 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
                 engine.state.value.members.isNotEmpty()
         )
             engine.stop(null)
-        queue.trySend(Queued(engine.epoch, intent))
+        if (queue.trySend(Queued(engine.epoch, intent)).isFailure) unavailable()
     }
 
     private suspend fun handle(epoch: Epoch, intent: UserIntent) {
         when (intent) {
             UserIntent.AcknowledgeAdultsOnly -> patch(PreferenceField.AdultsOnly.edit(true))
             UserIntent.AcknowledgeCoyoteNotes -> patch(PreferenceField.CoyoteNotes.edit(true))
-            is UserIntent.SendMessage -> chat.send(epoch, intent.text)
-            UserIntent.SendAgain -> chat.send(epoch, null, retry = true)
+            is UserIntent.SendMessage -> {
+                chat.send(epoch, intent.text)
+                autopilot.refresh()
+            }
+            UserIntent.SendAgain -> {
+                chat.send(epoch, null, retry = true)
+                autopilot.refresh()
+            }
             UserIntent.NewChat -> chat.newChat()
             is UserIntent.OpenChat -> chat.open(intent.chat)
-            UserIntent.StartMotion,
-            UserIntent.ResumeMotion -> devices.start(epoch, null)
-            is UserIntent.TestMotion -> devices.start(epoch, intent.device)
-            UserIntent.PauseMotion -> engine.stop(null)
+            UserIntent.StartMotion -> devices.playback.start(epoch, null)
+            UserIntent.ResumeMotion -> {
+                devices.playback.resume(epoch)
+                autopilot.refresh()
+            }
+            is UserIntent.TestMotion -> devices.playback.start(epoch, intent.device)
+            UserIntent.PauseMotion -> {
+                devices.playback.pause(epoch)
+                autopilot.refresh()
+            }
+            is UserIntent.SetEdge -> autopilot.edge(epoch, intent.isOn)
             is UserIntent.StepLimit -> step(intent)
             is UserIntent.Connect -> devices.connect(intent.device)
             is UserIntent.Disconnect -> devices.disconnect(intent.device)
             is UserIntent.SetInNextRun -> setMembership(intent)
             is UserIntent.SetLead -> devices.setLead(intent.device)
+            is UserIntent.SetReversed -> devices.setReversed(intent.device, intent.isReversed)
             is UserIntent.ReconcileDevice -> reconcile(epoch, intent.device)
             UserIntent.DismissStopReceipt -> engine.dismissReceipt()
             UserIntent.DismissInterruptedRun -> safety.dismissInterrupted()
@@ -204,32 +288,52 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             is UserIntent.SetChatConnection -> d.models.bindChat(intent.connection)
             is UserIntent.SetPlannerConnection -> d.models.bindPlanner(intent.connection)
             is UserIntent.RemoveConnection -> removeConnection(intent.connection)
-            UserIntent.StartChatGptSignIn -> startSignIn()
-            UserIntent.CancelSignIn -> cancelSignIn()
+            UserIntent.StartChatGptSignIn -> accounts.startSignIn()
+            UserIntent.CancelSignIn -> accounts.cancelSignIn()
+            is UserIntent.StartScan -> setup.startScan(intent.family)
+            UserIntent.StopScan -> setup.stopScan()
+            is UserIntent.ConnectScanResult -> setup.select(intent)
+            is UserIntent.AddCloudHandy ->
+                setup.cloud(
+                    com.magichandy.mobile.core.api.DeviceFamily.Handy,
+                    intent.name,
+                    intent.connectionKey,
+                )
+            is UserIntent.AddAutoblowDevice ->
+                setup.cloud(intent.family, intent.name, intent.deviceToken)
+            is UserIntent.AddIntiface -> setup.intiface(intent.address, intent.deviceIndex)
+            is UserIntent.Rename ->
+                if (intent.name.isNotBlank())
+                    setup.edit(intent.device) {
+                        it.copy(ref = it.ref.copy(name = intent.name.trim().take(64)))
+                    }
+            is UserIntent.CheckConnection -> devices.check(intent.device)
+            is UserIntent.Remove -> setup.remove(intent.device)
+            is UserIntent.SaveOpenRouter -> accounts.saveOpenRouter(intent)
             // These intents become available when their complete backend milestone is wired.
-            is UserIntent.SetEdge,
-            UserIntent.StartAutopilot,
-            UserIntent.PauseAutopilot,
-            UserIntent.ResumeAutopilot,
-            UserIntent.TurnOffAutopilot,
-            is UserIntent.StartScan,
-            UserIntent.StopScan,
-            is UserIntent.ConnectScanResult,
-            is UserIntent.AddCloudHandy,
-            is UserIntent.AddAutoblowDevice,
-            is UserIntent.AddIntiface,
-            is UserIntent.Rename,
-            is UserIntent.SetReversed,
-            is UserIntent.CheckConnection,
-            is UserIntent.Remove,
-            is UserIntent.SetCheckInInterval,
-            is UserIntent.SetValveSteps,
-            is UserIntent.AnswerCheckIn,
-            is UserIntent.CheckServer,
-            is UserIntent.SelectServerModel,
-            is UserIntent.SaveServer,
-            is UserIntent.SaveOpenRouter,
-            UserIntent.CheckForUpdate -> unavailable()
+            UserIntent.StartAutopilot -> autopilot.start(epoch)
+            UserIntent.PauseAutopilot -> autopilot.pause(true)
+            UserIntent.ResumeAutopilot -> autopilot.pause(false)
+            UserIntent.TurnOffAutopilot -> autopilot.off()
+            is UserIntent.SetCheckInInterval ->
+                if (intent.every == null || intent.every.isFinite() && intent.every.isPositive())
+                    setup.edit(intent.device) { row ->
+                        val v =
+                            row.settings as? com.magichandy.mobile.core.api.DeviceSettings.VacuGlide
+                        if (v == null) row
+                        else row.copy(settings = v.copy(checkInEvery = intent.every))
+                    }
+            is UserIntent.SetValveSteps ->
+                setup.edit(intent.device) { row ->
+                    val v = row.settings as? com.magichandy.mobile.core.api.DeviceSettings.VacuGlide
+                    if (v == null) row
+                    else row.copy(settings = v.copy(mayStepValve = intent.isAllowed))
+                }
+            is UserIntent.AnswerCheckIn -> checkIns.answer(intent.device)
+            is UserIntent.CheckServer -> servers.check(intent.address)
+            is UserIntent.SelectServerModel -> servers.select(intent.model)
+            is UserIntent.SaveServer -> servers.save(intent)
+            UserIntent.CheckForUpdate -> accounts.checkRelease()
         }
     }
 
@@ -262,12 +366,9 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         chat.interrupt(InterruptCause.ProviderError)
         val handle = d.models.state.value.models[id]?.credential
         d.models.remove(id)
+        if (d.settings.state.value.values.refusalFallback == id)
+            patch(PreferenceField.RefusalFallback.edit(null))
         if (handle != null) d.vault.remove(handle)
-    }
-
-    private fun cancelSignIn() {
-        signIn?.cancel()
-        setSignIn(SignInState.Failed(SignInFailure.Cancelled))
     }
 
     private suspend fun setMotionMode(mode: MotionMode) {
@@ -300,52 +401,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
                             Percent((l.strokeHigh.value + by).coerceIn(l.strokeLow.value + 1, 100))
                     )
             }
-        if (next != l && engine.state.value.members.isNotEmpty()) engine.stop(null)
         patch(PreferenceField.OutputLimits.edit(next))
-    }
-
-    private fun startSignIn() {
-        val action = d.signIn ?: return unavailable()
-        signIn?.cancel()
-        setSignIn(SignInState.WaitingForBrowser)
-        signIn =
-            d.scope.launch(d.dispatchers.session) {
-                val failure =
-                    try {
-                        action.signIn()
-                    } catch (_: IOException) {
-                        record(DiagnosticKind.AccountUnavailable)
-                        SignInFailure.NetworkError
-                    }
-                if (!isActive) return@launch
-                if (failure != null) {
-                    setSignIn(SignInState.Failed(failure))
-                    return@launch
-                }
-                val info =
-                    ModelConnection(
-                        ConnectionId("chatgpt"),
-                        "ChatGPT",
-                        ProviderKind.ChatGpt,
-                        "gpt-6.1-terra",
-                        "Terra",
-                        CapabilityLevel.Advanced,
-                        true,
-                        true,
-                        ConnectionStatus.Ready,
-                    )
-                try {
-                    d.models.save(SavedModel(info, d.signInCredential))
-                    setSignIn(SignInState.Idle)
-                } catch (_: IOException) {
-                    storeFailed()
-                    setSignIn(SignInState.Failed(SignInFailure.NetworkError))
-                }
-            }
-    }
-
-    private fun setSignIn(value: SignInState) {
-        ui.update { it.copy(models = it.models.copy(signIn = value)) }
     }
 
     private fun unavailable() {
@@ -355,33 +411,5 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     private fun storeFailed() {
         record(DiagnosticKind.StoreUnavailable)
         ui.update { it.copy(backendNotice = BackendNotice.StorageUnavailable) }
-    }
-
-    private fun observeNetwork() {
-        val network = d.network.observe()
-        var previous = network.value
-        d.scope.launch(d.dispatchers.session) {
-            network.collect { current ->
-                if (previous != current) {
-                    previous = current
-                    chat.interrupt(InterruptCause.ConnectionLost)
-                    val owners =
-                        engine.state.value.owners.values.filter {
-                            it.device.connection in
-                                setOf(
-                                    ConnectionKind.HandyCloud,
-                                    ConnectionKind.AutoblowCloud,
-                                    ConnectionKind.IntifaceOnNetwork,
-                                )
-                        }
-                    owners.forEach { devices.disconnect(it.device.id, lost = true) }
-                    if (current.isOnline) safety.retryRecovery()
-                }
-                ui.update {
-                    it.copy(devices = it.devices.copy(isOnline = current.isOnline))
-                        .models(d.models.state.value)
-                }
-            }
-        }
     }
 }

@@ -14,6 +14,8 @@ public data class ModelsState(
     public val plannerConnection: ConnectionId?,
     public val serverCheck: ServerCheck,
     public val signIn: SignInState,
+    /** Local connection explicitly authorized for a hosted refusal retry, or null for Off. */
+    public val refusalFallback: ConnectionId? = null,
 )
 
 /**
@@ -23,6 +25,7 @@ public data class ModelsState(
  * @property shortName the name the UI shows in tight places, such as "Terra".
  * @property isEncrypted false for plain HTTP to a server on the local network.
  */
+@kotlinx.serialization.Serializable
 public data class ModelConnection(
     public val id: ConnectionId,
     public val name: String,

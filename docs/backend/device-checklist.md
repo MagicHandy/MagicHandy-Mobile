@@ -1,0 +1,14 @@
+# Phone acceptance checklist
+
+These checks remain open for an owner-controlled phone, explicitly selected devices and test accounts. JVM simulations provide protocol and lifecycle regression coverage. The release gate does not establish physical timing or firmware behaviour.
+
+| Area | Acceptance evidence |
+|---|---|
+| Service and system controls | Start from a visible activity on the target Android versions. Check notification denial, connected-device service eligibility, background restrictions, screen-off playback and wake-lock release. Swipe away the task and check every participating device. Verify the footer, lock-screen action, TalkBack and Quick Settings Stop. |
+| Notification and visibility | Inspect the public lock screen for only "MagicHandy · Active" and Stop. Verify that the private notification includes the next change during Autopilot and opens Live. Compare Android's battery and notification settings with the app. Interrupt a chat-only reply by backgrounding. |
+| Bluetooth | Check explicit permission timing, denial and revocation, profile filtering, granted MTU, status-133 behaviour before the first write and retirement after an uncertain write. Measure output jitter, per-owner Stop latency and reconnection across supported firmware. |
+| Handy | Exercise each cloud and native model with both mount orientations, narrowed stroke windows, clock drift, a phone wall-clock jump, long playback, Pause/Resume and Edge. Check initial slider position and endpoints. On BLE firmware without geometry telemetry, verify RPC 715 and range restoration. If telemetry is available, verify the finite lead-in. Check linked alignment and loss of one participant. |
+| Other devices | Confirm Intiface vibration selection, ceiling and behaviour when the bridge is killed. Check Coyote B1 reporting, personal ceilings, both channels at zero and the 100 ms cadence. Check the Ultra's last movement and physical pause button. |
+| VacuGlide | With a local means to turn the device off, verify loss-time Stop, independent Stop on return, process death, both valves closed, permitted valve steps and personal motor range. Exercise the default check-in, Off, and the unanswered one-minute deadline. |
+| Network and models | Check airplane mode, Wi-Fi to cellular, a LAN without internet, a model-only outage and return of the same device while Wi-Fi remains connected. Complete the owner-authorized Custom Tab sign-in and token rotation. Verify the provider accepts the loopback callback on the phone. |
+| Storage and performance | Check Android Keystore persistence and behaviour after a key becomes unusable. Inspect backup and restore on the supported Android versions. Kill the process between journal arming and the first command. Verify Stop-only recovery and the local-check flow. Measure cold startup, sustained memory, trim response and screen-off scheduling jitter. |

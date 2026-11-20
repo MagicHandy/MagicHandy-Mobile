@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -35,6 +36,7 @@ android {
     }
 
     buildFeatures { compose = true }
+    testOptions { unitTests.isIncludeAndroidResources = true }
 
     lint {
         warningsAsErrors = true
@@ -62,6 +64,10 @@ kotlin {
 dependencies {
     implementation(project(":core"))
     implementation(project(":transport"))
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.browser)
+    implementation(libs.kotlinx.serialization.json)
     // In-memory stores, simulated devices and a canned model, for debug builds only
     // (docs/backend/wiring.md).
     debugImplementation(testFixtures(project(":core")))
@@ -78,11 +84,19 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    testImplementation(testFixtures(project(":core")))
+    testImplementation(testFixtures(project(":transport")))
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.archunit)
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.junit.four)
+    testRuntimeOnly(libs.junit.vintage)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-tasks.withType<Test>().configureEach { useJUnitPlatform() }
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+}

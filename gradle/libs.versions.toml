@@ -45,6 +45,14 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 # Test-only bytecode checks enforce the module and output boundaries in architecture plan §5.2.
 archunit = { module = "com.tngtech.archunit:archunit", version = "1.4.1" }
+# Opens the registered identity flow in a browser-owned Custom Tab.
+androidx-browser = { module = "androidx.browser:browser", version = "1.9.0" }
+# Runs Android lifecycle, notification and Room integration tests on the JVM.
+robolectric = { module = "org.robolectric:robolectric", version = "4.16.1" }
+# Discovers Robolectric's JUnit 4 runner alongside the JUnit Platform tests.
+junit-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit" }
+# Supplies the JUnit 4 runner annotations used by Android JVM framework tests.
+junit-four = { module = "junit:junit", version = "4.13.2" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

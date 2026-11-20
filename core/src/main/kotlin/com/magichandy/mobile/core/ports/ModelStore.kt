@@ -5,13 +5,17 @@ import com.magichandy.mobile.core.api.ModelConnection
 import kotlinx.coroutines.flow.StateFlow
 
 /** Persisted model configuration. Only the vault handle is kept next to public connection data. */
+@kotlinx.serialization.Serializable
 public data class SavedModel(
     public val info: ModelConnection,
     public val credential: SecretHandle? = null,
     public val address: String? = null,
+    /** Selected input context in tokens. Zero uses the connection's capability floor. */
+    public val contextTokens: Int = 0,
 )
 
 /** Named connections and independently persisted roles. Null planner inherits the chat role. */
+@kotlinx.serialization.Serializable
 public data class ModelCatalog(
     public val models: Map<ConnectionId, SavedModel> = emptyMap(),
     public val chat: ConnectionId? = null,

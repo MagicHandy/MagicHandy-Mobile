@@ -99,6 +99,7 @@ enum class SheetPage {
     PlannerModel,
     Persona,
     ChatModel,
+    RefusalFallback,
     Memory,
     DeviceType,
 }
@@ -137,6 +138,12 @@ class AppNavigator(stack: List<Route>, sheets: List<SheetPage>) {
     fun selectDestination(route: Route) {
         sheets = emptyList()
         stack = listOf(route)
+    }
+
+    /** Shows Live above Chat, as the chat deck opens it, and closes any sheet. */
+    fun openLive() {
+        sheets = emptyList()
+        stack = listOf(Route.Chat, Route.Live)
     }
 
     fun openSheet(page: SheetPage) {

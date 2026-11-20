@@ -26,8 +26,7 @@ import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.Palette
 import com.magichandy.mobile.core.api.UpdateCheck
 import com.magichandy.mobile.core.api.UserIntent
-import com.magichandy.mobile.ui.components.Banner
-import com.magichandy.mobile.ui.components.BannerTone
+import com.magichandy.mobile.ui.NotificationsRefusedBanner
 import com.magichandy.mobile.ui.components.Caption
 import com.magichandy.mobile.ui.components.Card
 import com.magichandy.mobile.ui.components.CardRow
@@ -40,10 +39,16 @@ import com.magichandy.mobile.ui.components.SettingRow
 import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
-/** What App settings reads from Android itself, rather than from the core. */
+/**
+ * What Android allows the app, as the core last saw it (see `systemAccess`).
+ *
+ * @property areNotificationsRefused true when notifications are off because they were refused,
+ *   rather than because the app hasn't asked yet. Only then do screens warn about it.
+ */
 data class SystemAccess(
     val areNotificationsAllowed: Boolean,
     val isBatteryUnrestricted: Boolean,
+    val areNotificationsRefused: Boolean = !areNotificationsAllowed,
 )
 
 /** System screens App settings can open. */
@@ -80,15 +85,8 @@ fun AppSettingsScreen(
             onBack = onBack,
             breadcrumb = stringResource(R.string.tab_settings),
         )
-        if (!system.areNotificationsAllowed) {
-            Banner(
-                tone = BannerTone.Warn,
-                title = stringResource(R.string.notifications_blocked_title),
-                body = stringResource(R.string.notifications_blocked_body),
-                actionLabel = stringResource(R.string.notifications_open_settings),
-                onAction = links.openNotificationSettings,
-            )
-        }
+        if (system.areNotificationsRefused)
+            NotificationsRefusedBanner(links.openNotificationSettings)
         Section(R.string.app_models) {
             val chat = state.models.connections.firstOrNull { it.id == state.models.chatConnection }
             SettingRow(
@@ -132,8 +130,8 @@ fun AppSettingsScreen(
                 onClick = links.openBatterySettings,
                 isFirst = false,
             )
-            // TODO(M1): add the Quick Settings tile and diagnostics rows once StopTileService and
-            // the redacted export exist in the platform layer.
+            // TODO: add a row that offers the Quick Settings tile, and a diagnostics row once the
+            // core exposes the redacted export.
         }
         Section(R.string.app_data) { DeleteAllRow(onIntent) }
         Section(R.string.app_about) {

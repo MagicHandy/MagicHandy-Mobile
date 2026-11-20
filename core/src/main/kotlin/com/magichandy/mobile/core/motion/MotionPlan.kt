@@ -1,4 +1,4 @@
-// Ported from internal/motion/{plan,content}.go at 9a4c36cf.
+// Ported from internal/motion/{plan,content}.go at 1b80d72e.
 package com.magichandy.mobile.core.motion
 
 import kotlin.math.abs
@@ -12,11 +12,30 @@ internal enum class HandyModel(
 ) {
     Original(110.0, 400.0),
     Standard(125.0, 400.0),
-    Pro(125.0, 450.0),
+    Pro(125.0, 450.0);
+
+    companion object {
+        /**
+         * The least capable participating model sets linked timeline speed, as in
+         * WithHandyCalibration.
+         */
+        fun calibration(names: Collection<String>): HandyModel =
+            when {
+                "handy_2_standard" in names -> Standard
+                "handy_2_pro" in names -> Pro
+                else -> Original
+            }
+    }
 }
 
 /** M0 bounded-ramp loop. The semantic score compiler provides its authored coordinates. */
-internal class MotionPlan(authored: List<CurvePoint>, speedPercent: Int, model: HandyModel) {
+internal class MotionPlan(
+    authored: List<CurvePoint>,
+    speedPercent: Int,
+    model: HandyModel,
+    val handoffMillis: Long = 0,
+    private val phaseOffset: Double = 0.0,
+) : MotionPath {
     private val points = authored.toList()
 
     init {
@@ -74,18 +93,25 @@ internal class MotionPlan(authored: List<CurvePoint>, speedPercent: Int, model: 
         return (turns + (turns.first() + cycleMillis)).zipWithNext { a, b -> b - a }.min()
     }
 
-    fun sampleAt(timeMillis: Long): CurvePoint {
-        val phase = (timeMillis.toDouble() / periodMillis) % 1.0
+    fun phaseAt(timeMillis: Long): Double =
+        (phaseOffset + (timeMillis - handoffMillis).coerceAtLeast(0).toDouble() / periodMillis) %
+            1.0
+
+    override fun sampleAt(timeMillis: Long): CurvePoint {
+        val phase = phaseAt(timeMillis)
         val raw = curve.positionAt(phase * cycleMillis)
         return CurvePoint(timeMillis, (100.0 * raw / 100.0).coerceIn(0.0, 100.0))
     }
 
-    fun knotTimes(start: Long, end: Long): Set<Long> = buildSet {
+    override fun knotTimes(start: Long, end: Long): Set<Long> = buildSet {
         for (point in points) {
             val phase = point.timeMillis.toDouble() / cycleMillis
-            var cycle = ceil(start.toDouble() / periodMillis - phase).toLong()
+            var cycle =
+                ceil((start - handoffMillis).toDouble() / periodMillis - phase + phaseOffset)
+                    .toLong()
             while (true) {
-                val at = ((phase + cycle) * periodMillis).roundToLong()
+                val at =
+                    handoffMillis + ((phase - phaseOffset + cycle) * periodMillis).roundToLong()
                 if (at >= end) break
                 if (at >= start) add(at)
                 cycle++

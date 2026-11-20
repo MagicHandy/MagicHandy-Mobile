@@ -1,8 +1,32 @@
 # Backend status
 
-**Handoff on 2026-11-19.** The backend is at M0. All nine pre-M1 review items and both Stop decisions are complete, and the debug composition root is packaged in the test fixtures. A forced offline run of `spotlessApply :core:check :transport:check spotlessCheck` passed all **103 JVM tests** (44 in `:core` and 59 in `:transport`) with zero failures, errors or skips.
+The non-UI M1–M4 implementation is complete against desktop alpha.89, `1b80d72e`. The offline rerun passed with **342 JVM tests**, comprising 223 core, 103 transport and 16 app tests, with zero failures, errors or skips. Full-suite counts below are cumulative at each milestone.
 
-## Verification on 2026-11-19
+| Milestone | Implemented and verified | Tests at milestone | Remaining acceptance or deviation |
+|---|---|---:|---|
+| Parity refresh | Re-export from alpha.89, history admission fitted to the selected context, expanded managed reference windows and the 135-case matrix. | 115 | Managed inference stays desktop-only. The final export now includes 197 cases. |
+| M1 backend | Continuous gesture and Layered scores, retargeting, Pause/Resume, live limits, Edge, both Handy paths, startup, clock sync and sustained playback. Hosted Advanced chat, refusal retry, one repair, built-in prompts, memory, OpenRouter, device and model setup. | 293 | The pinned native Handy protocol exposes no physical geometry RPC. The port uses acknowledged Stop and range restoration there. The measured path and lead-in are tested with synthetic telemetry. |
+| M1 Android | Release factory, foreground-service admission, notification and Live entry, GATT, contextual permissions, Room, journal, Keystore vault, browser, clock, network and diagnostics. Both APKs assemble. | 300 | Android and firmware behaviour on a phone, including actual account sign-in. Debug defaults to the simulators. A runtime settings toggle is an optional UI request. |
+| M2 | Service-owned Autopilot, ADR 0072 timing, finish target, all three check-in settings, held planning on model loss, Recent changes, private next-change notification and direct tile Stop. | 305 | Screen-off scheduling, Doze and tile behaviour on target Android versions. |
+| M3 | Three named LAN server types, Simple and Intermediate contracts, Intiface vibration, linked Handys, Coyote 3.0 and Autoblow Ultra. | 313 | Physical linked timing, bridge loss, Coyote strength reporting and Ultra movement. Bridge-only Stop evidence remains unconfirmed. |
+| M4 | VacuGlide tempo, six seeded routines, valve limits, 15-minute default check-in with Off, Stop on loss and return, and simulated process death, radio revocation, airplane mode and network handover. | 326 | Physical suction, local switch-off, valve closure and reconnection. A return may happen while the phone stays on the same network. |
+
+## Verification
+
+The final command was `./gradlew --console=plain spotlessApply check :app:assembleDebug :app:assembleRelease --offline --rerun-tasks`. All 126 actionable tasks executed. The debug Android Lint XML contains zero issues. JUnit Platform ran Jupiter and Vintage/Robolectric with zero failures, errors or skips. App JVM tests use the debug test variant, including a test that constructs the production release graph. The build configuration disables a separate release JVM test variant. Provider and device traffic in tests stayed in memory or on loopback.
+
+The debug APK is 37,064,636 bytes and the unsigned release APK is 4,414,238 bytes. Both APKs passed ZIP integrity checks and contain the exact regenerated prompt catalog.
+
+The later audit checkpoints reached 331 tests for the complete Terra bodies, explicit refusal fallback and automatic Edge return, 334 for Room migration and network projection, 338 for the release graph, browser, device acknowledgements and Intiface selection, then 341 for durable cloud-only return, provider authorization and all three LAN server types. The 342-test final gate includes priority native Stop. It also exercises a last-moment Coyote strength change and the 200-fact memory capacity. Fixtures and prompt resources were independently regenerated and compared byte for byte. [Parity map](../../PARITY.md)
+
+## Decisions and handoff
+
+- **Stop and recovery.** Stop fences output before any I/O. A returned VacuGlide requires a second Stop even if the loss-time Stop was acknowledged. The journal retains the device until that repeat settles or the user records a local check. Unknown delivery stays visible. Physical switches and the 1.5-second motor test keep their existing semantics.
+- **Consent and privacy.** Memory starts Off. With memory enabled, explicit remember requests in the five supported languages can save a short fact in the reply transaction, up to 200 distinct facts per persona. The refusal fallback requires a chosen local connection. Clearing it invalidates an in-flight fallback result. ChatGPT sign-in uses a short-lived, single-use loopback callback behind the browser port.
+- **Release and debug.** Release uses platform adapters. Debug uses local simulators for devices, model setup and release checks. Only `MagicHandyApp.kt`, `MainActivity.kt` and the debug `CoreFactory.kt` changed among shared wiring files. Compose source, UI strings, previews and the root build files stayed with their owners.
+- **Remaining work.** The phone checklist covers operational acceptance. UI follow-ups cover settings state, memory review, local fallback selection, Coyote controls, Intiface choices and shared Live navigation. The motor-test duration and form completion remain owner decisions. [Phone checklist](device-checklist.md) · [UI requests](ui-requests.md) · [Contract changes](contract-changes.md) · [Wiring](wiring.md)
+
+## M0 verification on 2026-11-19
 
 The baseline is the exported desktop snapshot at `9a4c36cf41fa4ec6abeb4c72ae6b4790cab0430a`. The Gradle verification gate runs `spotlessApply :core:check :transport:check spotlessCheck`.
 
@@ -18,31 +42,9 @@ The baseline is the exported desktop snapshot at `9a4c36cf41fa4ec6abeb4c72ae6b47
 
 The fixtures cover 21 atlas cases (807 frames), 10 Bluetooth RPC vectors, five Cloud REST requests, three hosted Terra request bodies, five translations, five prompt sets in one file, the default persona, the notice catalog and both brand assets. The shipped desktop has one built-in MagicHandy persona derived from default settings, and the fixture exporter never opens a persona store.
 
-The final handoff adds tests for the scope-only debug factory, held ordinary dispatchers, finite and stalled motor tests, HSP playback through the real Bluetooth session, connection-role deletion, the diagnostic ring and credential removal during token refresh. The Cloud tests check the actual HTTP method, path, headers and body against an in-process peer. All three Terra request fixtures serve as desktop export baselines for the future Advanced composer.
+The final handoff adds tests for the scope-only debug factory, held ordinary dispatchers, finite and stalled motor tests, HSP playback through the real Bluetooth session, connection-role deletion, the diagnostic ring and credential removal during token refresh. The Cloud tests check the actual HTTP method, path, headers and body against an in-process peer. Those three baseline captures now verify the complete hosted path in HostedParityTest.
 
 Two independent final exports produced the same manifest SHA-256 (`d08f1f6c9353fc96d1fb6ad59d80cc1d6dd4167b9bba964328c5559783b6f5b3`), and each manifest entry records its file digest. The exporter normalizes text line endings before hashing so these digests survive a Windows Git checkout.
-
-## Remaining milestones
-
-| Milestone | Implemented and verified | Remaining work and deviations |
-|---|---|---|
-| M0 | All seven backend checkpoints and the pre-M1 review fixes (49 fixture records and 103 JVM tests). | The Android pass still needs to cover real sign-in return, Pixel radio and Stop latency, jitter, cold launch, APK and memory budgets, notification denial and service lifecycle. |
-| M1 | M0 supplies the 21-case bounded-ramp sampler, both Handy protocol paths, text-only turns, revisioned in-memory storage and basic orchestration. | 114 atlas cases remain, along with continuous score compilation, retargeting, Pause/Resume semantics, Edge, Advanced motion chat, schema validation, refusal retry and repair, memory extraction, full history windows, OpenRouter and device/model setup. No M1 exit claim yet. |
-| M2 | Settings can store change frequency, check-in choice, planner role and finish target. No planner acceptance runs yet. | Autopilot planning, ADR 0072 timing, check-ins, finish-target handling, held planning and run history. |
-| M3 | The M0 integration suite exercises device selection and simulator fan-out. No M3 production drivers or LAN acceptance runs yet. | LAN server detection and providers, Simple and Intermediate contracts, Intiface, multiple Handy connections, the Coyote cadence and the Ultra driver. The Handy via Intiface isn't built, following the default for plan §12 decision 1, which is still open. |
-| M4 | M0 includes persistent-speed simulation, a cloud-loss retry and cold-start Stop through the journal. No production VacuGlide acceptance runs yet. | Real tempo and valve commands, the timed check-in and its Off setting, longer failure scenarios and physical acceptance. The simulator carries the fifteen-minute settings default. |
-
-The Android app pass owns the foreground service, GATT, Room, Keystore, browser callback and on-device measurements. All protocol verification so far uses synthetic data.
-
-The Bluetooth spike requires correlated responses to mutating RPCs, including initialization, which can exclude firmware that writes successfully without replying. Cloud confirmation requires an explicit stopped playback state. Startup position reconciliation, optional clock synchronization, retargeting, reversed mounting and sustained physical playback remain for Handy acceptance.
-
-## Behaviour exposed to the UI
-
-The debug path supports onboarding, new and saved chats, streaming replies, Send again, five-locale typed Stop, explicit connection to the supplied devices, next-run selection, manual motion and a short motor test. It also supports Stop receipts, interrupted-run recovery and stored preferences. The first hosted text path has no motion authority. When a requested action is unavailable, the UI can display `AppState.backendNotice`.
-
-Currently, Pause ends output through Stop, and Resume starts a fresh manual run. Editing a limit during motion also stops the current run before storing the limit; the reviewed Phase 1 handoff and smooth retargeting wait for M1. Text-only chat history keeps up to 16 messages. Memory storage and transactions are in place, while extraction is deferred to the Advanced chat port.
-
-The Bluetooth simulator runs the production RPC session against an in-memory byte peer, while the other four simulators operate at the device transport interface. Coyote write-only completion and vibrator bridge acknowledgement both retain unconfirmed receipts. See the [wiring guide](wiring.md), [additive API change](contract-changes.md) and [platform proposals](proposals.md).
 
 ## Review fixes (2026-11-19)
 
@@ -58,5 +60,3 @@ The Bluetooth simulator runs the production RPC session against an in-memory byt
 7. **Committed replies.** The chat transaction's final admission check claims the turn in the engine's Stop epoch, so a Stop after that point cannot label the saved reply as interrupted. `ChatCommitTest` holds the store after commit, triggers Stop, checks the receipt and retries, confirming that exactly one assistant message remains. Both module checks passed.
 8. **Connection ownership.** Each opening or connected device owns a supervised child job, and service readiness and connection I/O run outside the intent queue. Disconnect cancels an unfinished open, or waits for the attached owner's Stop and release before ending its scope. `DeviceConnectionTest` covers a later chat intent while connect is held, duplicate connect requests, owner-only cancellation and disconnecting mid-connect. Both module checks passed.
 9. **Maintainability and packaging.** Both module checks passed with strict explicit API enabled for test-fixture compilations, and production JARs exclude `core.testing` and `transport.simulated`. `ArchitectureTest` checks all five driver packages in both directions, and `HandyCloudTest` verifies that owners share a dedicated Stop dispatcher. The six reviewed functions now delegate their component steps, KDoc for intents and dependencies is complete, and caught I/O failures report redacted categories (`HandyBluetoothTest` checks the diagnostic emitted by a failed native Stop). Final JAR inspection found all six debug-store classes and all 15 simulator classes in the fixture JARs and zero in the production JARs.
-
-The Android handoff covers the debug Gradle dependencies and the local-check control. Motor-test duration and form-completion behaviour remain open owner decisions. See [wiring](wiring.md) and [contract changes](contract-changes.md).

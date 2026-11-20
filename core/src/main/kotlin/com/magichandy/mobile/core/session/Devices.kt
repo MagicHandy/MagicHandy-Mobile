@@ -1,9 +1,8 @@
-// Ported from internal/deviceapp/lifecycle.go and internal/httpapi/playback_devices.go at 9a4c36cf.
+// Ported from internal/deviceapp/lifecycle.go and internal/httpapi/playback_devices.go at 1b80d72e.
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.AppState
-import com.magichandy.mobile.core.api.BackendNotice
 import com.magichandy.mobile.core.api.Banner
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
@@ -11,19 +10,12 @@ import com.magichandy.mobile.core.api.DeviceOutput
 import com.magichandy.mobile.core.api.DeviceSettings
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.DeviceSummary
-import com.magichandy.mobile.core.api.InterruptedRun
 import com.magichandy.mobile.core.api.MotionMode
-import com.magichandy.mobile.core.api.MotionSource
-import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.RunMembership
-import com.magichandy.mobile.core.api.RunPhase
 import com.magichandy.mobile.core.api.StartRefusal
 import com.magichandy.mobile.core.api.StopOutcome
-import com.magichandy.mobile.core.motion.ManualPlayback
 import com.magichandy.mobile.core.motion.MotionEngine
 import com.magichandy.mobile.core.ports.DiagnosticKind
-import com.magichandy.mobile.core.ports.Epoch
-import com.magichandy.mobile.core.ports.RunIntent
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -46,16 +38,41 @@ internal class Devices(
     private val ui: MutableStateFlow<AppState>,
     private val record: (DiagnosticKind) -> Unit,
 ) {
-    private val playback = ManualPlayback(d, engine)
+    val playback = DevicePlayback(d, engine, safety, ui, { lead }, ::refused)
     private var lead: DeviceId? = null
 
     private class Connection(val scope: CoroutineScope) {
+        var checking: Job? = null
         var opening: Job? = null
         var closing = false
     }
 
     // Accessed only on the serialized session dispatcher, including after a suspended connect.
     private val connections = mutableMapOf<DeviceId, Connection>()
+
+    fun check(id: DeviceId) {
+        val owner = engine.state.value.owners[id] ?: return connect(id)
+        val connection = connections[id] ?: return
+        if (connection.closing || connection.checking?.isActive == true) return
+        val read = owner.checkConnection ?: return
+        connection.checking =
+            connection.scope.launch(d.dispatchers.session) {
+                val reachable =
+                    try {
+                        kotlinx.coroutines.withTimeoutOrNull(5000) {
+                            withContext(d.dispatchers.io) { read() }
+                        } == true
+                    } catch (_: IOException) {
+                        false
+                    } catch (_: SecurityException) {
+                        false
+                    }
+                if (!reachable && !connection.closing && engine.state.value.owners[id] === owner)
+                    d.scope.launch(d.dispatchers.session) {
+                        if (engine.state.value.owners[id] === owner) lose(listOf(id))
+                    }
+            }
+    }
 
     fun connect(id: DeviceId) {
         val row = ui.value.devices.devices.firstOrNull { it.id == id } ?: return
@@ -104,16 +121,50 @@ internal class Devices(
             if (connection.closing || owner == null || owner.device.id != id) return
             engine.attach(owner)
             attached = true
+            owner.feedback?.let { flow ->
+                connection.scope.launch(d.dispatchers.session) {
+                    flow.collect { value ->
+                        if (
+                            value != null &&
+                                engine.state.value.owners[id] === owner &&
+                                id in engine.state.value.members
+                        )
+                            ui.update { s ->
+                                val pace = (value as? DeviceOutput.Tempo)?.tempo
+                                s.copy(
+                                    run =
+                                        if (id == lead && pace != null)
+                                            s.run.copy(
+                                                commandedPace = pace,
+                                                source =
+                                                    engine.state.value.tempo?.source
+                                                        ?: s.run.source,
+                                            )
+                                        else s.run,
+                                    devices =
+                                        s.devices.copy(
+                                            devices =
+                                                s.devices.devices.map { row ->
+                                                    if (row.id == id) row.copy(output = value)
+                                                    else row
+                                                }
+                                        ),
+                                )
+                            }
+                    }
+                }
+            }
             edit(id) {
                 it.copy(status = DeviceStatus.Connected, membership = RunMembership.NextRun)
             }
             if (lead == null) setLead(id)
             if (
-                engine.state.value.receipt?.outcomes.orEmpty().any {
-                    it.device == id && it.outcome != StopOutcome.Confirmed
-                }
+                safety.awaitsReturn(id) ||
+                    engine.state.value.receipt?.outcomes.orEmpty().any {
+                        it.device == id && it.outcome != StopOutcome.Confirmed
+                    }
             )
-                safety.retryRecovery()
+                safety.retryRecovery(id)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -124,6 +175,25 @@ internal class Devices(
                 withContext(NonCancellable) { release(id, connection, lost = true) }
             }
         }
+    }
+
+    suspend fun lose(ids: List<DeviceId>) {
+        val state = engine.state.value
+        val participants = ids.filter { it in state.members }.mapNotNull(state.owners::get)
+        if (participants.isNotEmpty()) {
+            participants.forEach { safety.lost(it.device) }
+            engine.stop(null, expected = state.epoch)
+            ui.update { s ->
+                s.copy(
+                    banners =
+                        participants.map { owner ->
+                            val ref = owner.device
+                            Banner.DeviceLost(ref.id, ref.name, ref.connection, ref.afterLoss)
+                        } + s.banners.filterNot { it is Banner.DeviceLost && it.device in ids }
+                )
+            }
+        }
+        for (id in ids) disconnect(id, lost = true)
     }
 
     suspend fun disconnect(id: DeviceId, lost: Boolean = false) {
@@ -137,6 +207,7 @@ internal class Devices(
             return
         }
         if (lost && id in engine.state.value.members) {
+            safety.lost(owner.device)
             // Preserve the target in the Stop fan-out before removing its live handle.
             engine.stop(null)
             ui.update { s ->
@@ -224,157 +295,18 @@ internal class Devices(
         }
     }
 
-    suspend fun start(epoch: Epoch, test: DeviceId?) {
-        if (!ui.value.firstRun.hasAcknowledgedAdultsOnly) return
-        if (ui.value.settings.motionMode == MotionMode.Off && test == null) {
-            refused(StartRefusal.MotionModeOff)
-            return
-        }
-        if (engine.state.value.members.isNotEmpty()) {
-            ui.update { it.copy(backendNotice = BackendNotice.RunAlreadyActive) }
-            return
-        }
-        val state = ui.value
-        val ids =
-            state.devices.devices
-                .filter {
-                    it.status == DeviceStatus.Connected &&
-                        if (test != null) it.id == test else it.membership != RunMembership.NotInRun
-                }
-                .map { it.id }
-        val leadId = lead?.takeIf { it in ids } ?: ids.firstOrNull()
-        val owners = ids.mapNotNull(engine.state.value.owners::get)
-        when (
-            val start =
-                safety.start(
-                    epoch,
-                    owners,
-                    if (test != null) RunIntent.TestMotor else RunIntent.Start,
-                )
-        ) {
-            is StartDecision.Refused -> refused(start.cause)
-            StartDecision.Superseded ->
-                if (engine.epoch == epoch && !engine.state.value.canStart)
-                    ui.update { it.copy(backendNotice = BackendNotice.ReconcileDevices) }
-            StartDecision.Admitted ->
-                playback.play(epoch, owners, state.run.limits, test != null) { pace ->
-                    showPlaying(epoch, ids, leadId, pace)
-                }
-        }
+    suspend fun setReversed(id: DeviceId, isReversed: Boolean) {
+        val settings =
+            ui.value.devices.devices.firstOrNull { it.id == id }?.settings as? DeviceSettings.Handy
+                ?: return
+        if (settings.isReversed == isReversed) return
+        if (d.devices.setHandyReversed(id, isReversed))
+            edit(id) { it.copy(settings = settings.copy(isReversed = isReversed)) }
     }
-
-    private fun showPlaying(epoch: Epoch, ids: List<DeviceId>, leadId: DeviceId?, pace: Percent) {
-        ui.update { state ->
-            if (engine.epoch != epoch) return@update state
-            val rows =
-                state.devices.devices.map { row ->
-                    if (row.id !in ids) row
-                    else
-                        row.copy(
-                            status = DeviceStatus.Playing,
-                            membership = RunMembership.InRun(row.id == leadId),
-                            output = output(row, pace, state),
-                        )
-                }
-            state.copy(
-                run =
-                    state.run.copy(
-                        phase = RunPhase.Playing,
-                        source = MotionSource.You,
-                        commandedPace = pace,
-                    ),
-                devices = state.devices.copy(devices = rows),
-                banners = state.banners.filterNot { it is Banner.StartRefused },
-            )
-        }
-    }
-
-    private fun output(row: DeviceSummary, pace: Percent, s: AppState): DeviceOutput =
-        when (val config = row.settings) {
-            is DeviceSettings.Handy,
-            DeviceSettings.AutoblowUltra ->
-                DeviceOutput.Stroke(pace, null, s.run.limits.strokeLow, s.run.limits.strokeHigh)
-            is DeviceSettings.Vibrator ->
-                DeviceOutput.Level(
-                    Percent(minOf(pace.value, config.maxLevel.value)),
-                    config.maxLevel,
-                    true,
-                )
-            is DeviceSettings.Coyote -> DeviceOutput.Channels(0, 0)
-            is DeviceSettings.VacuGlide -> DeviceOutput.Tempo(pace)
-        }
 
     fun projectSafety() {
-        ui.update { s ->
-            val engineState = engine.state.value
-            val record = safety.interrupted.value
-            val receipt = engineState.receipt
-            val interrupted = record?.let { journal ->
-                val known =
-                    (s.interruptedRun?.outcomes.orEmpty() +
-                            engineState.evidence?.outcomes.orEmpty())
-                        .associateBy { it.device }
-                val outcomes =
-                    journal.devices
-                        .filterNot { it.id in engineState.reconciled }
-                        .mapNotNull { known[it.id] }
-                        .sortedWith(
-                            compareBy(
-                                {
-                                    it.outcome == StopOutcome.Confirmed ||
-                                        it.family != DeviceFamily.VacuGlide
-                                },
-                                { it.outcome },
-                            )
-                        )
-                InterruptedRun(journal.at, outcomes, journal.autopilot)
-            }
-            val updated = s.copy(stopReceipt = receipt, interruptedRun = interrupted)
-            if (engineState.members.isNotEmpty()) updated
-            else
-                updated.copy(
-                    run =
-                        s.run.copy(
-                            phase = RunPhase.Idle,
-                            commandedPace = null,
-                            source = null,
-                            isPlanningHeld = false,
-                        ),
-                    devices =
-                        s.devices.copy(
-                            devices =
-                                s.devices.devices.map { row ->
-                                    if (
-                                        row.id in engineState.retired &&
-                                            row.id in engineState.owners
-                                    )
-                                        row.copy(
-                                            status = DeviceStatus.Lost,
-                                            membership = RunMembership.NotInRun,
-                                            output = null,
-                                        )
-                                    else afterStop(row)
-                                }
-                        ),
-                )
-        }
+        ui.update { it.withRunEvidence(engine.state.value, safety.interrupted.value, lead) }
     }
-
-    private fun afterStop(row: DeviceSummary): DeviceSummary =
-        when (row.status) {
-            DeviceStatus.Playing,
-            DeviceStatus.Paused ->
-                row.copy(
-                    status = DeviceStatus.Connected,
-                    membership = RunMembership.NextRun,
-                    output = null,
-                )
-            DeviceStatus.NotConnected,
-            DeviceStatus.Connected,
-            DeviceStatus.Connecting,
-            DeviceStatus.NeedsSetup,
-            DeviceStatus.Lost -> row
-        }
 
     fun refused(cause: StartRefusal) {
         ui.update {

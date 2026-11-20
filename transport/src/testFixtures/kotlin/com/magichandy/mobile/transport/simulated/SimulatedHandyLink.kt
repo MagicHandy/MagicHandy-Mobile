@@ -1,4 +1,4 @@
-// Ported from internal/handyble/simulated.go at 9a4c36cf.
+// Ported from internal/handyble/simulated.go at 1b80d72e.
 package com.magichandy.mobile.transport.simulated
 
 import com.magichandy.mobile.transport.ble.BluetoothLink
@@ -11,7 +11,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /** Byte-level peer used by the real firmware-4 session. Every reply carries the request ID. */
-internal class SimulatedHandyLink(private val stopped: () -> Unit) : BluetoothLink {
+internal class SimulatedHandyLink(
+    private val clockMillis: () -> Long = { 0 },
+    private val stopped: () -> Unit,
+) : BluetoothLink {
     private val closed = AtomicBoolean()
     private val notifications = Channel<ByteArray>(Channel.UNLIMITED)
     private var stream = false
@@ -58,6 +61,8 @@ internal class SimulatedHandyLink(private val stopped: () -> Unit) : BluetoothLi
                     stopped()
                     true
                 }
+                709,
+                712,
                 841 -> true
                 860 -> {
                     stream = true
@@ -82,7 +87,11 @@ internal class SimulatedHandyLink(private val stopped: () -> Unit) : BluetoothLi
                     uint(1, 3)
                     message(4) {
                         uint(1, id)
-                        if (accepted) message(method.number) {} else message(2) { uint(1, 1) }
+                        if (accepted)
+                            message(method.number) {
+                                if (method.number == 712) uint(1, clockMillis() and 0xffff_ffffL)
+                            }
+                        else message(2) { uint(1, 1) }
                     }
                 }
                 .bytes()

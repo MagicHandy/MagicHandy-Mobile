@@ -1,10 +1,11 @@
-// Ported from internal/handyble/{session,session_rpc}.go at 9a4c36cf.
+// Ported from internal/handyble/{session,session_rpc}.go at 1b80d72e.
 package com.magichandy.mobile.transport.handy
 
 import com.magichandy.mobile.core.api.ConnectionKind
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.ScanResultId
 import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.Clock
 import com.magichandy.mobile.core.ports.DeviceRef
 import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.DiagnosticKind
@@ -45,22 +46,34 @@ private constructor(private val wire: BluetoothWire, owner: DeviceTransport) :
     public companion object {
         /**
          * Connect to the selected device only. Readiness requires the profile and a correlated RPC
-         * 715 reply.
+         * 715 reply. Supplying [clock] enables the optional firmware clock probe. [readMounting]
+         * reads a nonblocking configuration snapshot at the start of each stream.
          */
         public suspend fun connect(
             device: DeviceRef,
             result: ScanResultId,
             connector: BluetoothConnector,
             scope: CoroutineScope,
+            clock: Clock? = null,
+            readMounting: () -> Boolean = { false },
         ): HandyBluetoothSession {
             require(
                 device.family == DeviceFamily.Handy && device.connection == ConnectionKind.Bluetooth
             )
-            val wire = openWire(result, connector, scope)
+            val wire = openWire(result, connector, scope, clock)
             try {
                 if (wire.stop { true } != StopEvidence.Acknowledged)
                     throw IOException("Handy initialization Stop unconfirmed")
-                return HandyBluetoothSession(wire, HandyTransport(device, wire))
+                wire.synchronizeClock()
+                return HandyBluetoothSession(
+                    wire,
+                    HandyTransport(
+                        device,
+                        wire,
+                        initiallyStopped = true,
+                        readMounting = readMounting,
+                    ),
+                )
             } catch (failure: Throwable) {
                 wire.close()
                 throw failure
@@ -71,6 +84,7 @@ private constructor(private val wire: BluetoothWire, owner: DeviceTransport) :
             id: ScanResultId,
             connector: BluetoothConnector,
             scope: CoroutineScope,
+            clock: Clock?,
         ): BluetoothWire {
             var last: IOException? = null
             repeat(3) {
@@ -86,14 +100,19 @@ private constructor(private val wire: BluetoothWire, owner: DeviceTransport) :
                     if (!characteristics.containsAll(listOf(profile.write, profile.notify)))
                         throw IOException("Handy characteristics missing")
                     val events = bounded(2.seconds) { opened.notifications(profile.notify) }
-                    return BluetoothWire(opened, limit, events, scope)
+                    return BluetoothWire(opened, limit, events, scope, clock)
                 } catch (failure: IOException) {
                     DiagnosticReporter.record(DiagnosticKind.DeviceConnectionFailed)
                     link?.retire()
+                    if (failure is com.magichandy.mobile.transport.ble.BluetoothSetupWriteFailure)
+                        throw failure
                     last = failure
                 } catch (cancelled: CancellationException) {
                     link?.retire()
                     throw cancelled
+                } catch (failure: Exception) {
+                    link?.retire()
+                    throw failure
                 }
             }
             throw last ?: IOException("Handy connection failed")
@@ -109,9 +128,14 @@ private class BluetoothWire(
     private val limit: Int,
     events: Flow<ByteArray>,
     private val scope: CoroutineScope,
+    private val clock: Clock?,
 ) : HandyWire {
+    private var clockReading: HandyClockReading? = null
     override val maxPoints = minOf(20, (limit - 25) / 11)
     override val stopTimeout = 2.seconds
+
+    override suspend fun readPosition(allowed: () -> Boolean) = link.readSliderPosition(allowed)
+
     private val gatt = Mutex()
     private val sequence = AtomicLong()
     private val closed = AtomicBoolean()
@@ -140,12 +164,40 @@ private class BluetoothWire(
         reader.cancel()
     }
 
-    override suspend fun command(command: HandyCommand, allowed: () -> Boolean): WriteResult =
-        request(command, { !disconnecting.get() && allowed() })
+    suspend fun synchronizeClock() {
+        val timer = clock ?: return
+        fun allowed() = !closed.get() && !disconnecting.get()
+        clockReading =
+            synchronizeBluetoothClock(
+                timer,
+                read = {
+                    var time: Long? = null
+                    request(
+                        HandyCommand.ClockGet,
+                        ::allowed,
+                        received = { time = it.deviceTimeMillis },
+                    )
+                    time
+                },
+                set = { request(it, ::allowed) == WriteResult.Accepted },
+            )
+        if (closed.get()) throw IOException("Handy link lost during clock synchronization")
+        if (clockReading == null) DiagnosticReporter.record(DiagnosticKind.ClockSyncUnavailable)
+    }
+
+    override suspend fun command(command: HandyCommand, allowed: () -> Boolean): WriteResult {
+        if (command is HandyCommand.Setup && allowed()) link.setActive(true)
+        val timed =
+            if (command is HandyCommand.Play && clock != null)
+                command.copy(serverTimeMillis = clockReading?.at(clock.elapsed()))
+            else command
+        return request(timed, { !disconnecting.get() && allowed() })
+    }
 
     private suspend fun request(
         command: HandyCommand,
         allowed: () -> Boolean,
+        received: (RpcReply) -> Unit = {},
         sent: () -> Unit = {},
     ): WriteResult {
         fun refused() = if (!allowed()) WriteResult.Stale else WriteResult.Uncertain
@@ -162,11 +214,25 @@ private class BluetoothWire(
         replies[id] = reply
         val refusedAtWrite = AtomicBoolean()
         try {
-            if (!submit(bytes, ::valid, refusedAtWrite, sent)) return refused()
-            val response = bounded(700.milliseconds) { reply.await() }
-            return if (valid() && !response.rejected && response.method == command.method)
-                WriteResult.Accepted
-            else WriteResult.Uncertain
+            if (
+                !submit(
+                    bytes,
+                    command == HandyCommand.StopCurrentMode,
+                    ::valid,
+                    refusedAtWrite,
+                    sent,
+                )
+            )
+                return refused()
+            val response = withTimeoutOrNull(700.milliseconds) { reply.await() }
+            if (response == null) {
+                if (command == HandyCommand.ClockGet) return WriteResult.Uncertain
+                throw IOException("Handy acknowledgement timed out")
+            }
+            if (!valid() || response.rejected || response.method != command.method)
+                return WriteResult.Uncertain
+            received(response)
+            return WriteResult.Accepted
         } catch (failure: IOException) {
             if (refusedAtWrite.get()) {
                 DiagnosticReporter.record(DiagnosticKind.WriteFenced)
@@ -181,6 +247,7 @@ private class BluetoothWire(
 
     private suspend fun submit(
         bytes: ByteArray,
+        stop: Boolean,
         valid: () -> Boolean,
         refused: AtomicBoolean,
         sent: () -> Unit,
@@ -191,7 +258,7 @@ private class BluetoothWire(
                 if (!valid()) return@withLock false
                 withContext(NonCancellable) {
                     try {
-                        writeNative(bytes) { valid().also { if (!it) refused.set(true) } }
+                        writeNative(bytes, stop) { valid().also { if (!it) refused.set(true) } }
                         if (!refused.get()) sent()
                         !refused.get()
                     } catch (failure: IOException) {
@@ -203,11 +270,12 @@ private class BluetoothWire(
             }
         }
 
-    private suspend fun writeNative(bytes: ByteArray, admitted: () -> Boolean) {
+    private suspend fun writeNative(bytes: ByteArray, stop: Boolean, admitted: () -> Boolean) {
         // The platform callback may ignore cancellation. Its owner outlives the bounded wait.
         val operation = scope.async {
             try {
-                link.write(GattProfile.Handy.write, bytes, true, admitted)
+                if (stop) link.writeStop(GattProfile.Handy.write, bytes, true, admitted)
+                else link.write(GattProfile.Handy.write, bytes, true, admitted)
                 null
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -241,6 +309,7 @@ private class BluetoothWire(
                 DiagnosticReporter.record(DiagnosticKind.TransportStopFailed)
                 false
             }
+        if (acknowledged) link.setActive(false)
         return if (acknowledged) StopEvidence.Acknowledged
         else
             StopEvidence.Unconfirmed(

@@ -13,7 +13,20 @@ import kotlinx.coroutines.delay
 public class SimulatedModelProvider(
     private val chunks: List<String> = listOf("I'm here. ", "We can take our time."),
     private val interval: Duration = 50.milliseconds,
-) : ModelProvider {
+) : ModelProvider, com.magichandy.mobile.core.ports.PlanningProvider {
+    override suspend fun plan(request: com.magichandy.mobile.core.ports.ModelRequest): TextResult {
+        delay(interval)
+        return TextResult.Completed(
+            when {
+                request.schema.toString().contains("\"intent\"") ->
+                    """{"intent":"check in","next":"normal","reply":"How is the pace?"}"""
+                request.schema.toString().contains("\"next_check_seconds\"") ->
+                    """{"edits":{},"next_check_seconds":45,"reply":"Steady."}"""
+                else -> """{"edits":{},"reply":"Steady."}"""
+            }
+        )
+    }
+
     override suspend fun stream(
         messages: List<TextMessage>,
         preview: (String) -> Unit,

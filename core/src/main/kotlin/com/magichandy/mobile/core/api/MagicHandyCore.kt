@@ -24,6 +24,38 @@ public interface MagicHandyCore {
      * [AppState.stopReceipt], and is never claimed before a device acknowledges it.
      */
     public fun emergencyStop(source: StopSource)
+
+    /** Opt in to one refusal retry using a specific local server, or disable it with null. */
+    public fun setRefusalFallback(connection: ConnectionId?) {}
+
+    /** Refresh the OS access shown on Devices and App settings. */
+    public fun updateSystemAccess(notificationsAllowed: Boolean, batteryUnrestricted: Boolean) {}
+
+    /** Persist the first notification prompt across activity and process recreation. */
+    public fun notificationPermissionRequested() {}
+
+    /** Activity visibility and memory callbacks never change the epoch of a service-owned run. */
+    public fun appBackgrounded() {}
+
+    public fun trimMemory() {}
+
+    /**
+     * List eligible vibrators at a user-supplied bridge address. An unavailable bridge yields an
+     * empty list.
+     */
+    public suspend fun intifaceVibrators(address: String): List<IntifaceChoice> = emptyList()
+
+    /** The VacuGlide's physical speed buttons adjust only the top of its own motor range. */
+    public fun stepTempoRange(device: DeviceId, direction: StepDirection) {}
+
+    /**
+     * Set the personal ceilings while disconnected. They are written on the next verified
+     * connection.
+     */
+    public fun setCoyoteLimits(device: DeviceId, maximumA: Int, maximumB: Int) {}
+
+    /** One explicit manual strength step while the selected Coyote has a reported baseline. */
+    public fun stepCoyote(device: DeviceId, channel: CoyoteChannel, increase: Boolean) {}
 }
 
 /** Where a Stop came from, for the receipt and diagnostics. */
@@ -51,4 +83,9 @@ public enum class StopSource {
 
     /** A cold start found an unresolved run journal. */
     Recovery,
+
+    /** An authorized, validated Advanced chat decision to stop playback. */
+    ModelReply,
+    /** A playing VacuGlide's one-minute check-in expired without an answer. */
+    CheckInTimeout,
 }

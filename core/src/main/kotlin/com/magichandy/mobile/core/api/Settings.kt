@@ -15,6 +15,8 @@ public data class SessionSettings(
     public val personas: List<PersonaRef>,
     public val isMemoryOn: Boolean,
     public val memoryEntries: Int,
+    /** Saved entries for local review and clearing, newest first. */
+    public val memories: List<String> = emptyList(),
 )
 
 /** What the AI may do with motion. Every mode works at every capability level. */
@@ -45,6 +47,15 @@ public data class AppSettingsState(
     public val language: AppLanguage,
     public val versionName: String,
     public val update: UpdateCheck,
+    /**
+     * Latest permission and battery state reported when Android brings the app to the foreground.
+     */
+    public val notificationsAllowed: Boolean = false,
+    public val isBatteryUnrestricted: Boolean = false,
+    /** Becomes true when Android has supplied the two system settings. */
+    public val hasSystemAccessSnapshot: Boolean = false,
+    /** True after the first connected-device notification permission request. */
+    public val hasAskedForNotifications: Boolean = false,
 )
 
 /** The three palettes (plan §14.1). The semantic colours stay fixed in each. */

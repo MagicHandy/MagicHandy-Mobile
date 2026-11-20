@@ -35,6 +35,9 @@ public fun interface ModelProvider {
 
 /** The app owns the redirect listener or app-link receiver and launches a system browser. */
 public interface BrowserLauncher {
+    /** Close any pending single-use receiver, including if request construction fails. */
+    public fun close() {}
+
     /** Exact redirect URI reserved for this receiver before opening the browser. */
     public val redirectUri: String
 

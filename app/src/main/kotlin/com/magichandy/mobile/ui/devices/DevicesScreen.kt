@@ -44,6 +44,7 @@ import com.magichandy.mobile.core.api.RunMembership
 import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.api.StopReceipt
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.NotificationsRefusedBanner
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.Banner
@@ -58,15 +59,22 @@ import com.magichandy.mobile.ui.components.StatusDot
 import com.magichandy.mobile.ui.components.StatusLabel
 import com.magichandy.mobile.ui.components.SwitchGraphic
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.settings.SystemAccess
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
-/** Devices (board V-Devices): every saved device, grouped by whether it is in the run. */
+/**
+ * Devices (board V-Devices): every saved device, grouped by whether it is in the run. It also warns
+ * when notifications were refused, since the prompt comes with the first connection (board
+ * V-System).
+ */
 @Composable
 fun DevicesScreen(
     state: AppState,
+    system: SystemAccess,
     onIntent: (UserIntent) -> Unit,
     onOpenDevice: (DeviceId) -> Unit,
     onAddDevice: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = MagicHandyTheme.dimens
@@ -95,6 +103,7 @@ fun DevicesScreen(
             }
         }
         UnresolvedStops(state.stopReceipt, onIntent)
+        if (system.areNotificationsRefused) NotificationsRefusedBanner(onOpenNotificationSettings)
         if (devices.devices.isEmpty()) {
             Text(
                 stringResource(R.string.devices_empty),

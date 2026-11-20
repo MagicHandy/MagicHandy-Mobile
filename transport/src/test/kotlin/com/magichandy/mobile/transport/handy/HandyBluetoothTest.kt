@@ -18,8 +18,6 @@ import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.DiagnosticReporter
 import com.magichandy.mobile.core.ports.StopEvidence
 import com.magichandy.mobile.transport.ble.BluetoothConnector
-import com.magichandy.mobile.transport.ble.BluetoothLink
-import com.magichandy.mobile.transport.ble.GattProfile
 import com.magichandy.mobile.transport.simulated.SimulatedDevices
 import com.magichandy.mobile.transport.simulated.simulatedDependencies
 import java.io.IOException
@@ -30,13 +28,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -46,67 +39,6 @@ import kotlinx.coroutines.withContext
 internal class HandyBluetoothTest {
     private val device =
         DeviceRef(DeviceId("fake"), "fake", DeviceFamily.Handy, ConnectionKind.Bluetooth)
-
-    private class Link : BluetoothLink {
-        var retired = false
-        val events = Channel<ByteArray>(Channel.UNLIMITED)
-        val methods = mutableListOf<Int>()
-        var replyIdDelta = 0
-        var negotiation = true
-        var blockSetup = false
-        val nativeClose = CompletableDeferred<Unit>()
-        var setupDelayMillis = 0L
-        var failWrite = false
-        var beforeAdmission: () -> Unit = {}
-
-        override suspend fun requestMtu(bytes: Int): Int {
-            assertEquals(517, bytes)
-            if (!negotiation) throw IOException("synthetic")
-            return bytes
-        }
-
-        override suspend fun discover(service: String) =
-            setOf(GattProfile.Handy.write, GattProfile.Handy.notify)
-
-        override suspend fun notifications(characteristic: String) = events.receiveAsFlow()
-
-        override suspend fun write(
-            characteristic: String,
-            bytes: ByteArray,
-            withResponse: Boolean,
-            admitted: () -> Boolean,
-        ) {
-            assertTrue(withResponse)
-            beforeAdmission()
-            if (!admitted()) throw IOException("synthetic pre-write refusal")
-            val packet = fields(requireNotNull(fields(bytes).single { it.number == 2 }.data))
-            val method = packet.single { it.data != null }.number
-            if (failWrite) throw IOException("synthetic write failure")
-            methods += method
-            if (method == 860) delay(setupDelayMillis)
-            if (method == 860 && blockSetup) withContext(NonCancellable) { nativeClose.await() }
-            val id = requireNotNull(packet.single { it.number == 2 }.value)
-            events.send(
-                ProtoWriter()
-                    .apply {
-                        uint(1, 3)
-                        message(4) {
-                            uint(1, id + replyIdDelta)
-                            message(method) {}
-                        }
-                    }
-                    .bytes()
-            )
-        }
-
-        override suspend fun read(characteristic: String): ByteArray = error("Unexpected read")
-
-        override fun retire() {
-            nativeClose.complete(Unit)
-            retired = true
-            events.close()
-        }
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
@@ -122,7 +54,7 @@ internal class HandyBluetoothTest {
                             Instant.fromEpochMilliseconds(testScheduler.currentTime)
                     }
                 val radio =
-                    Link().apply {
+                    HandyPeerLink().apply {
                         blockSetup = stall
                         setupDelayMillis = 50
                     }
@@ -186,7 +118,7 @@ internal class HandyBluetoothTest {
     @Test
     fun `a stale batch at final native admission sends no motion and keeps the link usable`() =
         runTest {
-            val radio = Link()
+            val radio = HandyPeerLink()
             val sims = SimulatedDevices()
             val handy = sims.saved.first().ref
             val lane = StandardTestDispatcher(testScheduler)
@@ -259,7 +191,7 @@ internal class HandyBluetoothTest {
 
                     override fun now() = Instant.fromEpochMilliseconds(testScheduler.currentTime)
                 }
-            val radio = Link().apply { blockSetup = true }
+            val radio = HandyPeerLink().apply { blockSetup = true }
             val sims = SimulatedDevices()
             val handy = sims.saved.first().ref
             val deps =
@@ -315,7 +247,7 @@ internal class HandyBluetoothTest {
 
     @Test
     fun `connect and orderly teardown both send only correlated RPC 715`() = runTest {
-        val link = Link()
+        val link = HandyPeerLink()
         val session =
             HandyBluetoothSession.connect(
                 device,
@@ -330,7 +262,7 @@ internal class HandyBluetoothTest {
 
     @Test
     fun `a wrong response id or a successful GATT write alone leaves Stop unconfirmed`() = runTest {
-        val link = Link()
+        val link = HandyPeerLink()
         val session =
             HandyBluetoothSession.connect(
                 device,
@@ -345,7 +277,7 @@ internal class HandyBluetoothTest {
 
     @Test
     fun `a Stop that fails its GATT write reports WriteFailed`() = runTest {
-        val link = Link()
+        val link = HandyPeerLink()
         val session =
             HandyBluetoothSession.connect(
                 device,
@@ -364,13 +296,13 @@ internal class HandyBluetoothTest {
     @Test
     fun `only prewrite failures are retried up to twice and failed generations are retired`() =
         runTest {
-            val links = mutableListOf<Link>()
+            val links = mutableListOf<HandyPeerLink>()
             assertFailsWith<IOException> {
                 HandyBluetoothSession.connect(
                     device,
                     ScanResultId("one"),
                     BluetoothConnector { _, _, _ ->
-                        Link().also {
+                        HandyPeerLink().also {
                             it.negotiation = false
                             links += it
                         }
@@ -380,7 +312,7 @@ internal class HandyBluetoothTest {
             }
             assertEquals(3, links.size)
             assertTrue(links.all { it.retired && it.methods.isEmpty() })
-            val written = Link().apply { replyIdDelta = 1 }
+            val written = HandyPeerLink().apply { replyIdDelta = 1 }
             var opened = 0
             assertFailsWith<IOException> {
                 HandyBluetoothSession.connect(

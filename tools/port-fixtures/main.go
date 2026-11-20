@@ -1,4 +1,4 @@
-// Port-verification tool for desktop 9a4c36cf. Run only inside the exported source tree.
+// Port-verification tool for desktop 1b80d72e. Run only inside the exported source tree.
 package main
 
 import (
@@ -69,13 +69,17 @@ func main() {
 	dir := flag.String("output", "", "destination")
 	source := flag.String("source", "", "snapshot SHA")
 	flag.Parse()
-	if *dir == "" || *source != "9a4c36cf41fa4ec6abeb4c72ae6b4790cab0430a" {
+	if *dir == "" || *source != "1b80d72ee4b90a5ab80a9bb3fe373b1640388f80" {
 		panic("expected an output directory and the reviewed SHA")
 	}
 	e := exporter{dir: *dir}
 	e.atlas()
+	e.creativeMatrix()
+	e.layeredScores()
+	e.tempo()
 	e.wire()
 	e.hosted()
+	e.localHistory()
 	e.content()
 	manifest, err := json.MarshalIndent(map[string]any{"format_version": 1, "source_sha": *source, "cases": e.cases}, "", "  ")
 	must(err)

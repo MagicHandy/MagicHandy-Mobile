@@ -31,11 +31,13 @@ public enum class SendBlock {
 }
 
 /** One line of the transcript. */
+@kotlinx.serialization.Serializable
 public sealed interface ChatEntry {
     public val id: EntryId
     public val at: Instant
 
     /** A message from you or the persona, with what it commanded, if anything. */
+    @kotlinx.serialization.Serializable
     public data class Message(
         override val id: EntryId,
         override val at: Instant,
@@ -45,6 +47,7 @@ public sealed interface ChatEntry {
     ) : ChatEntry
 
     /** Motion stopped during this chat. [lostDevice] names the device whose loss caused it. */
+    @kotlinx.serialization.Serializable
     public data class MotionStopped(
         override val id: EntryId,
         override val at: Instant,
@@ -59,9 +62,11 @@ public enum class Author {
 }
 
 /** What a reply commanded, shown under it: "Pace 62 → 48 · Stroke 15–85 · commanded". */
+@kotlinx.serialization.Serializable
 public data class CommandReceipt(public val changes: List<ValueChange>)
 
 /** One commanded value. [from] is null when the control had no earlier value in this run. */
+@kotlinx.serialization.Serializable
 public data class ValueChange(
     public val control: ControlKind,
     public val from: Int?,
@@ -97,6 +102,7 @@ public enum class InterruptCause {
 }
 
 /** A saved chat in the chat list. */
+@kotlinx.serialization.Serializable
 public data class ChatSummary(
     public val id: ChatId,
     public val title: String,

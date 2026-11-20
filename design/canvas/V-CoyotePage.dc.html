@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Coyote page: strength limits</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.nav{display:flex;align-items:center;gap:4px;color:#9aa1a9;font-size:13px}
+.back{width:48px;height:48px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center}
+.hd{display:flex;align-items:center;gap:12px}
+.tile{width:44px;height:44px;border-radius:6px;background:#1d2024;display:grid;place-items:center;flex:none}
+h1{margin:0;font-size:22px;font-weight:600}
+.st{font-size:13px;color:#9aa1a9;display:flex;align-items:center;gap:6px;margin-top:2px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.off{background:#6b7178}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:4px 12px}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;padding:8px 0 2px}
+.lim{display:grid;grid-template-columns:1fr 48px 56px 48px;align-items:center;gap:6px;min-height:50px;border-top:1px solid #262a30}
+.cap + .lim{border-top:0}
+.stp{height:48px;border:1px solid #353b43;border-radius:6px;background:#1d2024;font-size:20px}
+.v{text-align:center;font-size:16px;font-weight:600}
+.cn{margin:0;padding:8px 0 10px;border-top:1px solid #262a30;font-size:12px;color:#9aa1a9;line-height:1.45}
+.r{display:flex;align-items:center;gap:10px;min-height:48px;border-top:1px solid #262a30}
+.cap + .r{border-top:0}
+.r .k{flex:1}
+.val{height:44px;border:0;background:transparent;color:#c9c6c0;font-size:13px;display:flex;align-items:center;gap:4px;padding:0}
+.val b{color:#e9e7e2;font-weight:500}
+.chev{color:#6b7178;font-size:16px}
+.hint{margin:-2px 0 0;font-size:12px;color:#9aa1a9;line-height:1.4}
+.sec{height:48px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px}
+.rm{height:48px;border:1px solid #d6453f;border-radius:6px;background:transparent;color:#f0a39f;font-weight:600;font-size:14px;margin-top:auto}
+.stopbar{background:#121417;border-top:1px solid #262a30;padding:10px 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <div class="nav"><button class="back" type="button" aria-label="Back to Devices"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button>Devices</div>
+    <div class="hd"><span class="tile"><svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M9 1.5L3.5 9H8l-1 5.5L12.5 7H8z"></path></svg></span><div><h1>Coyote 3.0</h1><div class="st"><i class="dot off"></i>Not connected · Bluetooth</div></div></div>
+    <div class="card">
+      <div class="cap">Strength limits</div>
+      <div class="lim"><span>Channel A</span><button class="stp" type="button" aria-label="Lower channel A's limit">−</button><span class="v mono">40</span><button class="stp" type="button" aria-label="Raise channel A's limit">+</button></div>
+      <div class="lim"><span>Channel B</span><button class="stp" type="button" aria-label="Lower channel B's limit">−</button><span class="v mono">25</span><button class="stp" type="button" aria-label="Raise channel B's limit">+</button></div>
+      <p class="cn">The most each channel can reach, on the Coyote's scale of 0 to 200. Each tap moves a limit by 5. You raise strength yourself on Live, and MagicHandy never goes past these limits or raises strength on its own.</p>
+    </div>
+    <p class="hint">Limits change only while the Coyote is disconnected. It gets them the next time it connects. A new Coyote starts at 0 on both channels.</p>
+    <div class="card">
+      <div class="cap">Device</div>
+      <div class="r"><div class="k">Name</div><button class="val" type="button"><b>Coyote 3.0</b><span class="chev">›</span></button></div>
+      <div class="r"><div class="k">Connection</div><span class="val"><b>Bluetooth</b></span></div>
+    </div>
+    <button class="sec" type="button">Connect</button>
+    <button class="rm" type="button">Remove this device</button>
+  </div>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

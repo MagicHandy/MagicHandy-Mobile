@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceSettings
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.DeviceSummary
@@ -47,16 +48,20 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 /**
- * One device's page (boards V-HandyPage and V-VacuGlide). Durable settings for the device live
- * here, not in chat settings.
+ * One device's page (boards V-HandyPage, V-VacuGlide and V-CoyotePage). Durable settings for the
+ * device live here, not in chat settings.
  *
  * @param isBatteryUnrestricted whether Android lets the app run without battery limits.
+ * @param hasAcknowledgedCoyoteNotes whether the Coyote's safety notes were read, which its limits
+ *   need.
  */
 @Composable
 fun DeviceDetailScreen(
     device: DeviceSummary,
     isBatteryUnrestricted: Boolean,
+    hasAcknowledgedCoyoteNotes: Boolean,
     onIntent: (UserIntent) -> Unit,
+    onSetCoyoteLimits: (device: DeviceId, maximumA: Int, maximumB: Int) -> Unit,
     onBack: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -82,6 +87,9 @@ fun DeviceDetailScreen(
             MotionTest(device, onIntent)
             DeviceSection(device, settings, onIntent)
         } else {
+            if (settings is DeviceSettings.Coyote) {
+                CoyoteLimits(device, settings, hasAcknowledgedCoyoteNotes, onSetCoyoteLimits)
+            }
             DeviceSection(device, settings, onIntent)
             MotionTest(device, onIntent)
         }
@@ -185,17 +193,8 @@ private fun DeviceSection(
                     value = Words.percent(settings.maxLevel),
                     isFirst = false,
                 )
-            is DeviceSettings.Coyote ->
-                FixedRow(
-                    label = stringResource(R.string.coyote_max_strength),
-                    value =
-                        stringResource(
-                            R.string.coyote_max_strength_value,
-                            settings.maxStrengthA,
-                            settings.maxStrengthB,
-                        ),
-                    isFirst = false,
-                )
+            // The Coyote's limits have their own card above (CoyoteLimits).
+            is DeviceSettings.Coyote,
             DeviceSettings.AutoblowUltra,
             is DeviceSettings.VacuGlide -> Unit
         }

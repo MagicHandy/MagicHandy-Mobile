@@ -4,7 +4,11 @@ import kotlin.time.Instant
 import kotlinx.coroutines.flow.StateFlow
 
 /** Default network identity changes on handover even if the new network is also validated. */
-public data class NetworkState(public val isOnline: Boolean, public val routeGeneration: Long)
+public data class NetworkState(
+    public val isOnline: Boolean,
+    public val routeGeneration: Long,
+    public val hasLocalRoute: Boolean = isOnline,
+)
 
 /** Android NetworkCallback supplies this state. No probes or background pings are required. */
 public fun interface NetworkMonitor {
@@ -29,6 +33,7 @@ public enum class DiagnosticKind {
     AccountRejected,
     AccountUnavailable,
     WriteFenced,
+    ClockSyncUnavailable,
 }
 
 /** A capped rotating event ring in production. Called off the Stop and output paths. */

@@ -1,7 +1,8 @@
-// Ported from internal/handyble/codec.go and internal/transport/cloud.go at 9a4c36cf.
+// Ported from internal/handyble/codec.go and internal/transport/cloud.go at 1b80d72e.
 package com.magichandy.mobile.transport.handy
 
 import com.magichandy.mobile.core.motion.MotionFrame
+import com.magichandy.mobile.core.motion.hasIncreasingTimes
 
 /** Only the finite, starvation-pausing firmware commands used by the engine. */
 internal sealed class HandyCommand(val method: Int) {
@@ -31,10 +32,7 @@ internal sealed class HandyCommand(val method: Int) {
         HandyCommand(861) {
         init {
             require(frames.isNotEmpty() && tail in (frames.size - 1).toLong()..0xffff_ffffL)
-            require(
-                frames.last().timeMillis <= 0xffff_ffffL &&
-                    frames.zipWithNext().all { (a, b) -> a.timeMillis < b.timeMillis }
-            )
+            require(frames.last().timeMillis <= 0xffff_ffffL && frames.hasIncreasingTimes())
         }
     }
 

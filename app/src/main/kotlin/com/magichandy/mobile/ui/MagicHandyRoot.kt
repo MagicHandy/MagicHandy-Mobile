@@ -52,26 +52,55 @@ import com.magichandy.mobile.ui.stop.dismissalKey
 import com.magichandy.mobile.ui.stop.isDismissed
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
-/** The whole UI. It observes [core] and sends it intents; Stop goes straight to the core. */
+/**
+ * The whole UI. It observes [core] and sends it intents; Stop goes straight to the core.
+ *
+ * @param openLive true after the ongoing notification was tapped. The root opens Live on the normal
+ *   back stack and then calls [onLiveOpened].
+ */
 @Composable
-fun MagicHandyRoot(core: MagicHandyCore) {
+fun MagicHandyRoot(
+    core: MagicHandyCore,
+    openLive: Boolean = false,
+    onLiveOpened: () -> Unit = {},
+) {
     val state by core.state.collectAsStateWithLifecycle()
     val onIntent: (UserIntent) -> Unit = remember(core) { { core.dispatch(it) } }
     val onStop: (StopSource) -> Unit = remember(core) { { core.emergencyStop(it) } }
-    MagicHandyTheme(state.app.palette) { AppContent(state, onIntent, onStop) }
+    val calls = remember(core) { CoreCalls.of(core) }
+    MagicHandyTheme(state.app.palette) {
+        AppContent(state, onIntent, onStop, calls, openLive, onLiveOpened)
+    }
 }
 
 /**
  * The frame and everything in it, for a given [state]. Stateless apart from navigation and which
  * Stop receipt was last dismissed.
+ *
+ * @param calls the core's calls that aren't intents; previews leave them doing nothing.
+ * @param openLive see [MagicHandyRoot].
  */
 @Composable
-fun AppContent(state: AppState, onIntent: (UserIntent) -> Unit, onStop: (StopSource) -> Unit) {
+fun AppContent(
+    state: AppState,
+    onIntent: (UserIntent) -> Unit,
+    onStop: (StopSource) -> Unit,
+    calls: CoreCalls = CoreCalls.None,
+    openLive: Boolean = false,
+    onLiveOpened: () -> Unit = {},
+) {
     val nav = rememberAppNavigator()
     val receipt = state.stopReceipt
     LaunchedEffect(receipt?.pressCount) { if (receipt != null) nav.closeSheet() }
     val interrupted = state.interruptedRun
     val isGated = !state.firstRun.hasAcknowledgedAdultsOnly || interrupted != null
+    // A tap on the ongoing notification opens Live (board V-System), unless a gate is showing.
+    LaunchedEffect(openLive) {
+        if (openLive) {
+            if (!isGated) nav.openLive()
+            onLiveOpened()
+        }
+    }
     BackHandler(enabled = !isGated && !nav.isAtDestination) { nav.pop() }
     // The core keeps a receipt while any device is unconfirmed, and Devices goes on showing those
     // devices, so Done hides the panel here until Stop is pressed again or another device turns
@@ -132,6 +161,7 @@ fun AppContent(state: AppState, onIntent: (UserIntent) -> Unit, onStop: (StopSou
                     state = state,
                     nav = nav,
                     onIntent = onIntent,
+                    calls = calls,
                     exits =
                         SheetExits(
                             openAppSettings = { nav.push(Route.AppSettings) },
@@ -164,13 +194,19 @@ fun AppContent(state: AppState, onIntent: (UserIntent) -> Unit, onStop: (StopSou
             !state.firstRun.hasAcknowledgedAdultsOnly ->
                 BeforeYouStartScreen(onAcknowledge = { onIntent(UserIntent.AcknowledgeAdultsOnly) })
             interrupted != null -> RunInterruptedScreen(interrupted, onIntent)
-            else -> RouteContent(state, nav, onIntent)
+            else -> RouteContent(state, nav, onIntent, calls)
         }
     }
 }
 
 @Composable
-private fun RouteContent(state: AppState, nav: AppNavigator, onIntent: (UserIntent) -> Unit) {
+private fun RouteContent(
+    state: AppState,
+    nav: AppNavigator,
+    onIntent: (UserIntent) -> Unit,
+    calls: CoreCalls,
+) {
+    val system = systemAccess(state.app)
     when (val route = nav.current) {
         Route.Chat ->
             ChatScreen(
@@ -185,14 +221,17 @@ private fun RouteContent(state: AppState, nav: AppNavigator, onIntent: (UserInte
         Route.Devices ->
             DevicesScreen(
                 state = state,
+                system = system,
                 onIntent = onIntent,
                 onOpenDevice = { nav.push(Route.DeviceDetail(it)) },
                 onAddDevice = { nav.openSheet(SheetPage.DeviceType) },
+                onOpenNotificationSettings = rememberSystemLinks().openNotificationSettings,
             )
         Route.Live ->
             LiveScreen(
                 state = state,
                 onIntent = onIntent,
+                onStepCoyote = calls.stepCoyote,
                 onBack = { nav.pop() },
                 onOpenAutopilotSettings = { nav.openSheet(SheetPage.Autopilot) },
             )
@@ -204,8 +243,10 @@ private fun RouteContent(state: AppState, nav: AppNavigator, onIntent: (UserInte
                 val links = rememberSystemLinks()
                 DeviceDetailScreen(
                     device = device,
-                    isBatteryUnrestricted = rememberSystemAccess().isBatteryUnrestricted,
+                    isBatteryUnrestricted = system.isBatteryUnrestricted,
+                    hasAcknowledgedCoyoteNotes = state.devices.hasAcknowledgedCoyoteNotes,
                     onIntent = onIntent,
+                    onSetCoyoteLimits = calls.setCoyoteLimits,
                     onBack = { nav.pop() },
                     onOpenBatterySettings = links.openBatterySettings,
                 )
@@ -216,13 +257,14 @@ private fun RouteContent(state: AppState, nav: AppNavigator, onIntent: (UserInte
                 family = route.family,
                 state = state,
                 onIntent = onIntent,
+                findVibrators = calls.findVibrators,
                 onBack = { nav.pop() },
                 onDone = { nav.pop() },
             )
         Route.AppSettings ->
             AppSettingsScreen(
                 state = state,
-                system = rememberSystemAccess(),
+                system = system,
                 links = rememberSystemLinks(),
                 onIntent = onIntent,
                 onBack = { nav.pop() },

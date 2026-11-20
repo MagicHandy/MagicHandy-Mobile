@@ -5,6 +5,10 @@ import com.magichandy.mobile.core.api.ScanResultId
 import kotlin.time.Duration
 import kotlinx.coroutines.flow.Flow
 
+/** A write was submitted while establishing this generation. Retrying setup could repeat it. */
+public class BluetoothSetupWriteFailure(cause: java.io.IOException) :
+    java.io.IOException("Notification setup was not confirmed", cause)
+
 /** Allowlisted GATT service and characteristic identifiers, with the profile's payload ceiling. */
 public enum class GattProfile(
     public val service: String,
@@ -55,6 +59,17 @@ public fun interface BluetoothConnector {
  * retires the generation. Never deliver its callbacks to the successor.
  */
 public interface BluetoothLink {
+    /** Request high connection priority during playback and balanced priority while idle. */
+    public fun setActive(active: Boolean) {}
+
+    /**
+     * Optional physical slider geometry from a verified profile. HSP playback state alone has no
+     * position evidence.
+     */
+    public suspend fun readSliderPosition(
+        admitted: () -> Boolean
+    ): com.magichandy.mobile.core.ports.SliderReading? = null
+
     /** Negotiate a real ATT MTU and return the granted value including the three-byte header. */
     public suspend fun requestMtu(bytes: Int): Int
 
@@ -71,6 +86,19 @@ public interface BluetoothLink {
         withResponse: Boolean,
         admitted: () -> Boolean,
     )
+
+    /**
+     * Submit a Stop ahead of queued reads or normal writes after the outstanding native call
+     * settles.
+     */
+    public suspend fun writeStop(
+        characteristic: String,
+        bytes: ByteArray,
+        withResponse: Boolean,
+        admitted: () -> Boolean,
+    ) {
+        write(characteristic, bytes, withResponse, admitted)
+    }
 
     /** Read a characteristic on this generation through the serialized operation queue. */
     public suspend fun read(characteristic: String): ByteArray

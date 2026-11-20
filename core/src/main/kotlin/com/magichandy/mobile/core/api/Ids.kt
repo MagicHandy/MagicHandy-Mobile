@@ -1,25 +1,30 @@
 package com.magichandy.mobile.core.api
 
 /** Identifies a saved chat. */
-@JvmInline public value class ChatId(public val value: String)
+@kotlinx.serialization.Serializable @JvmInline public value class ChatId(public val value: String)
 
 /** Identifies one entry in a chat transcript. */
-@JvmInline public value class EntryId(public val value: String)
+@kotlinx.serialization.Serializable @JvmInline public value class EntryId(public val value: String)
 
 /** Identifies a saved device. Stable across reconnections. */
-@JvmInline public value class DeviceId(public val value: String)
+@kotlinx.serialization.Serializable @JvmInline public value class DeviceId(public val value: String)
 
 /** Identifies a saved model connection. */
-@JvmInline public value class ConnectionId(public val value: String)
+@kotlinx.serialization.Serializable
+@JvmInline
+public value class ConnectionId(public val value: String)
 
 /** Identifies a built-in persona preset. */
-@JvmInline public value class PersonaId(public val value: String)
+@kotlinx.serialization.Serializable
+@JvmInline
+public value class PersonaId(public val value: String)
 
 /** Identifies one result of a Bluetooth scan. Valid until the scan ends. */
 @JvmInline public value class ScanResultId(public val value: String)
 
 /** A whole-number percentage from 0 to 100. */
 @JvmInline
+@kotlinx.serialization.Serializable
 public value class Percent(public val value: Int) {
     init {
         require(value in 0..100) { "A percentage must be 0..100, was $value" }

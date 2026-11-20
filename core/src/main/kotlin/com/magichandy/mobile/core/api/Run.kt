@@ -38,6 +38,7 @@ public enum class MotionSource {
 }
 
 /** Limits that every source obeys. Edits while idle never start motion. */
+@kotlinx.serialization.Serializable
 public data class Limits(
     public val topSpeed: Percent,
     public val strokeLow: Percent,
@@ -96,6 +97,7 @@ public enum class AutopilotStatus {
 
 /** How often Autopilot changes motion, from 1 (rarely) to 8 (often). Auto timing picks when. */
 @JvmInline
+@kotlinx.serialization.Serializable
 public value class ChangeFrequency(public val level: Int) {
     init {
         require(level in MIN..MAX) { "Change frequency must be $MIN..$MAX, was $level" }

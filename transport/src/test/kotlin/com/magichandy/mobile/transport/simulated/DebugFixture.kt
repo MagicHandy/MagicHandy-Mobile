@@ -37,7 +37,7 @@ internal class DebugFixture(
 
             override fun now() = Instant.fromEpochMilliseconds(test.testScheduler.currentTime)
         }
-    val devices = SimulatedDevices()
+    val devices = SimulatedDevices(clock)
     val network = MutableStateFlow(NetworkState(true, 0))
     val d =
         simulatedDependencies(

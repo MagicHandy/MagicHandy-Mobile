@@ -7,17 +7,37 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /** Saved device selection. Credential handles and radio addresses are resolved by the directory. */
-public data class SavedDevice(public val ref: DeviceRef, public val settings: DeviceSettings)
+@kotlinx.serialization.Serializable
+public data class SavedDevice(
+    public val ref: DeviceRef,
+    public val settings: DeviceSettings,
+    public val address: String? = null,
+    public val credential: SecretHandle? = null,
+    public val deviceIndex: Int? = null,
+)
 
 /** Device connection boundary. Connecting an owner verifies it and leaves it idle. */
 public interface DeviceDirectory : RecoveryStops {
+    /** Editable durable rows and explicit discovery, when supported by this adapter. */
+    public val configuration: DeviceConfiguration?
+        get() = null
+
     /** Preconfigured devices available for explicit connection. */
     public val saved: List<SavedDevice>
+
+    /**
+     * Persist one Handy's mounting and publish it in [saved] before returning. False for unknown
+     * devices or other families.
+     */
+    public suspend fun setHandyReversed(device: DeviceId, isReversed: Boolean): Boolean
 
     /** Actual radio availability. The platform updates it on adapter state changes. */
     public val bluetoothOn: StateFlow<Boolean>
     /** Notify the core about unexpected link loss, including when only Bluetooth drops. */
     public val losses: Flow<DeviceId>
+    /** Previously lost saved devices becoming reachable again, when the adapter has an event. */
+    public val returns: Flow<DeviceId>
+        get() = kotlinx.coroutines.flow.emptyFlow()
 
     /**
      * Return a verified, idle owner for exactly [device], or null on failure. Use [ownerScope] for

@@ -1,0 +1,10 @@
+<resources>
+    <string name="platform_channel">Active connections</string>
+    <string name="platform_active">MagicHandy · Active</string>
+    <string name="platform_stop">Stop</string>
+    <string name="platform_tile">Stop motion</string>
+    <string name="platform_pace">Pace %1$d</string>
+    <string name="platform_next">Next change in %1$d s</string>
+    <!-- Public application identifier distributed with desktop alpha.89. -->
+    <string name="platform_handy_application_id" translatable="false">rQoTWeMPrklUYcfdSXYYhS_9z.jAVNwy</string>
+</resources>

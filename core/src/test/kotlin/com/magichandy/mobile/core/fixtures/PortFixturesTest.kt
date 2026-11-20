@@ -22,7 +22,7 @@ internal class PortFixturesTest {
     fun `the fixture manifest identifies unique baseline cases by snapshot and SHA256`() {
         val manifest = fixtureJson("manifest.json").jsonObject
         assertEquals(
-            "9a4c36cf41fa4ec6abeb4c72ae6b4790cab0430a",
+            "1b80d72ee4b90a5ab80a9bb3fe373b1640388f80",
             manifest.getValue("source_sha").jsonPrimitive.content,
         )
         val cases = manifest.getValue("cases").jsonArray.map { it.jsonObject }
@@ -38,9 +38,13 @@ internal class PortFixturesTest {
         assertEquals(
             mapOf(
                 "motion-atlas" to 21,
+                "creative-atlas" to 135,
+                "layered-score" to 3,
+                "tempo" to 6,
                 "ble-wire" to 10,
                 "cloud-wire" to 5,
                 "chat" to 3,
+                "local-history" to 4,
                 "translations" to 5,
                 "content" to 3,
                 "brand" to 2,

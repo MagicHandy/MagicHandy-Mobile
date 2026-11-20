@@ -43,3 +43,5 @@ kotlin.target.compilations.named("testFixtures") {
 tasks.test { useJUnitPlatform() }
 
 sourceSets.test { resources.srcDir(rootProject.file("fixtures/wire")) }
+
+sourceSets.test { resources.srcDir(rootProject.file("fixtures/chat")) }

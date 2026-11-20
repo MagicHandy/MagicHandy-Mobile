@@ -1,4 +1,4 @@
-// Ported from internal/motion/engine.go and internal/httpapi/stop_admission.go at 9a4c36cf.
+// Ported from internal/motion/engine.go and internal/httpapi/stop_admission.go at 1b80d72e.
 package com.magichandy.mobile.core.motion
 
 import com.magichandy.mobile.core.api.DeviceId
@@ -11,6 +11,7 @@ import com.magichandy.mobile.core.ports.DeviceRef
 import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.RunIntent
 import com.magichandy.mobile.core.ports.RunJournal
 import com.magichandy.mobile.core.ports.StopEvidence
 import kotlin.time.Duration
@@ -33,11 +34,25 @@ internal data class StopTarget(
 
 internal class StopAttempt(val epoch: Epoch, val target: StopTarget, val pressedAt: Duration)
 
+/** Captured by the output job before its first write. Pause fences only this output stream. */
+internal data class PlaybackStream(val epoch: Epoch, val generation: Long)
+
 internal data class EngineState(
     val epoch: Epoch = Epoch(0),
     val owners: Map<DeviceId, DeviceTransport> = emptyMap(),
     val retired: Map<DeviceId, DeviceTransport> = emptyMap(),
     val members: Set<DeviceId> = emptySet(),
+    val streamGeneration: Long = 0,
+    val pausedPosition: PlaybackPosition? = null,
+    val edgeRequested: Boolean = false,
+    val beforeTempoHold: TempoLane? = null,
+    val score: ScoreRequest? = null,
+    val vibration: VibrationLane? = null,
+    val tempo: TempoLane? = null,
+    val previousTempo: com.magichandy.mobile.core.score.TempoScore? = null,
+    val air: AirAdjustment? = null,
+    val airBalance: Int = 0,
+    val pausedAt: Duration? = null,
     val journal: RunJournal? = null,
     val confirmed: Set<DeviceId> = emptySet(),
     val reconciled: Set<DeviceId> = emptySet(),
@@ -48,6 +63,21 @@ internal data class EngineState(
     val evidence: StopReceipt? = null,
     val publishesEvidence: Boolean = false,
 ) {
+    fun plays(stream: PlaybackStream): Boolean =
+        epoch == stream.epoch &&
+            streamGeneration == stream.generation &&
+            members.isNotEmpty() &&
+            pausedPosition == null
+
+    val canResume: Boolean
+        get() =
+            pausedPosition != null &&
+                members.isNotEmpty() &&
+                confirmed.containsAll(members) &&
+                pending.isEmpty() &&
+                inFlight.isEmpty() &&
+                members.none { it in retired }
+
     val resolved: Set<DeviceId>
         get() = confirmed + reconciled
 
@@ -80,6 +110,16 @@ internal fun EngineState.stopped(
     return copy(
         epoch = next,
         members = emptySet(),
+        pausedPosition = null,
+        edgeRequested = false,
+        beforeTempoHold = null,
+        score = null,
+        vibration = null,
+        previousTempo = tempo?.plan?.score ?: previousTempo,
+        tempo = null,
+        air = null,
+        airBalance = 0,
+        pausedAt = null,
         retired =
             if (retire != null && owners[retire.device.id] === retire)
                 retired + (retire.device.id to retire)
@@ -87,7 +127,8 @@ internal fun EngineState.stopped(
         journal = record ?: journal,
         reconciled = reconciled - targets.keys,
         confirmed =
-            if (record != null && record.runId != journal?.runId) emptySet() else confirmed - retry,
+            if (record != null && record.runId != journal?.runId) emptySet()
+            else confirmed - targets.keys,
         work = if (isolated) work else emptyMap(),
         pending = pending,
         evidence = evidence,
@@ -96,7 +137,69 @@ internal fun EngineState.stopped(
     )
 }
 
-private fun EngineState.nextReceipt(
+internal fun EngineState.withEdge(expected: Epoch, enabled: Boolean): EngineState =
+    if (
+        expected == epoch &&
+            members.isNotEmpty() &&
+            pausedPosition == null &&
+            journal?.intended == RunIntent.Start
+    )
+        copy(edgeRequested = enabled)
+    else this
+
+internal fun EngineState.pausing(
+    expected: Epoch,
+    position: PlaybackPosition,
+    elapsed: Duration,
+    at: Instant,
+): EngineState? {
+    if (
+        epoch != expected ||
+            members.isEmpty() ||
+            pausedPosition != null ||
+            journal?.intended != RunIntent.Start
+    )
+        return null
+    val targets = owners.filterKeys(members::contains).mapValues { StopTarget(it.value) }
+    return copy(
+        pausedPosition = position,
+        pausedAt = elapsed,
+        journal = journal.copy(intended = RunIntent.Paused, at = at),
+        streamGeneration = streamGeneration + 1,
+        pending = targets.mapValues { StopAttempt(expected, it.value, elapsed) },
+        confirmed = emptySet(),
+        evidence = nextReceipt(null, targets, true, at),
+        publishesEvidence = false,
+        work = work.filterValues { it != WorkKind.Output },
+    )
+}
+
+internal fun EngineState.resuming(
+    expected: Epoch,
+    record: RunJournal,
+    now: Duration,
+): EngineState? {
+    if (
+        !canResume ||
+            epoch != expected ||
+            journal?.runId != record.runId ||
+            journal.devices != record.devices
+    )
+        return null
+    val held = pausedAt?.let { now - it } ?: Duration.ZERO
+    return copy(
+        pausedPosition = null,
+        pausedAt = null,
+        tempo = tempo?.copy(since = tempo.since + held),
+        vibration = vibration?.copy(since = vibration.since + held),
+        air = null,
+        journal = record,
+        confirmed = emptySet(),
+        evidence = null,
+    )
+}
+
+internal fun EngineState.nextReceipt(
     source: StopSource?,
     targets: Map<DeviceId, StopTarget>,
     isolated: Boolean,

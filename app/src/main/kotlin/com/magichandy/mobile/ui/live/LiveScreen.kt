@@ -23,7 +23,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.CoyoteChannel
+import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceOutput
+import com.magichandy.mobile.core.api.DeviceSettings
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.DeviceSummary
 import com.magichandy.mobile.core.api.LimitKind
@@ -51,6 +54,7 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 fun LiveScreen(
     state: AppState,
     onIntent: (UserIntent) -> Unit,
+    onStepCoyote: (device: DeviceId, channel: CoyoteChannel, increase: Boolean) -> Unit,
     onBack: () -> Unit,
     onOpenAutopilotSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -72,6 +76,11 @@ fun LiveScreen(
         Figure(state, onIntent)
         val inRun = state.devices.devices.filter { it.membership is RunMembership.InRun }
         if (inRun.isNotEmpty()) DeviceOutputs(inRun)
+        if (state.run.phase != RunPhase.Idle) {
+            for (coyote in inRun.filter { it.settings is DeviceSettings.Coyote }) {
+                CoyoteStrength(coyote, state.run.phase, onStepCoyote)
+            }
+        }
         Limits(state, onIntent)
         PlayActions(state.run.phase, onIntent)
         AutopilotCard(state.autopilot, state.run.recentChanges, onIntent, onOpenAutopilotSettings)

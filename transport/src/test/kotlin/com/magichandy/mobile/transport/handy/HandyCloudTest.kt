@@ -86,7 +86,15 @@ internal class HandyCloudTest {
                     assertEquals("app-public-id", request.header("X-Api-Key"))
                     assertEquals(null, request.url.query)
                     val path = request.url.encodedPath
-                    assertEquals(if (path == "/hsp/state") "GET" else "PUT", request.method)
+                    assertEquals(
+                        if (
+                            path == "/hsp/state" ||
+                                path.startsWith("/slider/") && request.body == null
+                        )
+                            "GET"
+                        else "PUT",
+                        request.method,
+                    )
                     Response.Builder()
                         .request(request)
                         .protocol(Protocol.HTTP_1_1)
@@ -102,6 +110,26 @@ internal class HandyCloudTest {
             client,
             "https://fixture.invalid/".toHttpUrl(),
         )
+    }
+
+    @Test
+    fun `both authenticated reads must provide complete calibration and position`() = runTest {
+        val peer = wire { path ->
+            when (path) {
+                "/slider/state" ->
+                    """{"result":{"position":0.4,"position_absolute":52,"speed_absolute":0}}"""
+                "/slider/stroke" ->
+                    """{"result":{"min":0.1,"max":0.9,"min_absolute":19,"max_absolute":85}}"""
+                else -> error("unexpected route")
+            }
+        }
+        assertEquals(
+            com.magichandy.mobile.core.ports.SliderReading(52.0, 0.0, 10.0, 90.0, 19.0, 85.0),
+            peer.readPosition { true },
+        )
+        kotlin.test.assertFailsWith<java.io.IOException> {
+            wire { """{"result":{}}""" }.readPosition { true }
+        }
     }
 
     @Test

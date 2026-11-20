@@ -1,13 +1,9 @@
 package com.magichandy.mobile
 
 import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.platform.platformCore
 
-/**
- * Creates the release core.
- *
- * TODO(M1): build `CoreDependencies` from the Android platform layer (Room, Keystore, GATT, the
- *   foreground service and the sign-in redirect) and pass it to `createMagicHandyCore`; see
- *   docs/backend/wiring.md.
- */
-internal fun createCore(app: MagicHandyApp): MagicHandyCore =
-    throw UnsupportedOperationException("${app.packageName} has no release core before M1.")
+/** Builds the single process-wide Android core. */
+internal fun createCore(app: MagicHandyApp): MagicHandyCore = platformCore(app)
+
+internal const val simulatedDevices = false

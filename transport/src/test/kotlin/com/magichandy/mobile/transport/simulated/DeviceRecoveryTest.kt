@@ -250,7 +250,10 @@ internal class DeviceRecoveryTest {
             f.connect(id)
             f.send(UserIntent.StartMotion)
             f.send(UserIntent.PauseMotion)
-            assertEquals(RunPhase.Idle, f.core.state.value.run.phase)
+            assertEquals(
+                if (name == "ultra") RunPhase.Paused else RunPhase.Idle,
+                f.core.state.value.run.phase,
+            )
             val receipt = f.core.state.value.stopReceipt
             if (name == "ultra") assertNull(receipt)
             else {

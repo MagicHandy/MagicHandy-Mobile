@@ -2,6 +2,10 @@
 <!-- Nothing leaves the phone through backup or device transfer (plan §5.4). -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
         <exclude domain="root" />
         <exclude domain="file" />
         <exclude domain="database" />
@@ -9,6 +13,10 @@
         <exclude domain="external" />
     </cloud-backup>
     <device-transfer>
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
         <exclude domain="root" />
         <exclude domain="file" />
         <exclude domain="database" />

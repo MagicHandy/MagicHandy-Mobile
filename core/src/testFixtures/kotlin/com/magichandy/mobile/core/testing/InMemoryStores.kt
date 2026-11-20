@@ -14,6 +14,7 @@ import com.magichandy.mobile.core.ports.SavedChat
 import com.magichandy.mobile.core.ports.SavedModel
 import com.magichandy.mobile.core.ports.SettingsDocument
 import com.magichandy.mobile.core.ports.SettingsStore
+import com.magichandy.mobile.core.ports.newMemories
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,15 +42,19 @@ public class InMemoryChats : ChatStore {
         while (true) {
             val old = current.value
             val transcript = old.chats[chat] ?: return false
-            if (transcript.messages.any { it.id == entry.id }) return true
+            for ((id, stored) in old.chats) {
+                val duplicate = stored.messages.firstOrNull { it.id == entry.id }
+                if (duplicate != null) return id == chat && duplicate == entry
+            }
             val next =
                 transcript.copy(
                     summary = transcript.summary.copy(lastActivity = entry.at),
                     messages = transcript.messages + entry,
                 )
+            val previous = old.memory[persona].orEmpty()
+            val added = newMemories(previous, memories)
             val memory =
-                if (memories.isEmpty()) old.memory
-                else old.memory + (persona to (old.memory[persona].orEmpty() + memories))
+                if (added.isEmpty()) old.memory else old.memory + (persona to (previous + added))
             val result = old.copy(chats = old.chats + (chat to next), memory = memory)
             if (!admitted()) return false
             if (current.compareAndSet(old, result)) return true

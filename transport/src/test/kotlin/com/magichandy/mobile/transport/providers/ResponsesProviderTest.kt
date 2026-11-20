@@ -12,7 +12,9 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 internal class ResponsesProviderTest {
     private val messages = listOf(TextMessage(TextRole.User, "Hello"))
@@ -33,6 +35,43 @@ internal class ResponsesProviderTest {
         val result = ResponsesProvider(http, { Secret("synthetic") }).stream(messages, pieces::add)
         assertEquals(listOf("Hello"), pieces)
         assertEquals(TextResult.Completed("Hello"), result)
+    }
+
+    @Test
+    fun `a long conversation sheds only older dialogue before asking for a token`() = runTest {
+        val old = TextMessage(TextRole.User, "x".repeat(65536))
+        val latest = TextMessage(TextRole.User, "Read the correction back.")
+        val contract = TextMessage(TextRole.Developer, "Speak only.")
+        val correction = TextMessage(TextRole.Assistant, "The correction is 26.")
+        val http = MemoryHttp { req ->
+            val input =
+                Json.parseToJsonElement(req.payload()).jsonObject.getValue("input").jsonArray
+            assertEquals(
+                listOf(contract, correction, latest).map { it.text },
+                input.map { it.jsonObject.getValue("content").jsonPrimitive.content },
+            )
+            req.reply(
+                delta +
+                    """data: {"type":"response.completed","response":{"status":"completed"}}""" +
+                    "\n\n",
+                "text/event-stream",
+            )
+        }
+        var tokens = 0
+        val provider =
+            ResponsesProvider(
+                http,
+                {
+                    tokens++
+                    Secret("synthetic")
+                },
+            )
+        assertEquals(
+            TextResult.Completed("Hello"),
+            provider.stream(listOf(contract, old, correction, latest)) {},
+        )
+        assertEquals(TextResult.Interrupted, provider.stream(listOf(contract, old)) {})
+        assertEquals(1, tokens)
     }
 
     @Test

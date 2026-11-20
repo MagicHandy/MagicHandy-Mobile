@@ -1,10 +1,12 @@
-// Ported from internal/llm/{openai_responses,prompt_budget}.go at 9a4c36cf.
+// Ported from internal/llm/{openai_responses,prompt_budget}.go at 1b80d72e.
 package com.magichandy.mobile.transport.providers
 
 import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.chat.PromptBudget
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.DiagnosticReporter
-import com.magichandy.mobile.core.ports.ModelProvider
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.StructuredProvider
 import com.magichandy.mobile.core.ports.TextMessage
 import com.magichandy.mobile.core.ports.TextResult
 import com.magichandy.mobile.core.ports.TextRole
@@ -37,7 +39,10 @@ internal constructor(
     private val http: Call.Factory,
     private val tokens: AccessTokenSource,
     private val model: String = "gpt-6.1-terra",
-) : ModelProvider {
+    contextTokens: Int = 65536,
+) : StructuredProvider {
+    private val budget = PromptBudget(maxOf(65536, contextTokens))
+
     /**
      * Use the registered account's access token and a redirect-free, non-retrying HTTP connection.
      */
@@ -45,6 +50,7 @@ internal constructor(
         client: OkHttpClient,
         tokens: AccessTokenSource,
         model: String = "gpt-6.1-terra",
+        contextTokens: Int = 65536,
     ) : this(
         client
             .newBuilder()
@@ -54,16 +60,27 @@ internal constructor(
             .build() as Call.Factory,
         tokens,
         model,
+        contextTokens,
     )
 
     override suspend fun stream(
         messages: List<TextMessage>,
         preview: (String) -> Unit,
+    ): TextResult = send(messages, null, preview)
+
+    override suspend fun complete(request: ModelRequest, preview: (String) -> Unit): TextResult =
+        send(request.messages, request, preview)
+
+    private suspend fun send(
+        messages: List<TextMessage>,
+        contract: ModelRequest?,
+        preview: (String) -> Unit,
     ): TextResult {
         if (messages.isEmpty() || messages.last().role != TextRole.User)
             return TextResult.Interrupted
-        val size = messages.sumOf { it.text.encodeToByteArray().size.toLong() + 64 }
-        if (size > 32768 - 2048 - 256) return TextResult.Interrupted
+        val admitted =
+            budget.admit(messages, preserveTailMessages = contract?.preserveTail ?: 1)
+                ?: return TextResult.Interrupted
         return try {
             val token = tokens.token() ?: return TextResult.Interrupted
             val body = buildJsonObject {
@@ -71,10 +88,26 @@ internal constructor(
                 put("stream", true)
                 put("store", false)
                 put("reasoning", buildJsonObject { put("effort", "low") })
+                contract?.let {
+                    put(
+                        "text",
+                        buildJsonObject {
+                            put(
+                                "format",
+                                buildJsonObject {
+                                    put("type", "json_schema")
+                                    put("name", it.name)
+                                    put("strict", true)
+                                    put("schema", it.schema)
+                                },
+                            )
+                        },
+                    )
+                }
                 put(
                     "input",
                     buildJsonArray {
-                        for (message in messages) add(
+                        for (message in admitted.messages) add(
                             buildJsonObject {
                                 put("role", message.role.name.lowercase())
                                 put("content", message.text)

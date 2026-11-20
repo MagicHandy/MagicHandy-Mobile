@@ -1,18 +1,17 @@
-// Ported from internal/motion/engine.go and internal/httpapi/stop_admission.go at 9a4c36cf.
+// Ported from internal/motion/engine.go and internal/httpapi/stop_admission.go at 1b80d72e.
 package com.magichandy.mobile.core.motion
 
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.api.StopSource
-import com.magichandy.mobile.core.api.UnconfirmedCause
 import com.magichandy.mobile.core.ports.Clock
 import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.MotionBatch
 import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.RunIntent
 import com.magichandy.mobile.core.ports.RunJournal
-import com.magichandy.mobile.core.ports.StopEvidence
 import com.magichandy.mobile.core.ports.WriteResult
 import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
@@ -20,7 +19,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -30,12 +28,13 @@ import kotlinx.coroutines.launch
 /** One atomic state transition fences work, closes admission and publishes the initial receipt. */
 internal class MotionEngine(
     private val scope: CoroutineScope,
-    private val stopDispatcher: CoroutineDispatcher,
+    stopDispatcher: CoroutineDispatcher,
     private val stopIo: CoroutineDispatcher,
     private val clock: Clock,
     private val record: (DiagnosticKind) -> Unit,
 ) {
     private val current = MutableStateFlow(EngineState())
+    private val stops = StopDelivery(scope, stopDispatcher, stopIo, clock, record, current)
     val state = current.asStateFlow()
     val epoch
         get() = current.value.epoch
@@ -132,11 +131,132 @@ internal class MotionEngine(
         }
     }
 
-    suspend fun write(expected: Epoch, owner: DeviceTransport, batch: MotionBatch): WriteResult {
+    fun stream(expected: Epoch): PlaybackStream =
+        PlaybackStream(expected, current.value.streamGeneration)
+
+    fun updateAutopilotJournal(expected: Epoch, original: RunJournal, next: RunJournal): Boolean {
+        while (true) {
+            val s = current.value
+            if (s.epoch != expected || s.journal != original || s.members.isEmpty()) return false
+            if (current.compareAndSet(s, s.copy(journal = next))) return true
+        }
+    }
+
+    fun setEdge(expected: Epoch, enabled: Boolean) {
+        current.update { it.edgeTempo(expected, enabled, clock.elapsed()) }
+    }
+
+    fun selectScore(expected: Epoch, record: RunJournal, score: ScoreRequest): Boolean {
+        while (true) {
+            val s = current.value
+            if (
+                s.epoch != expected ||
+                    s.journal?.runId != record.runId ||
+                    s.members.isEmpty() ||
+                    s.pausedPosition != null ||
+                    s.journal.intended != RunIntent.Start
+            )
+                return false
+            if (current.compareAndSet(s, s.copy(score = score, edgeRequested = false))) return true
+        }
+    }
+
+    /**
+     * Close output admission before independently halting the participating owners. Keep the turn
+     * and roster.
+     */
+    fun pause(expected: Epoch, position: PlaybackPosition): RunJournal? {
+        while (true) {
+            val s = current.value
+            val journal = s.journal ?: return null
+            val paused = s.pausing(expected, position, clock.elapsed(), clock.now()) ?: return null
+            if (!current.compareAndSet(s, paused)) continue
+            paused.pending.values.forEach(stops::send)
+            scope.launch(stopIo) {
+                s.work.filterValues { it == WorkKind.Output }.keys.forEach { it.cancel() }
+            }
+            return journal
+        }
+    }
+
+    /** Reopen the same roster only after the service and journal have admitted a fresh stream. */
+    fun resume(expected: Epoch, record: RunJournal): Boolean {
+        while (true) {
+            val s = current.value
+            val next = s.resuming(expected, record, clock.elapsed()) ?: return false
+            if (current.compareAndSet(s, next)) return true
+        }
+    }
+
+    suspend fun write(
+        stream: PlaybackStream,
+        owner: DeviceTransport,
+        batch: MotionBatch,
+        prepare: Boolean = false,
+    ): WriteResult =
+        admittedWrite(stream, owner) { fence ->
+            if (prepare)
+                owner.startupPosition?.let { reconcileStartup(it, batch, fence) }
+                    ?: WriteResult.Accepted
+            else owner.write(batch, fence)
+        }
+
+    suspend fun startBuffered(
+        stream: PlaybackStream,
+        owner: DeviceTransport,
+        origin: kotlin.time.Duration,
+    ): WriteResult =
+        admittedWrite(stream, owner) { fence ->
+            requireNotNull(owner.linkedStart)
+                .play((clock.elapsed() - origin).inWholeMilliseconds.coerceAtLeast(0), fence)
+        }
+
+    suspend fun output(
+        stream: PlaybackStream,
+        owner: com.magichandy.mobile.core.ports.TimedDevice,
+        slice: com.magichandy.mobile.core.ports.OutputSlice,
+    ): WriteResult = admittedWrite(stream, owner) { fence -> owner.output(slice, fence) }
+
+    fun vibration(
+        expected: Epoch,
+        envelope: com.magichandy.mobile.core.score.VibrationEnvelope,
+    ): Boolean {
+        while (true) {
+            val s = current.value
+            if (s.epoch != expected || s.members.isEmpty() || s.pausedPosition != null) return false
+            if (
+                current.compareAndSet(
+                    s,
+                    s.copy(vibration = VibrationLane(envelope, clock.elapsed())),
+                )
+            )
+                return true
+        }
+    }
+
+    fun tempo(
+        expected: Epoch,
+        score: com.magichandy.mobile.core.score.TempoScore?,
+        steps: Int,
+        source: com.magichandy.mobile.core.api.MotionSource,
+    ): Boolean {
+        require(steps in -2..2)
+        while (true) {
+            val s = current.value
+            val next = s.withTempo(expected, score, steps, source, clock.elapsed()) ?: return false
+            if (current.compareAndSet(s, next)) return true
+        }
+    }
+
+    private suspend fun admittedWrite(
+        stream: PlaybackStream,
+        owner: DeviceTransport,
+        operation: suspend (OutputFence) -> WriteResult,
+    ): WriteResult {
         val fence =
-            OutputFence(expected) {
+            OutputFence(stream.epoch, stream.generation) {
                 val s = current.value
-                s.epoch == expected &&
+                s.plays(stream) &&
                     owner.device.id in s.members &&
                     s.owners[owner.device.id] === owner
             }
@@ -156,7 +276,7 @@ internal class MotionEngine(
             if (!fence.isCurrent()) return WriteResult.Stale
             val result =
                 try {
-                    owner.write(batch, fence)
+                    operation(fence)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
@@ -194,10 +314,12 @@ internal class MotionEngine(
         journal: RunJournal? = null,
         retire: DeviceTransport? = null,
         disconnecting: DeviceTransport? = null,
+        stream: PlaybackStream? = null,
     ) {
         while (true) {
             val old = current.value
             if (expected != null && old.epoch != expected) return
+            if (stream != null && !old.plays(stream)) return
             if (disconnecting != null && old.owners[disconnecting.device.id] !== disconnecting)
                 return
             val isolated = disconnecting != null && old.members.isEmpty()
@@ -205,12 +327,13 @@ internal class MotionEngine(
             val selected =
                 if (isolated) listOf(StopTarget(requireNotNull(disconnecting))) else targets(old)
             val byId = selected.associateBy { it.device.id }
+            val retry = if (old.pausedPosition == null) forceRetry else forceRetry + old.members
             val stopped =
                 old.stopped(
                     source,
                     next,
                     byId,
-                    forceRetry.intersect(byId.keys),
+                    retry.intersect(byId.keys),
                     journal,
                     retire,
                     isolated,
@@ -220,91 +343,10 @@ internal class MotionEngine(
             if (!current.compareAndSet(old, stopped)) continue
             stopped.pending.values
                 .filter { old.pending[it.target.device.id] !== it }
-                .forEach(::sendStop)
+                .forEach(stops::send)
             if (!isolated && old.work.isNotEmpty())
                 scope.launch(stopIo) { old.work.keys.forEach { it.cancel() } }
             return
-        }
-    }
-
-    private fun sendStop(attempt: StopAttempt) {
-        val id = attempt.target.device.id
-        val fence = OutputFence(attempt.epoch) { current.value.pending[id] === attempt }
-        val timeout = attempt.target.timeout
-        val worker =
-            scope.launch(stopIo, start = CoroutineStart.LAZY) {
-                if (!fence.isCurrent()) return@launch
-                val evidence =
-                    try {
-                        attempt.target.send(fence)
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (_: Exception) {
-                        record(DiagnosticKind.TransportStopFailed)
-                        StopEvidence.Unconfirmed(UnconfirmedCause.WriteFailed)
-                    }
-                // Keep the absolute deadline live until an older submitted write is settled.
-                if (evidence == StopEvidence.Acknowledged && id in current.value.inFlight.values) {
-                    state.first { it.pending[id] !== attempt || id !in it.inFlight.values }
-                }
-                finish(attempt, evidence)
-            }
-        // A non-cooperative write cannot keep its receipt pending or stall the independent Stop
-        // lane.
-        val timer =
-            scope.launch(stopDispatcher) {
-                delay(
-                    (timeout - (clock.elapsed() - attempt.pressedAt)).coerceAtLeast(Duration.ZERO)
-                )
-                finish(attempt, StopEvidence.Unconfirmed(UnconfirmedCause.NoReply))
-                worker.cancel()
-            }
-        worker.invokeOnCompletion { cause ->
-            if (cause != null)
-                finish(attempt, StopEvidence.Unconfirmed(UnconfirmedCause.WriteFailed))
-            timer.cancel()
-        }
-        worker.start()
-    }
-
-    private fun finish(attempt: StopAttempt, evidence: StopEvidence) {
-        val ref = attempt.target.device
-        val elapsed = clock.elapsed() - attempt.pressedAt
-        val outcome =
-            if (elapsed >= attempt.target.timeout)
-                ref.outcome(StopOutcome.Unconfirmed, cause = UnconfirmedCause.NoReply)
-            else
-                when (evidence) {
-                    is StopEvidence.Unconfirmed ->
-                        ref.outcome(StopOutcome.Unconfirmed, cause = evidence.cause)
-                    StopEvidence.Acknowledged -> ref.outcome(StopOutcome.Confirmed, elapsed)
-                }
-        current.update { s ->
-            val evidence = s.evidence
-            if (s.pending[ref.id] !== attempt || evidence == null) return@update s
-            if (ref.id in s.reconciled) return@update s.copy(pending = s.pending - ref.id)
-            val updated = evidence.withOutcome(outcome)
-            val publish = s.publishesEvidence || outcome.outcome == StopOutcome.Unconfirmed
-            s.copy(
-                pending = s.pending - ref.id,
-                confirmed =
-                    if (outcome.outcome == StopOutcome.Confirmed) s.confirmed + ref.id
-                    else s.confirmed,
-                evidence = updated,
-                publishesEvidence = publish,
-                receipt =
-                    if (publish) updated
-                    else
-                        s.receipt?.let { visible ->
-                            if (
-                                visible.outcomes.any {
-                                    it.device == ref.id && it.outcome != StopOutcome.Confirmed
-                                }
-                            )
-                                visible.withOutcome(outcome)
-                            else visible
-                        },
-            )
         }
     }
 

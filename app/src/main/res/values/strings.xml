@@ -239,7 +239,6 @@
     <string name="add_vibrator_desc">Vibrators connect through Intiface Central. Run it on this phone, or on a computer on the same network.</string>
     <string name="field_intiface_address">Intiface address</string>
     <string name="field_intiface_address_hint">127.0.0.1:12345 on this phone</string>
-    <string name="add_vibrator_connect">Connect to Intiface</string>
     <string name="add_autoblow_title">Connect %1$s</string>
     <string name="add_autoblow_desc">Uses Autoblow\'s cloud and the device token from the Autoblow app.</string>
 
@@ -253,15 +252,13 @@
     <string name="handy_model">Handy model</string>
     <string name="handy_model_desc">Sets travel in millimetres and speed limits.</string>
     <string name="handy_reverse">Reverse direction</string>
-    <string name="handy_reverse_desc">For a Handy mounted the other way up.</string>
+    <string name="handy_reverse_desc">For a Handy mounted the other way up. A change applies from the next Start or Resume.</string>
     <string name="device_check">Check connection</string>
     <string name="device_test">Test motion</string>
     <string name="device_check_test_note">Check never moves the device. Test plays a short, slow stroke on this device only, while nothing else is playing.</string>
     <string name="device_remove_handy">Remove this Handy</string>
     <string name="device_remove">Remove this device</string>
     <string name="vibrator_max_level">Maximum level</string>
-    <string name="coyote_max_strength">Maximum strength</string>
-    <string name="coyote_max_strength_value">A %1$d · B %2$d</string>
     <string name="vacuglide_warning_title">Stop goes through the internet</string>
     <string name="vacuglide_warning_body">If the phone loses internet, or Android closes MagicHandy, the VacuGlide can keep its last speed. Then switch it off at the device.</string>
     <string name="vacuglide_safeguards">Phone safeguards</string>
@@ -381,7 +378,7 @@
     <string name="update_available">Version %1$s available</string>
     <string name="update_failed">Couldn\'t check</string>
     <string name="notifications_blocked_title">Lock-screen Stop is off</string>
-    <string name="notifications_blocked_body">Notifications are blocked, so Stop can\'t appear on the lock screen. The in-app Stop still works.</string>
+    <string name="notifications_blocked_body">Notifications are blocked, so Stop can\'t appear on the lock screen. The Quick Settings tile and the in-app Stop still work.</string>
     <string name="notifications_open_settings">Open notification settings</string>
 
     <!-- Models -->
@@ -506,4 +503,45 @@
     <string name="interrupted_autopilot">Autopilot · off</string>
     <string name="interrupted_autopilot_detail">It never restarts on its own. The chat is kept.</string>
     <string name="interrupted_reconnect">Reconnect devices</string>
+
+    <!-- A value and the most it can reach, as in "12 / 40" (StepperRow). -->
+    <string name="out_of">" / %1$s"</string>
+    <!-- A reading that hasn't arrived yet. -->
+    <string name="no_value">–</string>
+
+    <!-- Retrying a refused message on a local server (board V-RefusalFallback). -->
+    <string name="refusal_row">If %1$s refuses</string>
+    <string name="refusal_title_generic">If the chat model refuses</string>
+    <string name="refusal_desc">%1$s runs online and can refuse a message. MagicHandy can then send that message, once, to a server you added on your network.</string>
+    <string name="refusal_off_desc">Show the refusal. Nothing is sent anywhere else.</string>
+    <string name="refusal_note">Only servers on your network are listed; ChatGPT and OpenRouter never are. Choosing Off cancels a retry that hasn\'t finished.</string>
+    <string name="refusal_none">There\'s no server on your network yet. Add one in Models and providers to use this.</string>
+
+    <!-- Finding and choosing an Intiface vibrator (board V-AddVibrator). -->
+    <string name="vibrator_find">Find vibrators</string>
+    <string name="vibrator_finding">Finding vibrators…</string>
+    <string name="vibrator_find_again">Find vibrators again</string>
+    <string name="vibrator_found">Found at this address · %1$d</string>
+    <string name="vibrator_device">Intiface device %1$d</string>
+    <string name="vibrator_none_title">No vibrators found</string>
+    <string name="vibrator_none_body">Check that Intiface Central\'s server is running at this address, and that the vibrator shows there.</string>
+    <string name="vibrator_find_hint">Finding only asks Intiface what\'s connected. Nothing moves until a run starts. When Intiface reports one vibrator, it\'s chosen for you.</string>
+    <string name="vibrator_connect">Connect %1$s</string>
+
+    <!-- The Coyote's strength limits and steps (boards V-CoyotePage and V-CoyoteLive). -->
+    <string name="coyote_limits">Strength limits</string>
+    <string name="coyote_channel">Channel %1$s</string>
+    <string name="coyote_limit_lower">Lower channel %1$s\'s limit</string>
+    <string name="coyote_limit_raise">Raise channel %1$s\'s limit</string>
+    <string name="coyote_limits_note">The most each channel can reach, on the Coyote\'s scale of 0 to 200. Each tap moves a limit by 5. You raise strength yourself on Live, and MagicHandy never goes past these limits or raises strength on its own.</string>
+    <string name="coyote_limits_hint">Limits change only while the Coyote is disconnected. It gets them the next time it connects. A new Coyote starts at 0 on both channels.</string>
+    <string name="coyote_limits_notes">Read the Coyote\'s safety notes before setting its limits. They\'re shown when you add a Coyote from Devices.</string>
+    <string name="coyote_limits_locked">Disconnect the Coyote to change its limits. It gets the new ones the next time it connects.</string>
+    <string name="live_coyote_caption">%1$s strength · only you change it</string>
+    <string name="coyote_strength_lower">Lower channel %1$s strength</string>
+    <string name="coyote_strength_raise">Raise channel %1$s strength</string>
+    <string name="live_coyote_note">One step per tap, up to the limits on the Coyote\'s page. A step waits until the Coyote reports the last one. Stop sets both channels to zero.</string>
+    <string name="live_coyote_no_limits">Both limits are 0, so strength can\'t go up. Disconnect the Coyote and set its limits on its page.</string>
+    <string name="live_coyote_waiting">Waiting for the Coyote to report its strength.</string>
+    <string name="live_coyote_paused">Strength steps wait while motion is paused.</string>
 </resources>

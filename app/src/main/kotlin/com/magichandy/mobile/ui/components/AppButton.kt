@@ -245,4 +245,5 @@ fun PageHeader(
     }
 }
 
-private const val DISABLED_ALPHA = 0.45f
+/** The opacity of a control that can't be used right now. */
+internal const val DISABLED_ALPHA = 0.45f
