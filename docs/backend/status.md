@@ -1,5 +1,33 @@
 # Backend status
 
+## Last non-UI items, 2026-11-20
+
+All seven items are implemented. The final offline rerun executed all 127 Gradle tasks and passed 367 JVM tests with zero failures, errors or skips. The Android Lint XML reports zero issues. Both UI boundary tests passed. On the final source, the disposable signer verified the staged APK and SHA256SUMS, then restored the unsigned output. ZIP checks passed for both APKs and their embedded prompt catalog and numerical licence matched the source bytes. The debug APK is 37,396,184 bytes and the unsigned release APK is 4,516,111 bytes.
+
+**3.1** Intiface linear features now use a shared per-address connection, stable selection, bounded asynchronous acknowledgements, full-precision engine samples and a generation-fenced anchor. A correlated bridge Stop acknowledgement remains unconfirmed. Gate passed with 349 tests (224 core, 109 transport, 16 app).
+
+**3.2** Configuration forms have one bounded submission lane and a per-call typed result. Store commits, LAN readiness, duplicate and stale choices, active runs and unresolved devices return distinct outcomes. A suspended form cannot delay direct Stop. Gate passed with 352 tests (224 core, 112 transport, 16 app).
+
+**3.3** The read-only diagnostics report includes bounded event and Stop evidence, run/journal state, device kinds and build versions. The share provider exposes only cache/diagnostics. JVM tests inject synthetic private fields and malformed disk entries. Gate passed with 354 tests (224 core, 113 transport, 17 app).
+
+**3.4** System UI tile callbacks now persist Added or Removed; a new installation exposes null until Android reports presence. The tile click still calls emergencyStop directly. Robolectric verifies callback order and Room reopen. Gate passed with 356 tests (224 core, 113 transport, 19 app).
+
+**3.5** The debug Coyote now uses the production CoyoteControls and B0/B1 session against an in-memory byte peer. Delayed reports, one pending step, independent ceilings and both-channel zero on Stop are verified from Live’s core entry points. Gate passed with 357 tests (224 core, 114 transport, 19 app).
+
+**3.6** The signed pipeline built and verified a disposable APK with Android SDK apksigner, generated MagicHandy-0.1.0.apk and independently verified SHA256SUMS. The key, temporary properties and staged artifacts were deleted. The following gate restored the unsigned APK. R8 contents and the restored licence are checked at build time. Private or inaccessible release metadata now reports Failed. Gate passed with 357 tests (224 core, 114 transport, 19 app).
+
+**3.7** Old Lowlight JSON loads as OledBlack and the next settings patch writes its current name. The previous palette-revision test deliberately retains a Lowlight input and now expects OledBlack. The Room test preserves the existing revision and other preferences. Gate passed with 358 tests (224 core, 114 transport, 20 app).
+
+**Final integration audit.** Direct Emergency Stop reaches an open discovery socket and supersedes a pending per-device Stop. Repeated numeric indices are checked against fresh device identity, and a failed database deletion leaves the credential and form retryable. The same gate passed with **367 JVM tests** (225 core, 122 transport, 20 app), including the existing UI boundary tests.
+
+**Owner decisions and remaining work.** The Handy reached through Intiface keeps its Handy family and bridge connection kind. A generic linear actuator has its own family without Handy-only settings. Legacy bridge rows that have only an index require explicit re-selection. The desktop motor test remains 1.5 seconds. Android reports tile presence as unknown until the first callback. Cloud key and OpenRouter save results denote local persistence; remote reachability is established separately.
+
+The UI owner has the remaining screen changes for linear discovery and the bridge caveat, per-form error presentation, diagnostics sharing and the Android add-tile request. The four exhaustive UI edits in this pass are in `AddDeviceScreen.kt`, `DeviceDetailScreen.kt`, `DevicesScreen.kt` and `Words.kt`. Debug `CoreFactory.kt` is the only shared wiring edit. Existing Coyote controls, vibrator discovery, refusal fallback, memory, system access, notification navigation, branded icons and the Go numerics licence are present. Physical timing, real Stop behaviour and signed install/upgrade remain on the device checklist. [UI requests](ui-requests.md) · [Device checklist](device-checklist.md) · [Release guide](../release.md)
+
+## Earlier M0 to M4 checkpoint
+
+The counts and APK sizes in this historical checkpoint precede the final non-UI pass.
+
 The non-UI M1–M4 implementation is complete against desktop alpha.89, `1b80d72e`. The offline rerun passed with **342 JVM tests**, comprising 223 core, 103 transport and 16 app tests, with zero failures, errors or skips. Full-suite counts below are cumulative at each milestone.
 
 | Milestone | Implemented and verified | Tests at milestone | Remaining acceptance or deviation |
@@ -24,7 +52,7 @@ The later audit checkpoints reached 331 tests for the complete Terra bodies, exp
 - **Stop and recovery.** Stop fences output before any I/O. A returned VacuGlide requires a second Stop even if the loss-time Stop was acknowledged. The journal retains the device until that repeat settles or the user records a local check. Unknown delivery stays visible. Physical switches and the 1.5-second motor test keep their existing semantics.
 - **Consent and privacy.** Memory starts Off. With memory enabled, explicit remember requests in the five supported languages can save a short fact in the reply transaction, up to 200 distinct facts per persona. The refusal fallback requires a chosen local connection. Clearing it invalidates an in-flight fallback result. ChatGPT sign-in uses a short-lived, single-use loopback callback behind the browser port.
 - **Release and debug.** Release uses platform adapters. Debug uses local simulators for devices, model setup and release checks. Only `MagicHandyApp.kt`, `MainActivity.kt` and the debug `CoreFactory.kt` changed among shared wiring files. Compose source, UI strings, previews and the root build files stayed with their owners.
-- **Remaining work.** The phone checklist covers operational acceptance. UI follow-ups cover settings state, memory review, local fallback selection, Coyote controls, Intiface choices and shared Live navigation. The motor-test duration and form completion remain owner decisions. [Phone checklist](device-checklist.md) · [UI requests](ui-requests.md) · [Contract changes](contract-changes.md) · [Wiring](wiring.md)
+- **Subsequent decisions.** The 20 November owner decision confirmed the bottom settings row, a 1.5-second motor test, per-form acceptance and full Intiface support. Current UI status is recorded in [UI requests](ui-requests.md).
 
 ## M0 verification on 2026-11-19
 

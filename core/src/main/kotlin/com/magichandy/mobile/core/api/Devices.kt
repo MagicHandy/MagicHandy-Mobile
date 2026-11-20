@@ -18,7 +18,21 @@ public data class DevicesState(
 )
 
 /** A vibration-capable endpoint reported by the named Intiface server. */
-public data class IntifaceChoice(public val deviceIndex: Int, public val name: String)
+public data class IntifaceChoice(
+    public val deviceIndex: Int,
+    public val name: String,
+    public val selection: String? = null,
+)
+
+/** One LinearCmd feature. Indices belong only to the discovery that returned this choice. */
+public data class IntifaceLinearChoice(
+    public val deviceIndex: Int,
+    public val actuatorIndex: Int,
+    public val name: String,
+    public val descriptor: String = "",
+    /** Opaque identity to return with the form if discovery results change. */
+    public val selection: String? = null,
+)
 
 /**
  * One saved device.
@@ -50,6 +64,7 @@ public enum class DeviceFamily {
     Coyote,
     AutoblowUltra,
     VacuGlide,
+    LinearActuator,
 }
 
 /** Independent Coyote strength channels. Strength belongs exclusively to the person. */
@@ -127,6 +142,10 @@ public sealed interface DeviceSettings {
     public data class Coyote(public val maxStrengthA: Int, public val maxStrengthB: Int) :
         DeviceSettings
 
+    /** An Intiface linear axis with a host-side mounting direction. */
+    @kotlinx.serialization.Serializable
+    public data class LinearActuator(public val isReversed: Boolean = false) : DeviceSettings
+
     @kotlinx.serialization.Serializable public data object AutoblowUltra : DeviceSettings
 
     /**
@@ -155,7 +174,7 @@ public enum class AfterLossBehaviour {
     /** The Coyote goes silent when packets stop. */
     GoesSilent,
 
-    /** The Autoblow Ultra finishes its last move. */
+    /** The Ultra or a linear bridge actuator may finish its last submitted move. */
     FinishesLastMove,
 
     /** The VacuGlide may keep running at its last speed. */

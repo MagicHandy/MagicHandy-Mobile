@@ -14,6 +14,39 @@ internal class RotatingDiagnostics(private val directory: File, private val size
     DiagnosticsSink {
     private val owner = Mutex()
 
+    override suspend fun recent(limit: Int): List<DiagnosticEvent> =
+        withContext(Dispatchers.IO) {
+            owner.withLock {
+                val maximum = limit.coerceIn(0, 2048)
+                if (maximum == 0) return@withLock emptyList()
+                val recent = ArrayDeque<DiagnosticEvent>(maximum)
+                for (name in listOf("previous.log", "events.log")) {
+                    val file = File(directory, name)
+                    if (!file.isFile) continue
+                    java.io.RandomAccessFile(file, "r").use { input ->
+                        val start = (input.length() - 65536).coerceAtLeast(0)
+                        input.seek(start)
+                        if (start > 0) input.readLine()
+                        while (input.filePointer < input.length()) {
+                            val text = input.readLine() ?: break
+                            val split = text.indexOf(' ')
+                            if (split !in 1..20) continue
+                            val time = text.substring(0, split).toLongOrNull() ?: continue
+                            val kind =
+                                DiagnosticKind.entries.firstOrNull {
+                                    it.name == text.substring(split + 1)
+                                } ?: continue
+                            if (recent.size == maximum) recent.removeFirst()
+                            recent.addLast(
+                                DiagnosticEvent(Instant.fromEpochMilliseconds(time), kind)
+                            )
+                        }
+                    }
+                }
+                recent.toList()
+            }
+        }
+
     override suspend fun record(at: Instant, kind: DiagnosticKind) {
         val line = at.toEpochMilliseconds().toString() + " " + kind.name + "\n"
         withContext(Dispatchers.IO) {

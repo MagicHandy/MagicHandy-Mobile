@@ -10,6 +10,14 @@ import com.magichandy.mobile.transport.simulated.simulatedDependencies
  * never reach it.
  */
 internal fun createCore(app: MagicHandyApp): MagicHandyCore =
-    createMagicHandyCore(simulatedDependencies(app.processScope).copy(runHost = app.host))
+    createMagicHandyCore(
+        simulatedDependencies(app.processScope)
+            .copy(
+                runHost = app.host,
+                androidApi = android.os.Build.VERSION.SDK_INT,
+                versionName =
+                    app.packageManager.getPackageInfo(app.packageName, 0).versionName.orEmpty(),
+            )
+    )
 
 internal const val simulatedDevices = true

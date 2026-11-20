@@ -7,6 +7,10 @@ local.properties
 *.iml
 *.apk
 *.aab
+# Release signing: the keystore and its properties stay on the owner's machine.
+keystore.properties
+*.jks
+*.keystore
 # Agent workspaces and desktop snapshots; never part of the repo.
 .work/
 

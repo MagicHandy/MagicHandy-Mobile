@@ -13,8 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.FormRefusal
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.Card
@@ -24,12 +27,16 @@ import com.magichandy.mobile.ui.components.Segmented
 import com.magichandy.mobile.ui.components.TextInput
 import com.magichandy.mobile.ui.components.ToggleRow
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
-/** OpenRouter setup: a key, a model, a capability level and reasoning. */
+/**
+ * OpenRouter setup: a key, a model, a capability level and reasoning. It closes once the core has
+ * saved the connection, and keeps what was typed when the core can't.
+ */
 @Composable
 fun OpenRouterScreen(
-    onIntent: (UserIntent) -> Unit,
+    submit: suspend (form: FormIntent) -> FormResult,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -38,6 +45,7 @@ fun OpenRouterScreen(
     var model by rememberSaveable { mutableStateOf("") }
     var capability by rememberSaveable { mutableStateOf(CapabilityLevel.Advanced) }
     var isReasoningOn by rememberSaveable { mutableStateOf(false) }
+    val submission = rememberFormSubmission(submit)
     Page(modifier) {
         PageHeader(
             title = stringResource(R.string.provider_openrouter),
@@ -50,10 +58,21 @@ fun OpenRouterScreen(
             style = MagicHandyTheme.type.small,
             color = MagicHandyTheme.colors.muted,
         )
-        TextInput(key, { key = it }, stringResource(R.string.field_api_key), isSecret = true)
+        TextInput(
+            key,
+            {
+                key = it
+                submission.edited()
+            },
+            stringResource(R.string.field_api_key),
+            isSecret = true,
+        )
         TextInput(
             model,
-            { model = it },
+            {
+                model = it
+                submission.edited()
+            },
             stringResource(R.string.field_model),
             placeholder = stringResource(R.string.field_model_hint),
         )
@@ -72,21 +91,24 @@ fun OpenRouterScreen(
                 isFirst = true,
             )
         }
+        FormRefusal(submission)
         AppButton(
-            stringResource(R.string.action_save),
+            stringResource(
+                if (submission.isSending) R.string.form_saving else R.string.action_save
+            ),
             {
-                onIntent(
+                submission.send(
                     UserIntent.SaveOpenRouter(
                         Secret(key.trim()),
                         model.trim(),
                         capability,
                         isReasoningOn,
-                    )
+                    ),
+                    onBack,
                 )
-                onBack()
             },
             kind = ButtonKind.Primary,
-            isEnabled = key.isNotBlank() && model.isNotBlank(),
+            isEnabled = key.isNotBlank() && model.isNotBlank() && !submission.isSending,
             modifier = Modifier.fillMaxWidth(),
         )
     }

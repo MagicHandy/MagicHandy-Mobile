@@ -20,8 +20,18 @@
 
 ## Debug
 
-The debug factory passes the process scope and real service host to the simulated graph. Its five device families, model replies, LAN readiness check, release check, vault and stores use local fixtures. New model rows also use the canned provider. The Handy simulator exercises the production RPC session. The fixture artifacts are debug and test dependencies. The existing UI owner can add a selector if a runtime simulation toggle is wanted. [Debug factory](../../app/src/debug/kotlin/com/magichandy/mobile/CoreFactory.kt) · [UI requests](ui-requests.md)
+The debug factory passes the process scope and real service host to the simulated graph. Its five seeded devices, discoverable linear actuator, model replies, LAN readiness check, release check, vault and stores use local fixtures. New model rows also use the canned provider. The Handy simulator exercises the production RPC session. The fixture artifacts are debug and test dependencies. The existing UI owner can add a selector if a runtime simulation toggle is wanted. [Debug factory](../../app/src/debug/kotlin/com/magichandy/mobile/CoreFactory.kt) · [UI requests](ui-requests.md)
 
 ## Shared wiring
 
 `MagicHandyApp.kt` owns the core, Android host and memory-pressure callback. `MainActivity.kt` forwards visibility and permission interactions and handles the notification's Live entry. The debug `CoreFactory.kt` supplies the same host to the simulated graph. The release factory, service, receivers, Bluetooth and storage adapters live in the backend-owned source sets.
+
+## Last non-UI wiring
+
+`PlatformDevices` owns one `IntifaceHub` for the process. Canonical WebSocket addresses own connections. Discovery, linear features and vibrators take independent leases. Selecting an output requires fresh type, feature and device identity. The final lease closes the socket. Shared emergency Stop also reaches a discovery or handshake in progress. A discovery-only broadcast has no selected device to attribute to a receipt. A device row can report `NeedsSetup` when its identity cannot be established.
+
+The engine fits full-precision points for each distinct linear sampling policy. Each linear owner captures mounting at enqueue, maps the live stroke window at send, and uses monotonic absolute deadlines. The owner sends one anchor and bounds pending movement replies and unsent segments. Excessive lateness or exhausted coverage records the redacted IntifaceStarved event before recovery Stop. The bridge write barrier also covers vibrator submissions. Physical confirmation remains distinct from a correlated server reply.
+
+A bounded form queue handles only configuration changes. A pending LAN readiness request leaves motion controls and direct Stop available. The session exposes a structured, allowlisted diagnostics report, while the Android ring reader validates timestamps and enum categories. The latest 16 Stop epochs are kept in process. The journal and the rotating event files supply the durable part of a report after restart. The FileProvider grants access only to the diagnostics cache subtree. Tile presence has a dedicated dirty settings field. Debug uses the production Coyote controller with a simulated byte peer and reports the installed app version and Android API to diagnostics.
+
+Release builds use optional root signing properties. Gradle signs with the configured owner key and checks the packaged Room and serialization classes, prompt resource and numerical licence. The script uses the variant metadata to stage the APK, verifies its signature and writes SHA256SUMS. The regular build works without signing configuration. [Release guide](../release.md)

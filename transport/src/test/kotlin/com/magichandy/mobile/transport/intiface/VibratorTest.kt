@@ -67,18 +67,22 @@ internal class VibratorTest {
                         ConnectionKind.IntifaceOnPhone,
                     )
                 val address = server.url("/").toString().replaceFirst("http", "ws")
+                val hub = IntifaceHub(OkHttpClient(), scope)
+                val choices = hub.targets(address)
                 assertEquals(
                     listOf(IntifaceChoice(5, "Synthetic")),
-                    IntifaceVibrator.choices(OkHttpClient(), address),
+                    choices.map { IntifaceChoice(it.deviceIndex, it.name) },
                 )
                 assertEquals(listOf("RequestServerInfo", "RequestDeviceList"), names.toList())
                 val vibrator =
                     IntifaceVibrator.connect(
-                        ref,
-                        server.url("/").toString().replaceFirst("http", "ws"),
-                        null,
-                        OkHttpClient(),
-                        scope,
+                        hub,
+                        SavedDevice(
+                            ref,
+                            DeviceSettings.Vibrator(Percent(60)),
+                            address = address,
+                            bridgeIdentity = choices.single().identity,
+                        ),
                         { Percent(60) },
                         {},
                     )

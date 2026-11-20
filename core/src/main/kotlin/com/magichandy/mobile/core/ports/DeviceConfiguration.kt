@@ -4,6 +4,19 @@ import com.magichandy.mobile.core.api.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
+/** A discovery-only index and the stable protocol identity used for reconnection. */
+public data class BridgeTarget(
+    public val deviceIndex: Int,
+    public val name: String,
+    public val identity: String,
+    public val family: DeviceFamily,
+    public val actuatorIndex: Int = 0,
+    public val descriptor: String = "",
+)
+
+/** The saved identity cannot be distinguished in the current bridge device list. */
+public class BridgeSelectionRequired : java.io.IOException("Choose a bridge device again")
+
 /** Durable ordered device records. A Bluetooth address or endpoint is private to the adapter. */
 public interface DeviceRecords {
     public val rows: StateFlow<List<SavedDevice>>
@@ -20,6 +33,9 @@ public interface DeviceConfiguration : DeviceRecords {
     /** Read-only v3 device list at the explicitly supplied WebSocket origin. */
     public suspend fun intifaceVibrators(address: String): List<IntifaceChoice> = emptyList()
 
+    /** Inspect only the supplied bridge. The caller persists identity after explicit selection. */
+    public suspend fun bridgeTargets(address: String): List<BridgeTarget> = emptyList()
+
     public val scanAllowed: Boolean
         get() = true
 
@@ -30,6 +46,7 @@ public interface DeviceConfiguration : DeviceRecords {
 
 public fun defaultDeviceSettings(family: DeviceFamily): DeviceSettings =
     when (family) {
+        DeviceFamily.LinearActuator -> DeviceSettings.LinearActuator()
         DeviceFamily.Handy -> DeviceSettings.Handy("handy_original", false)
         DeviceFamily.Coyote -> DeviceSettings.Coyote(0, 0)
         DeviceFamily.Vibrator -> DeviceSettings.Vibrator(Percent(70))

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="platform_channel">Conexiones activas</string>
+    <string name="platform_active">MagicHandy · Activa</string>
+    <string name="platform_stop">Detener</string>
+    <string name="platform_tile">Detener movimiento</string>
+    <string name="platform_pace">Ritmo %1$d</string>
+    <string name="platform_next">Próximo cambio en %1$d s</string>
+</resources>

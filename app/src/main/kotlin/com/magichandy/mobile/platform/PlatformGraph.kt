@@ -117,6 +117,7 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
             app.packageManager.getPackageInfo(app.packageName, 0).versionName.orEmpty(),
             servers,
             com.magichandy.mobile.transport.http.MobileReleases(http),
+            androidApi = android.os.Build.VERSION.SDK_INT,
         )
     )
 }

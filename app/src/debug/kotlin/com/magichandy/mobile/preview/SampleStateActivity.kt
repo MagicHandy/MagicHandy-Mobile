@@ -26,7 +26,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * design board. Intents do nothing; navigation works.
  *
  * `adb shell am start -n com.magichandy.mobile/.preview.SampleStateActivity --es state playing --es
- * palette Lowlight`
+ * palette OledBlack`
  */
 class SampleStateActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

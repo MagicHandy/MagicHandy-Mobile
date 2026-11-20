@@ -351,6 +351,7 @@ internal class DevicePlayback(
     private fun output(row: DeviceSummary, batch: MotionBatch, target: ManualTarget): DeviceOutput =
         when (val config = row.settings) {
             is DeviceSettings.Handy,
+            is DeviceSettings.LinearActuator,
             DeviceSettings.AutoblowUltra ->
                 DeviceOutput.Stroke(
                     batch.pace,

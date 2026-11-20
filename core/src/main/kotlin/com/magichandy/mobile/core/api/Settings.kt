@@ -56,13 +56,26 @@ public data class AppSettingsState(
     public val hasSystemAccessSnapshot: Boolean = false,
     /** True after the first connected-device notification permission request. */
     public val hasAskedForNotifications: Boolean = false,
+    /** Last presence reported by Android. Null until System UI has reported this tile. */
+    public val isStopTileAdded: Boolean? = null,
 )
 
-/** The three palettes (plan §14.1). The semantic colours stay fixed in each. */
+/**
+ * The palettes, all dark and chosen for phones (plan §14.1). The semantic colours stay fixed in
+ * each.
+ */
 public enum class Palette {
+    /** The default, in the brand's Graphite greys. */
     SteelAzure,
+
+    /** Retired on 2026-11-20 in favour of [OledBlack]. A saved Lowlight loads as [OledBlack]. */
     Lowlight,
+
+    /** The brightest text and outlines, for low vision and bright light. */
     HighContrast,
+
+    /** True black: OLED screens draw it with their pixels off, so it doesn't glow in the dark. */
+    OledBlack,
 }
 
 /** The five UI languages, or the phone's own. */

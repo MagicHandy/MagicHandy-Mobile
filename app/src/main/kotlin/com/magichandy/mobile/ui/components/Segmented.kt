@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
@@ -111,6 +113,25 @@ fun <T> Segmented(
             }
         }
     }
+}
+
+/**
+ * The narrowest a [Segmented] can be while each label stays on one line: equal segments, each as
+ * wide as the widest label. Languages written without spaces, such as Japanese, would otherwise
+ * split a word anywhere, so a control given this width moves under its label instead.
+ */
+@Composable
+fun segmentedWidthFor(labels: List<String>): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = MagicHandyTheme.type.small.copy(fontWeight = FontWeight.SemiBold)
+    val density = LocalDensity.current
+    val dimens = MagicHandyTheme.dimens
+    val widest =
+        remember(labels, style, density) {
+            labels.maxOf { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width }
+        }
+    val segment = with(density) { widest.toDp() } + dimens.xs * 2
+    return segment * labels.size + dimens.tight * (labels.size + 1) + dimens.hairline * 2
 }
 
 /** A compact picker: the current value in a field with a caret, opening a menu of [options]. */

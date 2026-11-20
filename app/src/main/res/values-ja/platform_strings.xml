@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="platform_channel">アクティブな接続</string>
+    <string name="platform_active">MagicHandy · 動作中</string>
+    <string name="platform_stop">停止</string>
+    <string name="platform_tile">モーションを停止</string>
+    <string name="platform_pace">ペース %1$d</string>
+    <string name="platform_next">次の変更まで %1$d秒</string>
+</resources>

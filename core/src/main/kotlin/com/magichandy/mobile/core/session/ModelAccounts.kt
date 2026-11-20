@@ -6,6 +6,8 @@ import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.CapabilityLevel
 import com.magichandy.mobile.core.api.ConnectionId
 import com.magichandy.mobile.core.api.ConnectionStatus
+import com.magichandy.mobile.core.api.FormReason
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.ModelConnection
 import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.SignInFailure
@@ -69,15 +71,25 @@ internal class ModelAccounts(
             }
     }
 
-    suspend fun saveOpenRouter(intent: UserIntent.SaveOpenRouter) {
+    suspend fun saveOpenRouter(intent: UserIntent.SaveOpenRouter): FormResult {
         val name = intent.model.trim()
         if (
             name.isEmpty() ||
                 name.length > 200 ||
-                name.any { it.isWhitespace() || it.isISOControl() } ||
-                intent.apiKey.reveal().isBlank()
+                name.any { it.isWhitespace() || it.isISOControl() }
         )
-            return unavailable()
+            return reject(FormReason.InvalidModel)
+        val key = intent.apiKey.reveal()
+        if (key.length !in 1..2048 || key.any { it.code !in 33..126 })
+            return reject(FormReason.InvalidKey)
+        for (saved in d.models.state.value.models.values) {
+            if (
+                saved.info.provider == ProviderKind.OpenRouter &&
+                    saved.info.model == name &&
+                    saved.credential?.let { d.vault.get(it) } == intent.apiKey
+            )
+                return reject(FormReason.Duplicate)
+        }
         val id = ConnectionId(java.util.UUID.randomUUID().toString())
         val handle = com.magichandy.mobile.core.ports.SecretHandle("router-" + id.value)
         val info =
@@ -98,6 +110,7 @@ internal class ModelAccounts(
         } finally {
             if (id !in d.models.state.value.models) d.vault.remove(handle)
         }
+        return FormResult.Accepted
     }
 
     private fun setSignIn(value: SignInState) {

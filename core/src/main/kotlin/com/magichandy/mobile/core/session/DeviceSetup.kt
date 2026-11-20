@@ -4,7 +4,6 @@ import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.*
 import com.magichandy.mobile.core.motion.MotionEngine
 import com.magichandy.mobile.core.ports.*
-import java.net.URI
 import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.*
@@ -217,9 +216,15 @@ internal class DeviceSetup(
             }
     }
 
-    suspend fun cloud(family: DeviceFamily, name: String, key: Secret) {
-        val cfg = config ?: return
-        if (!ui.value.firstRun.hasAcknowledgedAdultsOnly) return
+    suspend fun cloud(family: DeviceFamily, name: String, key: Secret): FormResult {
+        val cfg = config ?: return reject(FormReason.Unsupported)
+        if (!ui.value.firstRun.hasAcknowledgedAdultsOnly) return reject(FormReason.ConsentRequired)
+        if (name.trim().length > 64 || name.any(Char::isISOControl))
+            return reject(FormReason.InvalidName)
+        if (
+            family !in setOf(DeviceFamily.Handy, DeviceFamily.VacuGlide, DeviceFamily.AutoblowUltra)
+        )
+            return reject(FormReason.Unsupported)
         val valid =
             when (family) {
                 DeviceFamily.Handy -> key.reveal().matches(Regex("[A-Za-z0-9]{5,64}"))
@@ -228,9 +233,14 @@ internal class DeviceSetup(
                     key.reveal().length in 1..256 && key.reveal().all { it.code in 33..126 }
                 else -> false
             }
-        if (!valid) {
-            ui.update { it.copy(backendNotice = BackendNotice.FeatureUnavailable) }
-            return
+        if (!valid) return reject(FormReason.InvalidKey)
+        for (saved in cfg.rows.value) {
+            if (
+                saved.credential != null &&
+                    (family == DeviceFamily.Handy) == (saved.ref.family == DeviceFamily.Handy) &&
+                    d.vault.get(saved.credential) == key
+            )
+                return reject(FormReason.Duplicate)
         }
         val kind =
             if (family == DeviceFamily.Handy) ConnectionKind.HandyCloud
@@ -244,61 +254,10 @@ internal class DeviceSetup(
             if (cfg.rows.value.none { it.credential == handle }) d.vault.remove(handle)
         }
         refresh(cfg.rows.value)
+        return FormResult.Accepted
     }
 
-    private val listing = kotlinx.coroutines.sync.Mutex()
-
-    suspend fun vibratorsAt(address: String): List<IntifaceChoice> {
-        val cfg = config ?: return emptyList()
-        val uri = bridgeAddress(address) ?: return emptyList()
-        if (!ui.value.firstRun.hasAcknowledgedAdultsOnly || !listing.tryLock()) return emptyList()
-        return try {
-            withTimeoutOrNull(8.seconds) {
-                    withContext(d.dispatchers.io) { cfg.intifaceVibrators(uri.toASCIIString()) }
-                }
-                .orEmpty()
-        } catch (_: java.io.IOException) {
-            DiagnosticReporter.record(DiagnosticKind.DeviceConnectionFailed)
-            emptyList()
-        } finally {
-            listing.unlock()
-        }
-    }
-
-    private fun bridgeAddress(address: String): URI? {
-        val uri =
-            try {
-                URI(if ("://" in address) address.trim() else "ws://" + address.trim())
-            } catch (_: java.net.URISyntaxException) {
-                return null
-            }
-        if (
-            uri.scheme !in setOf("ws", "wss") ||
-                uri.host == null ||
-                uri.userInfo != null ||
-                uri.query != null ||
-                uri.fragment != null
-        )
-            return null
-        return uri
-    }
-
-    suspend fun intiface(address: String, index: Int?) {
-        val cfg = config ?: return
-        if (!ui.value.firstRun.hasAcknowledgedAdultsOnly || index != null && index < 0) return
-        val uri = bridgeAddress(address) ?: return
-        val local = uri.host in setOf("127.0.0.1", "localhost", "[::1]")
-        cfg.save(
-            newRow(
-                    DeviceFamily.Vibrator,
-                    if (local) ConnectionKind.IntifaceOnPhone else ConnectionKind.IntifaceOnNetwork,
-                    "Intiface",
-                    address = uri.toASCIIString(),
-                )
-                .copy(deviceIndex = index)
-        )
-        refresh(cfg.rows.value)
-    }
+    val bridges = BridgeSetup(d, ui, ::refresh)
 
     suspend fun edit(id: DeviceId, transform: (SavedDevice) -> SavedDevice) {
         val cfg = config ?: return
@@ -310,9 +269,27 @@ internal class DeviceSetup(
             }
     }
 
-    suspend fun remove(id: DeviceId) {
-        val cfg = config ?: return
-        val row = cfg.rows.value.find { it.ref.id == id } ?: return
+    suspend fun rename(intent: UserIntent.Rename): FormResult {
+        val cfg = config ?: return reject(FormReason.Unsupported)
+        val name = intent.name.trim()
+        if (name.isEmpty() || name.length > 64 || name.any(Char::isISOControl))
+            return reject(FormReason.InvalidName)
+        val row =
+            cfg.rows.value.firstOrNull { it.ref.id == intent.device }
+                ?: return reject(FormReason.NotFound)
+        if (cfg.rows.value.any { it.ref.id != intent.device && it.ref.name.equals(name, true) })
+            return reject(FormReason.Duplicate)
+        cfg.save(row.copy(ref = row.ref.copy(name = name)))
+        refresh(cfg.rows.value)
+        return FormResult.Accepted
+    }
+
+    suspend fun remove(id: DeviceId): FormResult {
+        val cfg = config ?: return reject(FormReason.Unsupported)
+        val row = cfg.rows.value.find { it.ref.id == id } ?: return reject(FormReason.NotFound)
+        if (id in engine.state.value.members) return reject(FormReason.RunInProgress)
+        if (ui.value.devices.devices.any { it.id == id && it.status == DeviceStatus.Connecting })
+            return reject(FormReason.Busy)
         if (id in engine.state.value.owners) {
             devices.disconnect(id)
         }
@@ -324,10 +301,12 @@ internal class DeviceSetup(
                     it.device == id && it.outcome != StopOutcome.Confirmed
                 }
         )
-            return
-        cfg.remove(id)
-        row.credential?.let { d.vault.remove(it) }
+            return reject(FormReason.ReconcileDevice)
+        removeWithCredential(d.vault, row.credential, { cfg.rows.value.any { it.ref.id == id } }) {
+            cfg.remove(id)
+        }
         refresh(cfg.rows.value)
+        return FormResult.Accepted
     }
 
     private fun newRow(

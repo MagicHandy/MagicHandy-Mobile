@@ -22,9 +22,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MagicHandy">
 
+        <provider android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.diagnostics" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/diagnostics_paths" />
+        </provider>
         <service android:name=".platform.CoreService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="connectedDevice" />
         <receiver android:name=".platform.StopActionReceiver" android:exported="false" />
-        <service android:name=".platform.StopTileService" android:label="@string/platform_tile" android:icon="@android:drawable/ic_media_pause" android:exported="true" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+        <service android:name=".platform.StopTileService" android:label="@string/platform_tile" android:icon="@drawable/ic_tile_stop" android:exported="true" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
         <activity

@@ -195,7 +195,7 @@ A Stop can jump ahead of queued operations and retire a stalled generation.
   - WebSocket to `ws://127.0.0.1:12345` on the phone, or to a server on the LAN;
   - pings keep the connection alive;
   - Android may close Intiface Central in the background, so the app treats a closed socket as Lost for every device using it and stops the run;
-  - The Handy via Intiface is proposed for removal on mobile (plan §12). Until you decide, it stays with a persistent caveat, and an acknowledgement from the bridge alone reports Stop as unconfirmed.
+  - The Handy, and other linear actuators, connect through Intiface too (plan §12, decision 1). Setup shows a persistent caveat, and an acknowledgement from the bridge alone reports Stop as unconfirmed.
 
 ## 4. Network resilience
 

@@ -18,6 +18,13 @@ public class InMemoryDiagnostics(private val capacity: Int = 128) : DiagnosticsS
     /** Snapshot in insertion order. */
     public val events: StateFlow<List<Pair<Instant, DiagnosticKind>>> = current.asStateFlow()
 
+    override suspend fun recent(
+        limit: Int
+    ): List<com.magichandy.mobile.core.ports.DiagnosticEvent> =
+        current.value.takeLast(limit.coerceIn(0, 2048)).map {
+            com.magichandy.mobile.core.ports.DiagnosticEvent(it.first, it.second)
+        }
+
     override suspend fun record(at: Instant, kind: DiagnosticKind) {
         current.update { (it + (at to kind)).takeLast(capacity) }
     }

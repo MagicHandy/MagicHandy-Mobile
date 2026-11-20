@@ -1,7 +1,5 @@
 package com.magichandy.mobile.ui.onboarding
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,14 +20,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.magichandy.mobile.R
 import com.magichandy.mobile.ui.components.AppButton
+import com.magichandy.mobile.ui.components.BrandMark
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.Card
 import com.magichandy.mobile.ui.devices.CheckBox
@@ -59,13 +56,9 @@ fun BeforeYouStartScreen(onAcknowledge: () -> Unit, modifier: Modifier = Modifie
             verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.roomy),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painterResource(R.drawable.ic_launcher_mark),
+                BrandMark(
                     contentDescription = stringResource(R.string.app_name),
-                    modifier =
-                        Modifier.size(MagicHandyTheme.dimens.brandMark)
-                            .clip(MagicHandyTheme.shapes.card)
-                            .background(colors.surface),
+                    modifier = Modifier.size(MagicHandyTheme.dimens.brandMark),
                 )
                 Text(
                     stringResource(R.string.onboarding_title),

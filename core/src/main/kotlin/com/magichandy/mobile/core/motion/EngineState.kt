@@ -32,7 +32,12 @@ internal data class StopTarget(
     constructor(owner: DeviceTransport) : this(owner.device, owner.stopTimeout, owner::stop)
 }
 
-internal class StopAttempt(val epoch: Epoch, val target: StopTarget, val pressedAt: Duration)
+internal class StopAttempt(
+    val epoch: Epoch,
+    val target: StopTarget,
+    val pressedAt: Duration,
+    val wholeBridge: Boolean = true,
+)
 
 /** Captured by the output job before its first write. Pause fences only this output stream. */
 internal data class PlaybackStream(val epoch: Epoch, val generation: Long)
@@ -103,8 +108,13 @@ internal fun EngineState.stopped(
 ): EngineState {
     val pending = pending.toMutableMap()
     for ((id, target) in targets) {
-        if (id !in pending || id in retry || id in reconciled)
-            pending[id] = StopAttempt(next, target, elapsed)
+        if (
+            id !in pending ||
+                id in retry ||
+                id in reconciled ||
+                (!isolated && pending[id]?.wholeBridge == false)
+        )
+            pending[id] = StopAttempt(next, target, elapsed, !isolated)
     }
     val evidence = nextReceipt(source, targets, isolated, at)
     return copy(
@@ -166,7 +176,7 @@ internal fun EngineState.pausing(
         pausedAt = elapsed,
         journal = journal.copy(intended = RunIntent.Paused, at = at),
         streamGeneration = streamGeneration + 1,
-        pending = targets.mapValues { StopAttempt(expected, it.value, elapsed) },
+        pending = targets.mapValues { StopAttempt(expected, it.value, elapsed, false) },
         confirmed = emptySet(),
         evidence = nextReceipt(null, targets, true, at),
         publishesEvidence = false,

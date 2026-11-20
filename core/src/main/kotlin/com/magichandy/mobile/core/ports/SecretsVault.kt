@@ -18,6 +18,22 @@ public interface SecretsVault {
     /** Install rotated credentials only if the original credential still owns the handle. */
     public suspend fun replace(handle: SecretHandle, expected: Secret?, value: Secret): Boolean
 
+    /**
+     * Erase before removing its Room row. The short-lived rollback restores only an empty handle.
+     */
+    public suspend fun takeForRemoval(handle: SecretHandle): ErasedCredential {
+        val prior = get(handle)
+        remove(handle)
+        return ErasedCredential { if (prior != null) replace(handle, null, prior) }
+    }
+
     /** Erase local authority for this handle. */
     public suspend fun remove(handle: SecretHandle)
+}
+
+/**
+ * An in-process compensation for a failed database removal. Implementations expose no key material.
+ */
+public fun interface ErasedCredential {
+    public suspend fun restoreIfMissing()
 }

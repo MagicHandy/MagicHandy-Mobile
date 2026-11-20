@@ -1,31 +1,40 @@
-// Ported from internal/transport/intiface_{session,protocol}.go at 1b80d72e.
+// Ported from internal/transport/intiface_session.go at 1b80d72e.
 package com.magichandy.mobile.transport.intiface
 
 import com.magichandy.mobile.transport.providers.originClient
 import java.io.IOException
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import okhttp3.*
 
-internal class ButtplugSocket(private val lost: () -> Unit) : WebSocketListener() {
-    private data class Pending(val reply: String, val result: CompletableDeferred<JsonObject>)
+internal class ButtplugSocket(
+    private val lost: () -> Unit,
+    private val changed: (Int) -> Unit = {},
+) : WebSocketListener() {
+    internal data class Reply(val data: JsonObject, val elapsed: kotlin.time.Duration)
 
-    private val replies = ConcurrentHashMap<Long, Pending>()
-    private val sequence = AtomicLong()
+    internal class Pending(val expected: String) {
+        val result = CompletableDeferred<Reply>()
+        val sent = TimeSource.Monotonic.markNow()
+    }
+
+    // The only critical section covers registration, the last admission check and OkHttp's
+    // nonblocking send. Never hold it while awaiting a peer or a coroutine.
+    val wire = Any()
+    private val pending = mutableMapOf<Long, Pending>()
+    private var next = 0L
     private val ready = CompletableDeferred<Unit>()
     private val closed = AtomicBoolean()
     @Volatile private var socket: WebSocket? = null
-    @Volatile var deviceIndex = -1
 
     suspend fun open(http: OkHttpClient, address: String) {
-        val request = Request.Builder().url(address).build()
-        socket = originClient(http, request.url).newWebSocket(request, this)
+        val req = Request.Builder().url(address).build()
+        socket = originClient(http, req.url).newWebSocket(req, this)
         try {
-            withTimeoutOrNull(5.seconds) { ready.await() }
+            withTimeoutOrNull(5000) { ready.await() }
                 ?: throw IOException("Bridge handshake timed out")
         } catch (e: Throwable) {
             close()
@@ -37,88 +46,105 @@ internal class ButtplugSocket(private val lost: () -> Unit) : WebSocketListener(
         ready.complete(Unit)
     }
 
-    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-        fail()
-    }
+    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) = fail()
 
-    override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-        fail()
-    }
+    override fun onClosing(webSocket: WebSocket, code: Int, reason: String) = fail()
 
-    override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-        fail()
-    }
+    override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = fail()
 
     override fun onMessage(webSocket: WebSocket, text: String) {
-        if (text.length > 65536) {
-            fail()
-            return
-        }
         try {
-            val messages = Json.parseToJsonElement(text).jsonArray
-            require(messages.size in 1..64)
-            for (item in messages) {
+            require(text.length <= 65536)
+            val batch = Json.parseToJsonElement(text).jsonArray
+            require(batch.size in 1..64)
+            for (item in batch) {
                 val (kind, payload) = item.jsonObject.entries.single()
                 val data = payload.jsonObject
                 val id = data.getValue("Id").jsonPrimitive.long
                 if (id == 0L) {
-                    if (
-                        kind == "DeviceRemoved" &&
-                            data["DeviceIndex"]?.jsonPrimitive?.int == deviceIndex
-                    )
-                        fail()
-                } else
-                    replies.remove(id)?.let { pending ->
-                        if (pending.reply == kind) pending.result.complete(data)
-                        else
-                            pending.result.completeExceptionally(
-                                IOException("Bridge command rejected")
-                            )
-                    }
+                    if (kind == "DeviceRemoved" || kind == "DeviceAdded")
+                        changed(data.getValue("DeviceIndex").jsonPrimitive.int)
+                } else {
+                    val slot = synchronized(wire) { pending.remove(id) } ?: continue
+                    if (slot.expected == kind)
+                        slot.result.complete(Reply(data, slot.sent.elapsedNow()))
+                    else slot.result.completeExceptionally(IOException("Bridge command rejected"))
+                }
             }
         } catch (_: RuntimeException) {
             fail()
         }
     }
 
+    inner class Ticket(private val id: Long, private val slot: Pending) {
+        suspend fun await(timeoutMillis: Long): JsonObject =
+            try {
+                val received =
+                    if (slot.result.isCompleted) slot.result.await()
+                    else
+                        withTimeoutOrNull(timeoutMillis.milliseconds - slot.sent.elapsedNow()) {
+                            slot.result.await()
+                        } ?: throw IOException("Bridge response timed out")
+                if (received.elapsed > timeoutMillis.milliseconds)
+                    throw IOException("Bridge response timed out")
+                received.data
+            } finally {
+                synchronized(wire) { pending.remove(id, slot) }
+            }
+    }
+
+    fun begin(
+        kind: String,
+        reply: String = "Ok",
+        data: JsonObject = JsonObject(emptyMap()),
+        allowed: () -> Boolean = { true },
+    ): Ticket =
+        synchronized(wire) {
+            if (
+                closed.get() ||
+                    next >= 0xffffffffL ||
+                    pending.size >= (if (kind in stopKinds) 160 else 128) ||
+                    !allowed()
+            )
+                throw IOException("Bridge submission refused")
+            val id = ++next
+            val slot = Pending(reply)
+            val payload = buildJsonObject {
+                put(kind, JsonObject(data + ("Id" to JsonPrimitive(id))))
+            }
+            pending[id] = slot
+            if (socket?.send(JsonArray(listOf(payload)).toString()) != true) {
+                pending.remove(id)
+                throw IOException("Bridge write failed")
+            }
+            Ticket(id, slot)
+        }
+
     suspend fun request(
         kind: String,
         reply: String = "Ok",
         data: JsonObject = JsonObject(emptyMap()),
         allowed: () -> Boolean = { true },
-    ): JsonObject {
-        val id = sequence.incrementAndGet()
-        if (closed.get() || replies.size >= 16 || id > 0xffff_ffffL)
-            throw IOException("Bridge unavailable")
-        val pending = Pending(reply, CompletableDeferred())
-        replies[id] = pending
-        try {
-            val message =
-                JsonArray(
-                    listOf(
-                        buildJsonObject {
-                            put(kind, JsonObject(data + ("Id" to JsonPrimitive(id))))
-                        }
-                    )
-                )
-            if (!allowed() || closed.get() || socket?.send(message.toString()) != true)
-                throw IOException("Bridge submission refused")
-            return withTimeoutOrNull(1500) { pending.result.await() }
-                ?: throw IOException("Bridge response timed out")
-        } finally {
-            replies.remove(id)
-        }
-    }
+    ) = begin(kind, reply, data, allowed).await(1500)
 
     private fun fail() {
         if (close()) lost()
     }
 
     fun close(): Boolean {
-        if (!closed.compareAndSet(false, true)) return false
-        ready.completeExceptionally(IOException("Bridge closed"))
-        replies.values.forEach { it.result.completeExceptionally(IOException("Bridge closed")) }
+        val waiters =
+            synchronized(wire) {
+                if (!closed.compareAndSet(false, true)) return false
+                pending.values.toList().also { pending.clear() }
+            }
+        val failure = IOException("Bridge closed")
+        ready.completeExceptionally(failure)
+        waiters.forEach { it.result.completeExceptionally(failure) }
         socket?.cancel()
         return true
+    }
+
+    companion object {
+        private val stopKinds = setOf("StopAllDevices", "StopDeviceCmd")
     }
 }

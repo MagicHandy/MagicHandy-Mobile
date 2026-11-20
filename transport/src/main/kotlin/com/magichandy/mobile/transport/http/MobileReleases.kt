@@ -16,7 +16,6 @@ public class MobileReleases(private val http: okhttp3.Call.Factory) : ReleaseFee
                 .build()
         return try {
             http.exchange(req) { res ->
-                if (res.code == 404) return@exchange UpdateCheck.UpToDate
                 if (!res.isSuccessful) return@exchange UpdateCheck.Failed
                 val release = Json.parseToJsonElement(res.boundedText(256 * 1024)).jsonObject
                 val tag =

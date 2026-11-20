@@ -92,6 +92,15 @@ internal class AndroidVault(
             }
         }
 
+    override suspend fun takeForRemoval(handle: SecretHandle): ErasedCredential = access {
+        val store = file(handle)
+        val packet = store.read(262144)
+        store.remove()
+        ErasedCredential {
+            access { if (packet != null && store.read(262144) == null) store.replace(packet) }
+        }
+    }
+
     override suspend fun remove(handle: SecretHandle) {
         access { file(handle).remove() }
     }

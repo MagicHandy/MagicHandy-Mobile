@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Grouped by screen (plan §5.5). Wording follows the v1 design boards. -->
 <resources>
-    <string name="app_name">MagicHandy</string>
+    <string name="app_name" translatable="false">MagicHandy</string>
 
     <!-- Shared -->
     <string name="stop">Stop</string>
@@ -22,26 +22,27 @@
     <string name="back_to_models">Back to Models</string>
     <string name="back_to_app_settings">Back to App settings</string>
     <string name="back_to_page">Back to %1$s</string>
-    <string name="separator">" · "</string>
+    <string name="separator" translatable="false">" · "</string>
     <!-- Joins two sentences. Languages written without spaces between sentences drop the space. -->
     <string name="sentences">%1$s %2$s</string>
     <string name="on">On</string>
     <string name="off">Off</string>
-    <string name="percent">%1$d%%</string>
-    <string name="range">%1$d–%2$d</string>
+    <string name="percent" translatable="false">%1$d%%</string>
+    <string name="range" translatable="false">%1$d–%2$d</string>
     <string name="minutes_short">%1$d min</string>
-    <string name="milliseconds_short">%1$d ms</string>
+    <string name="milliseconds_short" translatable="false">%1$d ms</string>
     <string name="seconds_short">%1$s s</string>
-    <string name="context_tokens">%1$dK</string>
+    <string name="context_tokens" translatable="false">%1$dK</string>
 
     <!-- Device words -->
-    <string name="family_handy">The Handy</string>
+    <string name="family_handy" translatable="false">The Handy</string>
     <string name="family_vibrator">Vibrator</string>
-    <string name="family_coyote">Coyote 3.0</string>
-    <string name="family_autoblow_ultra">Autoblow Ultra</string>
-    <string name="family_vacuglide">VacuGlide</string>
-    <string name="connection_bluetooth">Bluetooth</string>
-    <string name="connection_handy_cloud">Handy Cloud</string>
+    <string name="family_linear_actuator">Stroker</string>
+    <string name="family_coyote" translatable="false">Coyote 3.0</string>
+    <string name="family_autoblow_ultra" translatable="false">Autoblow Ultra</string>
+    <string name="family_vacuglide" translatable="false">VacuGlide</string>
+    <string name="connection_bluetooth" translatable="false">Bluetooth</string>
+    <string name="connection_handy_cloud" translatable="false">Handy Cloud</string>
     <string name="connection_autoblow_cloud">Autoblow cloud</string>
     <string name="connection_intiface_phone">Intiface on this phone</string>
     <string name="connection_intiface_network">Intiface on your network</string>
@@ -200,6 +201,7 @@
     <string name="device_type_coyote">DG-LAB e-stim over Bluetooth</string>
     <string name="device_type_ultra">Autoblow cloud, with a device token</string>
     <string name="device_type_vacuglide">Autoblow cloud. It keeps its last speed if the phone loses it.</string>
+    <string name="device_type_linear">Another stroker, through Intiface Central on this phone or your network</string>
 
     <!-- Adding devices -->
     <string name="add_breadcrumb">Devices › Add</string>
@@ -209,6 +211,8 @@
     <string name="add_handy_bluetooth_desc">Fastest Stop, and it works without internet. Keep the phone within a few metres.</string>
     <string name="add_handy_cloud">Handy Cloud</string>
     <string name="add_handy_cloud_desc">Needs internet and the connection key from the Handy app.</string>
+    <string name="add_handy_intiface">Intiface Central</string>
+    <string name="add_handy_intiface_desc">Through Intiface Central on this phone or your network. Its Stop can\'t be confirmed.</string>
     <string name="add_nearby">Nearby · order stays put while you choose</string>
     <string name="add_scanning">Looking for nearby devices…</string>
     <string name="add_verifying">Verifying…</string>
@@ -256,6 +260,8 @@
     <string name="device_check">Check connection</string>
     <string name="device_test">Test motion</string>
     <string name="device_check_test_note">Check never moves the device. Test plays a short, slow stroke on this device only, while nothing else is playing.</string>
+    <string name="device_check_test_note_vibrator">Check never runs the vibrator. Test runs it gently for a moment, on this device only, while nothing else is playing.</string>
+    <string name="device_check_note_coyote">Check never sends pulses. There\'s no test here: strength starts at zero, and only you raise it, on Live while a run plays.</string>
     <string name="device_remove_handy">Remove this Handy</string>
     <string name="device_remove">Remove this device</string>
     <string name="vibrator_max_level">Maximum level</string>
@@ -352,11 +358,17 @@
     </plurals>
     <string name="app_appearance">Appearance</string>
     <string name="app_palette">Palette</string>
-    <string name="palette_steel_azure">Steel Azure</string>
-    <string name="palette_lowlight">Lowlight</string>
+    <string name="palette_steel_azure" translatable="false">Steel Azure</string>
+    <string name="palette_oled_black">OLED black</string>
     <string name="palette_high_contrast">High contrast</string>
+    <string name="palette_steel_azure_use">The default, in soft dark greys that suit any screen.</string>
+    <string name="palette_oled_black_use">True black. An OLED screen switches those pixels off, so it uses less power and doesn\'t glow in a dark room.</string>
+    <string name="palette_high_contrast_use">The brightest text and outlines, for bright light or low vision.</string>
     <string name="app_language">Language</string>
     <string name="language_system">System</string>
+    <!-- Which language "System" resolves to: each translation gives its own language's name. -->
+    <string name="language_resolved">English</string>
+    <string name="language_system_resolved">System · %1$s</string>
     <string name="language_english" translatable="false">English</string>
     <string name="language_spanish" translatable="false">Español</string>
     <string name="language_portuguese_brazil" translatable="false">Português (Brasil)</string>
@@ -371,8 +383,12 @@
     <string name="app_delete_all">Delete all chats and memory</string>
     <string name="app_delete_confirm">Tap again to delete. This can\'t be undone; devices, models and settings stay.</string>
     <string name="app_about">About</string>
-    <string name="app_version">Version</string>
+    <string name="app_version">Version %1$s</string>
     <string name="app_check_update">Check for update</string>
+    <string name="app_stop_tile">Quick Settings tile</string>
+    <string name="stop_tile_add">Add</string>
+    <string name="stop_tile_added">Added</string>
+    <string name="stop_tile_by_hand">Swipe down twice from the top, tap the pencil, then drag Stop motion into Quick Settings.</string>
     <string name="update_checking">Checking…</string>
     <string name="update_up_to_date">Up to date</string>
     <string name="update_available">Version %1$s available</string>
@@ -389,14 +405,14 @@
     <string name="models_saved">Saved connections</string>
     <string name="models_empty">No model yet. Add one to start chatting.</string>
     <string name="models_add">Add a provider</string>
-    <string name="provider_chatgpt">ChatGPT</string>
+    <string name="provider_chatgpt" translatable="false">ChatGPT</string>
     <string name="provider_chatgpt_desc">Sign in with your ChatGPT account</string>
-    <string name="provider_openrouter">OpenRouter</string>
+    <string name="provider_openrouter" translatable="false">OpenRouter</string>
     <string name="provider_openrouter_desc">Your OpenRouter API key</string>
     <string name="provider_lan">A server on your network</string>
     <string name="provider_lan_desc">Ollama, llama.cpp or another OpenAI-compatible server</string>
-    <string name="provider_ollama">Ollama</string>
-    <string name="provider_llamacpp">llama.cpp</string>
+    <string name="provider_ollama" translatable="false">Ollama</string>
+    <string name="provider_llamacpp" translatable="false">llama.cpp</string>
     <string name="provider_openai_compatible">an OpenAI-compatible server</string>
     <string name="connection_ready">Ready</string>
     <string name="connection_checking">Checking…</string>
@@ -407,7 +423,7 @@
     <string name="add_server_title">Add a server on your network</string>
     <string name="add_server_lead">Ollama, llama.cpp or another OpenAI-compatible server on a computer you control.</string>
     <string name="field_address">Address</string>
-    <string name="field_address_hint">192.168.0.20:11434</string>
+    <string name="field_address_hint" translatable="false">192.168.0.20:11434</string>
     <string name="add_server_check">Check</string>
     <string name="add_server_checking">Checking…</string>
     <string name="add_server_found">Found %1$s</string>
@@ -505,9 +521,9 @@
     <string name="interrupted_reconnect">Reconnect devices</string>
 
     <!-- A value and the most it can reach, as in "12 / 40" (StepperRow). -->
-    <string name="out_of">" / %1$s"</string>
+    <string name="out_of" translatable="false">" / %1$s"</string>
     <!-- A reading that hasn't arrived yet. -->
-    <string name="no_value">–</string>
+    <string name="no_value" translatable="false">–</string>
 
     <!-- Retrying a refused message on a local server (board V-RefusalFallback). -->
     <string name="refusal_row">If %1$s refuses</string>
@@ -544,4 +560,43 @@
     <string name="live_coyote_no_limits">Both limits are 0, so strength can\'t go up. Disconnect the Coyote and set its limits on its page.</string>
     <string name="live_coyote_waiting">Waiting for the Coyote to report its strength.</string>
     <string name="live_coyote_paused">Strength steps wait while motion is paused.</string>
+
+    <!-- Finding and choosing a stroker through Intiface (board V-AddHandyIntiface). -->
+    <string name="add_linear_title">Connect a stroker</string>
+    <string name="add_linear_desc">Strokers connect through Intiface Central. Run it on this phone, or on a computer on the same network.</string>
+    <string name="linear_find">Find strokers</string>
+    <string name="linear_finding">Finding strokers…</string>
+    <string name="linear_find_again">Find strokers again</string>
+    <string name="linear_device">Intiface device %1$d · axis %2$d</string>
+    <string name="linear_none_title">No strokers found</string>
+    <string name="linear_none_body">Check that Intiface Central\'s server is running at this address, and that the stroker shows there.</string>
+    <string name="linear_find_hint">Finding only asks Intiface what\'s connected. Nothing moves until a run starts. When Intiface reports one stroker, it\'s chosen for you.</string>
+    <string name="linear_reverse_desc">For a stroker mounted the other way up. A change applies from the next Start or Resume.</string>
+    <string name="intiface_caveat_title">Stop through Intiface can\'t be confirmed</string>
+    <string name="intiface_caveat_body">Intiface Central answers Stop for the device, which doesn\'t prove it stopped. Its driver for The Handy has missed a hardware Stop before, so keep a way to switch the device off within reach.</string>
+
+    <!-- Why the core refused a form. The form keeps what was typed. -->
+    <string name="form_saving">Saving…</string>
+    <string name="form_invalid_key">That key or token doesn\'t look right. Check it and try again.</string>
+    <string name="form_invalid_address">That address doesn\'t look right. Use a host or IP and a port.</string>
+    <string name="form_invalid_name">That name can\'t be used. Try a shorter one.</string>
+    <string name="form_invalid_model">That model name doesn\'t look right.</string>
+    <string name="form_unsupported">This version can\'t do that yet.</string>
+    <string name="form_consent_required">Confirm you\'re an adult on Before you start first.</string>
+    <string name="form_unreachable">Couldn\'t reach it. Check the address, and that it\'s running on the same network.</string>
+    <string name="form_provider_refused">The server refused the test reply. Check the model and try again.</string>
+    <string name="form_duplicate">That\'s already saved.</string>
+    <string name="form_duplicate_name">Another device already has that name.</string>
+    <string name="form_choose_device">What\'s at this address changed. Find the devices again and choose one.</string>
+    <string name="form_not_found">It\'s no longer there. It may already have been removed.</string>
+    <string name="form_run_in_progress">Stop the current run first.</string>
+    <string name="form_reconcile_device">Finish checking this device\'s Stop on Devices first.</string>
+    <string name="form_busy">MagicHandy is still finishing the last change. Try again in a moment.</string>
+    <string name="form_storage_unavailable">MagicHandy couldn\'t save that. Free some storage and try again.</string>
+
+    <!-- Sharing the redacted diagnostics report from App settings. -->
+    <string name="app_diagnostics">Share diagnostics</string>
+    <string name="app_diagnostics_value">Redacted</string>
+    <string name="diagnostics_preparing">Preparing…</string>
+    <string name="diagnostics_failed">Couldn\'t write the report. Free some storage and try again.</string>
 </resources>

@@ -19,20 +19,24 @@ import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.ServerCheck
 import com.magichandy.mobile.core.api.ServerCheckFailure
 import com.magichandy.mobile.ui.AppContent
+import com.magichandy.mobile.ui.CoreCalls
 import com.magichandy.mobile.ui.components.AppFrame
 import com.magichandy.mobile.ui.components.SheetHeader
 import com.magichandy.mobile.ui.components.SheetOverlay
 import com.magichandy.mobile.ui.devices.AddDeviceScreen
+import com.magichandy.mobile.ui.devices.BridgeSearch
+import com.magichandy.mobile.ui.devices.BridgeSetup
 import com.magichandy.mobile.ui.devices.DeviceDetailScreen
 import com.magichandy.mobile.ui.devices.DevicesScreen
-import com.magichandy.mobile.ui.devices.VibratorSearch
-import com.magichandy.mobile.ui.devices.VibratorSetup
+import com.magichandy.mobile.ui.devices.VibratorWords
 import com.magichandy.mobile.ui.live.LiveScreen
 import com.magichandy.mobile.ui.models.AddServerScreen
 import com.magichandy.mobile.ui.models.ChatGptScreen
 import com.magichandy.mobile.ui.models.ModelExits
 import com.magichandy.mobile.ui.models.ModelsScreen
 import com.magichandy.mobile.ui.models.OpenRouterScreen
+import com.magichandy.mobile.ui.rememberDiagnosticsShare
+import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.settings.AppSettingsScreen
 import com.magichandy.mobile.ui.settings.ChatsPage
 import com.magichandy.mobile.ui.settings.MemoryPage
@@ -44,9 +48,9 @@ import com.magichandy.mobile.ui.settings.SystemLinks
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 import kotlin.time.Duration.Companion.milliseconds
 
-/** Previews draw each screen in Steel Azure and Lowlight (plan §5.5). */
+/** Previews draw each screen in Steel Azure and OLED black (plan §5.5). */
 class PaletteProvider : PreviewParameterProvider<Palette> {
-    override val values: Sequence<Palette> = sequenceOf(Palette.SteelAzure, Palette.Lowlight)
+    override val values: Sequence<Palette> = sequenceOf(Palette.SteelAzure, Palette.OledBlack)
 }
 
 @Composable
@@ -125,6 +129,7 @@ private fun CoyotePage(@PreviewParameter(PaletteProvider::class) palette: Palett
             isBatteryUnrestricted = true,
             hasAcknowledgedCoyoteNotes = true,
             onIntent = {},
+            submit = CoreCalls.None.submit,
             onSetCoyoteLimits = { _, _, _ -> },
             onBack = {},
             onOpenBatterySettings = {},
@@ -142,16 +147,35 @@ private fun AddVibratorFound(@PreviewParameter(PaletteProvider::class) palette: 
             Modifier.padding(horizontal = MagicHandyTheme.dimens.m),
             verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.cozy),
         ) {
-            VibratorSetup(
+            BridgeSetup(
+                words = VibratorWords,
                 address = "127.0.0.1:12345",
-                search = VibratorSearch.Found("127.0.0.1:12345", choices),
+                search = BridgeSearch.Found("127.0.0.1:12345", choices),
                 selected = choices.first(),
+                name = { it.name },
+                detail = { "Intiface device ${it.deviceIndex}" },
+                submission = rememberFormSubmission(CoreCalls.None.submit),
                 onAddressChange = {},
                 onFind = {},
                 onSelect = {},
                 onConnect = { _, _ -> },
             )
         }
+    }
+
+/** Board V-AddHandyIntiface: The Handy's setup through Intiface Central, before finding. */
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun AddHandyIntiface(@PreviewParameter(PaletteProvider::class) palette: Palette) =
+    InFrame(palette) {
+        AddDeviceScreen(
+            DeviceFamily.LinearActuator,
+            SampleStates.playing,
+            onIntent = {},
+            calls = CoreCalls.None,
+            onBack = {},
+            onDone = {},
+        )
     }
 
 @Preview(widthDp = 390, heightDp = 844)
@@ -177,6 +201,7 @@ private fun VacuGlidePage(@PreviewParameter(PaletteProvider::class) palette: Pal
             isBatteryUnrestricted = true,
             hasAcknowledgedCoyoteNotes = true,
             onIntent = {},
+            submit = CoreCalls.None.submit,
             onSetCoyoteLimits = { _, _, _ -> },
             onBack = {},
             onOpenBatterySettings = {},
@@ -191,6 +216,7 @@ private fun AppSettings(@PreviewParameter(PaletteProvider::class) palette: Palet
             state = SampleStates.playing,
             system = SystemAccess(areNotificationsAllowed = false, isBatteryUnrestricted = true),
             links = SystemLinks(openNotificationSettings = {}, openBatterySettings = {}),
+            diagnostics = rememberDiagnosticsShare(CoreCalls.None.diagnosticsReport),
             onIntent = {},
             onBack = {},
             onOpenModels = {},
@@ -214,7 +240,9 @@ private fun AddServer(@PreviewParameter(PaletteProvider::class) palette: Palette
             repliedIn = 1_900.milliseconds,
         )
     val state = SampleStates.playing.let { it.copy(models = it.models.copy(serverCheck = found)) }
-    InFrame(palette) { AddServerScreen(state, onIntent = {}, onBack = {}) }
+    InFrame(palette) {
+        AddServerScreen(state, onIntent = {}, submit = CoreCalls.None.submit, onBack = {})
+    }
 }
 
 @Preview(widthDp = 390, heightDp = 844)
@@ -254,6 +282,7 @@ private fun HandyPage(@PreviewParameter(PaletteProvider::class) palette: Palette
             isBatteryUnrestricted = false,
             hasAcknowledgedCoyoteNotes = true,
             onIntent = {},
+            submit = CoreCalls.None.submit,
             onSetCoyoteLimits = { _, _, _ -> },
             onBack = {},
             onOpenBatterySettings = {},
@@ -268,7 +297,7 @@ private fun AddHandy(@PreviewParameter(PaletteProvider::class) palette: Palette)
             DeviceFamily.Handy,
             SampleStates.playing,
             onIntent = {},
-            findVibrators = { emptyList() },
+            calls = CoreCalls.None,
             onBack = {},
             onDone = {},
         )
@@ -286,7 +315,7 @@ private fun AddCoyote(@PreviewParameter(PaletteProvider::class) palette: Palette
             DeviceFamily.Coyote,
             state,
             onIntent = {},
-            findVibrators = { emptyList() },
+            calls = CoreCalls.None,
             onBack = {},
             onDone = {},
         )
@@ -299,7 +328,7 @@ private fun Models(@PreviewParameter(PaletteProvider::class) palette: Palette) =
     InFrame(palette) {
         ModelsScreen(
             SampleStates.playing,
-            onIntent = {},
+            submit = CoreCalls.None.submit,
             exits = ModelExits(back = {}, addServer = {}, addOpenRouter = {}, addChatGpt = {}),
         )
     }
@@ -309,13 +338,15 @@ private fun Models(@PreviewParameter(PaletteProvider::class) palette: Palette) =
 private fun AddServerFailed(@PreviewParameter(PaletteProvider::class) palette: Palette) {
     val failed = ServerCheck.Failed("192.168.0.20:11434", ServerCheckFailure.Unreachable)
     val state = SampleStates.playing.let { it.copy(models = it.models.copy(serverCheck = failed)) }
-    InFrame(palette) { AddServerScreen(state, onIntent = {}, onBack = {}) }
+    InFrame(palette) {
+        AddServerScreen(state, onIntent = {}, submit = CoreCalls.None.submit, onBack = {})
+    }
 }
 
 @Preview(widthDp = 390, heightDp = 844)
 @Composable
 private fun OpenRouter(@PreviewParameter(PaletteProvider::class) palette: Palette) =
-    InFrame(palette) { OpenRouterScreen(onIntent = {}, onBack = {}) }
+    InFrame(palette) { OpenRouterScreen(submit = CoreCalls.None.submit, onBack = {}) }
 
 @Preview(widthDp = 390, heightDp = 844)
 @Composable

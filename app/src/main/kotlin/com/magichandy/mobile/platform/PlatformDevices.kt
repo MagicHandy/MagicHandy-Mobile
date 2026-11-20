@@ -20,6 +20,10 @@ internal class PlatformDevices(
     private val scope: CoroutineScope,
     private val network: NetworkMonitor,
 ) : DeviceDirectory {
+    private val bridges = com.magichandy.mobile.transport.intiface.IntifaceHub(http, scope)
+
+    override fun stopOpenBridges(epoch: Epoch) = bridges.emergencyStop(epoch)
+
     private val events = MutableSharedFlow<DeviceId>()
     override val losses = events.asSharedFlow()
     private val radio =
@@ -31,8 +35,7 @@ internal class PlatformDevices(
     override val bluetoothOn = radio.enabled.asStateFlow()
     override val configuration: DeviceConfiguration =
         object : DeviceConfiguration, DeviceRecords by stores.devices {
-            override suspend fun intifaceVibrators(address: String) =
-                com.magichandy.mobile.transport.intiface.IntifaceVibrator.choices(http, address)
+            override suspend fun bridgeTargets(address: String) = bridges.targets(address)
 
             override val scanAllowed
                 get() = radio.permissionGranted()
@@ -59,14 +62,22 @@ internal class PlatformDevices(
 
     override suspend fun setHandyReversed(device: DeviceId, isReversed: Boolean): Boolean {
         val row = saved.firstOrNull { it.ref.id == device } ?: return false
-        val settings = row.settings as? DeviceSettings.Handy ?: return false
-        stores.devices.save(row.copy(settings = settings.copy(isReversed = isReversed)))
+        val settings =
+            when (val s = row.settings) {
+                is DeviceSettings.Handy -> s.copy(isReversed = isReversed)
+                is DeviceSettings.LinearActuator -> s.copy(isReversed = isReversed)
+                else -> return false
+            }
+        stores.devices.save(row.copy(settings = settings))
         return true
     }
 
     private fun reversed(id: DeviceId) =
-        (saved.firstOrNull { it.ref.id == id }?.settings as? DeviceSettings.Handy)?.isReversed ==
-            true
+        when (val s = saved.firstOrNull { it.ref.id == id }?.settings) {
+            is DeviceSettings.Handy -> s.isReversed
+            is DeviceSettings.LinearActuator -> s.isReversed
+            else -> false
+        }
 
     private suspend fun cloud(row: SavedDevice): DeviceTransport? {
         val key = row.credential?.let { vault.get(it) } ?: return null
@@ -161,19 +172,33 @@ internal class PlatformDevices(
             }
             ConnectionKind.IntifaceOnNetwork,
             ConnectionKind.IntifaceOnPhone -> {
+                val lost: () -> Unit = {
+                    scope.launch { events.emit(device) }
+                }
+                if (row.ref.family != DeviceFamily.Vibrator) {
+                    val linear =
+                        com.magichandy.mobile.transport.intiface.IntifaceLinear.connect(
+                            bridges,
+                            row,
+                            ownerScope,
+                            AndroidClock,
+                            { stores.settings.state.value.values.limits },
+                            { reversed(device) },
+                            lost,
+                        )
+                    sessions[device] = { linear.close() }
+                    return linear
+                }
                 val session =
                     com.magichandy.mobile.transport.intiface.IntifaceVibrator.connect(
-                        row.ref,
-                        row.address ?: return null,
-                        row.deviceIndex,
-                        http,
-                        ownerScope,
+                        bridges,
+                        row,
                         {
                             (saved.first { it.ref.id == device }.settings
                                     as DeviceSettings.Vibrator)
                                 .maxLevel
                         },
-                        { scope.launch { events.emit(device) } },
+                        lost,
                     )
                 sessions[device] = { session.close() }
                 session

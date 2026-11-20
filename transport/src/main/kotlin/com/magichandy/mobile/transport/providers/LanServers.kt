@@ -14,6 +14,23 @@ public class LanServers(private val client: OkHttpClient) : ModelServers {
         address: String,
         model: String?,
         level: CapabilityLevel?,
+    ): ServerCheck = inspect(address, model, level) {}
+
+    override suspend fun verify(
+        address: String,
+        model: String,
+        level: CapabilityLevel,
+    ): ServerAssessment {
+        var refused = false
+        val result = inspect(address, model, level) { refused = true }
+        return ServerAssessment(result, refused)
+    }
+
+    private suspend fun inspect(
+        address: String,
+        model: String?,
+        level: CapabilityLevel?,
+        onRefusal: () -> Unit,
     ): ServerCheck {
         val base =
             serverAddress(address)
@@ -45,6 +62,7 @@ public class LanServers(private val client: OkHttpClient) : ModelServers {
             val start = TimeSource.Monotonic.markNow()
             val provider = localProvider(http, base, peer.kind, selected, needed)
             val reply = provider.stream(listOf(TextMessage(TextRole.User, "Reply with OK."))) {}
+            if (reply == TextResult.Refused) onRefusal()
             if (reply !is TextResult.Completed)
                 return ServerCheck.Failed(address, ServerCheckFailure.Unreachable)
             ServerCheck.Found(

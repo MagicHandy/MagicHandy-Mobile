@@ -58,13 +58,7 @@ class CoreService : Service() {
         observer?.cancel()
         observer = scope.launch {
             core.state
-                .map { state ->
-                    ServiceView(
-                        state.needsHost,
-                        state.run.phase in setOf(RunPhase.Playing, RunPhase.Edging),
-                        notices.privateText(state),
-                    )
-                }
+                .map { state -> serviceView(state, notices.privateText(state)) }
                 .distinctUntilChanged()
                 .collect { view ->
                     if (!view.active) {
@@ -112,8 +106,6 @@ class CoreService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
-
-    private data class ServiceView(val active: Boolean, val playing: Boolean, val text: String)
 }
 
 class StopActionReceiver : BroadcastReceiver() {
@@ -122,3 +114,22 @@ class StopActionReceiver : BroadcastReceiver() {
             (context.applicationContext as CoreOwner).core.emergencyStop(StopSource.Notification)
     }
 }
+
+/**
+ * What the service shows and holds for [state]. A change re-posts the notification, and that
+ * includes Android starting to allow notifications: one posted before then stays hidden otherwise.
+ */
+internal data class ServiceView(
+    val active: Boolean,
+    val playing: Boolean,
+    val text: String,
+    val canNotify: Boolean,
+)
+
+internal fun serviceView(state: AppState, text: String): ServiceView =
+    ServiceView(
+        active = state.needsHost,
+        playing = state.run.phase in setOf(RunPhase.Playing, RunPhase.Edging),
+        text = text,
+        canNotify = state.app.notificationsAllowed,
+    )

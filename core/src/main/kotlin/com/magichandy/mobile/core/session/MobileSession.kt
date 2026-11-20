@@ -5,6 +5,7 @@ import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.BackendNotice
 import com.magichandy.mobile.core.api.ConnectionId
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.FormIntent
 import com.magichandy.mobile.core.api.InterruptCause
 import com.magichandy.mobile.core.api.LimitKind
 import com.magichandy.mobile.core.api.MagicHandyCore
@@ -79,6 +80,18 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     private val queue = Channel<Queued>(256)
     private val accounts = ModelAccounts(d, ui, ::record, ::unavailable, ::storeFailed)
 
+    private val diagnostics = DiagnosticsExport(d)
+
+    override suspend fun diagnosticsReport() = diagnostics.report(ui.value)
+
+    private val tile = TileSettings(d, ::storeFailed)
+
+    override fun updateStopTileAdded(added: Boolean) = tile.observe(added)
+
+    private val forms = SessionForms(d, ui, engine, setup, servers, accounts, chat, ::record)
+
+    override suspend fun submit(intent: FormIntent) = forms.submissions.submit(intent)
+
     init {
         d.scope.launch(d.dispatchers.io) {
             for ((at, kind) in reports) try {
@@ -111,6 +124,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             var last = engine.epoch
             var uncertainEpoch: Epoch? = null
             engine.state.collect { s ->
+                diagnostics.observe(s.epoch, s.evidence ?: s.receipt)
                 if (last != s.epoch) {
                     chat.stopEarlierThan(s.epoch)
                     autopilot.epochChanged(s.epoch)
@@ -163,6 +177,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
 
     override fun emergencyStop(source: StopSource) {
         safety.emergencyStop(source)
+        d.devices.stopOpenBridges(engine.epoch)
         record(DiagnosticKind.StopRequested)
     }
 
@@ -206,7 +221,9 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         d.scope.launch(d.dispatchers.io) { d.chats.trimPages() }
     }
 
-    override suspend fun intifaceVibrators(address: String) = setup.vibratorsAt(address)
+    override suspend fun intifaceLinearActuators(address: String) = setup.bridges.linearsAt(address)
+
+    override suspend fun intifaceVibrators(address: String) = setup.bridges.vibratorsAt(address)
 
     override fun setCoyoteLimits(device: DeviceId, maximumA: Int, maximumB: Int) =
         setup.setCoyoteLimits(device, maximumA, maximumB)
@@ -287,29 +304,13 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             is UserIntent.SetPersona -> if (intent.persona != defaultPersona.id) unavailable()
             is UserIntent.SetChatConnection -> d.models.bindChat(intent.connection)
             is UserIntent.SetPlannerConnection -> d.models.bindPlanner(intent.connection)
-            is UserIntent.RemoveConnection -> removeConnection(intent.connection)
             UserIntent.StartChatGptSignIn -> accounts.startSignIn()
             UserIntent.CancelSignIn -> accounts.cancelSignIn()
             is UserIntent.StartScan -> setup.startScan(intent.family)
             UserIntent.StopScan -> setup.stopScan()
             is UserIntent.ConnectScanResult -> setup.select(intent)
-            is UserIntent.AddCloudHandy ->
-                setup.cloud(
-                    com.magichandy.mobile.core.api.DeviceFamily.Handy,
-                    intent.name,
-                    intent.connectionKey,
-                )
-            is UserIntent.AddAutoblowDevice ->
-                setup.cloud(intent.family, intent.name, intent.deviceToken)
-            is UserIntent.AddIntiface -> setup.intiface(intent.address, intent.deviceIndex)
-            is UserIntent.Rename ->
-                if (intent.name.isNotBlank())
-                    setup.edit(intent.device) {
-                        it.copy(ref = it.ref.copy(name = intent.name.trim().take(64)))
-                    }
+            is FormIntent -> forms.submissions.dispatch(intent)
             is UserIntent.CheckConnection -> devices.check(intent.device)
-            is UserIntent.Remove -> setup.remove(intent.device)
-            is UserIntent.SaveOpenRouter -> accounts.saveOpenRouter(intent)
             // These intents become available when their complete backend milestone is wired.
             UserIntent.StartAutopilot -> autopilot.start(epoch)
             UserIntent.PauseAutopilot -> autopilot.pause(true)
@@ -332,7 +333,6 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             is UserIntent.AnswerCheckIn -> checkIns.answer(intent.device)
             is UserIntent.CheckServer -> servers.check(intent.address)
             is UserIntent.SelectServerModel -> servers.select(intent.model)
-            is UserIntent.SaveServer -> servers.save(intent)
             UserIntent.CheckForUpdate -> accounts.checkRelease()
         }
     }
@@ -360,15 +360,6 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         if (total == null || total.isPositive() && total.isFinite())
             patch(PreferenceField.FinishAfter.edit(total))
         else unavailable()
-    }
-
-    private suspend fun removeConnection(id: ConnectionId) {
-        chat.interrupt(InterruptCause.ProviderError)
-        val handle = d.models.state.value.models[id]?.credential
-        d.models.remove(id)
-        if (d.settings.state.value.values.refusalFallback == id)
-            patch(PreferenceField.RefusalFallback.edit(null))
-        if (handle != null) d.vault.remove(handle)
     }
 
     private suspend fun setMotionMode(mode: MotionMode) {

@@ -350,6 +350,7 @@ internal fun DeviceTile(
 /** The board's glyph for each device family. */
 internal fun familyIcon(family: DeviceFamily): ImageVector =
     when (family) {
+        DeviceFamily.LinearActuator,
         DeviceFamily.Handy -> AppIcons.Handy
         DeviceFamily.Vibrator -> AppIcons.Vibrator
         DeviceFamily.Coyote -> AppIcons.Coyote
@@ -363,6 +364,7 @@ fun DeviceTypeList(onChoose: (DeviceFamily) -> Unit) {
     val families =
         listOf(
             DeviceFamily.Handy to R.string.device_type_handy,
+            DeviceFamily.LinearActuator to R.string.device_type_linear,
             DeviceFamily.Vibrator to R.string.device_type_vibrator,
             DeviceFamily.Coyote to R.string.device_type_coyote,
             DeviceFamily.AutoblowUltra to R.string.device_type_ultra,

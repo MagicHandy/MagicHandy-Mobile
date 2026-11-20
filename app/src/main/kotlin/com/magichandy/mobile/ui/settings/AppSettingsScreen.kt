@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.magichandy.mobile.R
@@ -26,16 +27,18 @@ import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.Palette
 import com.magichandy.mobile.core.api.UpdateCheck
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.DiagnosticsShare
 import com.magichandy.mobile.ui.NotificationsRefusedBanner
+import com.magichandy.mobile.ui.applyLanguage
 import com.magichandy.mobile.ui.components.Caption
 import com.magichandy.mobile.ui.components.Card
 import com.magichandy.mobile.ui.components.CardRow
 import com.magichandy.mobile.ui.components.DotTone
-import com.magichandy.mobile.ui.components.FixedRow
 import com.magichandy.mobile.ui.components.PageHeader
 import com.magichandy.mobile.ui.components.Segment
 import com.magichandy.mobile.ui.components.Segmented
 import com.magichandy.mobile.ui.components.SettingRow
+import com.magichandy.mobile.ui.components.segmentedWidthFor
 import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
@@ -51,11 +54,29 @@ data class SystemAccess(
     val areNotificationsRefused: Boolean = !areNotificationsAllowed,
 )
 
-/** System screens App settings can open. */
+/**
+ * System screens and requests App settings can open.
+ *
+ * @property requestStopTile asks Android to add the Stop tile to Quick Settings and reports what
+ *   happened; null before Android 13, where only the person can add it.
+ */
 data class SystemLinks(
     val openNotificationSettings: () -> Unit,
     val openBatterySettings: () -> Unit,
+    val requestStopTile: ((onResult: (StopTileRequest) -> Unit) -> Unit)? = null,
 )
+
+/** What Android said when asked to add the Stop tile. */
+enum class StopTileRequest {
+    /** The tile is in Quick Settings now, or already was. */
+    Added,
+
+    /** The person declined. */
+    Declined,
+
+    /** Android couldn't ask, so the person has to add the tile by hand. */
+    Failed,
+}
 
 /**
  * App settings (board V-AppSettings): durable, app-wide preferences. Reached from the last row of
@@ -66,6 +87,7 @@ fun AppSettingsScreen(
     state: AppState,
     system: SystemAccess,
     links: SystemLinks,
+    diagnostics: DiagnosticsShare,
     onIntent: (UserIntent) -> Unit,
     onBack: () -> Unit,
     onOpenModels: () -> Unit,
@@ -130,21 +152,31 @@ fun AppSettingsScreen(
                 onClick = links.openBatterySettings,
                 isFirst = false,
             )
-            // TODO: add a row that offers the Quick Settings tile, and a diagnostics row once the
-            // core exposes the redacted export.
+            StopTileRow(links.requestStopTile, observed = state.app.isStopTileAdded)
         }
-        Section(R.string.app_data) { DeleteAllRow(onIntent) }
-        Section(R.string.app_about) {
-            FixedRow(
-                label = stringResource(R.string.app_version),
-                value = state.app.versionName,
+        Section(R.string.app_data) {
+            // The report is built only when asked for, and its text never shows here.
+            SettingRow(
+                label = stringResource(R.string.app_diagnostics),
+                description =
+                    if (diagnostics.hasFailed) stringResource(R.string.diagnostics_failed)
+                    else null,
+                value =
+                    stringResource(
+                        if (diagnostics.isPreparing) R.string.diagnostics_preparing
+                        else R.string.app_diagnostics_value
+                    ),
+                onClick = diagnostics::share,
                 isFirst = true,
             )
+            DeleteAllRow(onIntent)
+        }
+        Section(R.string.app_about) {
             SettingRow(
-                label = stringResource(R.string.app_check_update),
-                value = updateText(state.app.update),
+                label = stringResource(R.string.app_version, state.app.versionName),
+                value = updateText(state.app.update) ?: stringResource(R.string.app_check_update),
                 onClick = { onIntent(UserIntent.CheckForUpdate) },
-                isFirst = false,
+                isFirst = true,
             )
         }
     }
@@ -165,10 +197,17 @@ private fun Section(title: Int, rows: @Composable () -> Unit) {
 
 @Composable
 private fun LanguageRow(language: AppLanguage, onIntent: (UserIntent) -> Unit) {
+    val context = LocalContext.current
     var isOpen by rememberSaveable { mutableStateOf(false) }
     SettingRow(
         label = stringResource(R.string.app_language),
-        value = Words.language(language),
+        value =
+            if (language == AppLanguage.System)
+                stringResource(
+                    R.string.language_system_resolved,
+                    stringResource(R.string.language_resolved),
+                )
+            else Words.language(language),
         onClick = { isOpen = !isOpen },
         isFirst = false,
     )
@@ -179,6 +218,7 @@ private fun LanguageRow(language: AppLanguage, onIntent: (UserIntent) -> Unit) {
                 value = if (option == language) stringResource(R.string.on) else null,
                 onClick = {
                     onIntent(UserIntent.SetLanguage(option))
+                    applyLanguage(context, option)
                     isOpen = false
                 },
                 isFirst = false,
@@ -204,7 +244,7 @@ private fun DeleteAllRow(onIntent: (UserIntent) -> Unit) {
                 isArmed = true
             }
         },
-        isFirst = true,
+        isFirst = false,
     )
 }
 
@@ -218,25 +258,75 @@ private fun updateText(update: UpdateCheck): String? =
         UpdateCheck.Failed -> stringResource(R.string.update_failed)
     }
 
+/** The palettes on offer, in order: all dark, each for a different screen or setting. */
+private val OfferedPalettes = listOf(Palette.SteelAzure, Palette.OledBlack, Palette.HighContrast)
+
 /**
- * "Palette" beside its three choices (board V-AppSettings). With large text the choices wrap under
- * the label instead of squeezing it.
+ * "Palette" beside its three choices (board V-AppSettings), then a line on what the chosen one is
+ * for. With large text the choices wrap under the label instead of squeezing it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PaletteChoice(state: AppState, onIntent: (UserIntent) -> Unit, modifier: Modifier) {
-    FlowRow(
-        modifier,
-        horizontalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.cozy),
-        verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.snug),
-        itemVerticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(stringResource(R.string.app_palette), style = MagicHandyTheme.type.body)
-        Segmented(
-            segments = Palette.entries.map { Segment(it, Words.palette(it)) },
-            selected = state.app.palette,
-            onSelect = { onIntent(UserIntent.SetPalette(it)) },
-            modifier = Modifier.weight(1f).widthIn(min = MagicHandyTheme.dimens.paletteWidth),
+    // The retired Lowlight shows as OLED black, which replaced it.
+    val palette = state.app.palette.let { if (it == Palette.Lowlight) Palette.OledBlack else it }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.xs)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.cozy),
+            verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.snug),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.app_palette), style = MagicHandyTheme.type.body)
+            val segments = OfferedPalettes.map { Segment(it, Words.palette(it)) }
+            // Wide enough for every name on one line; longer names move it under "Palette".
+            val width =
+                maxOf(
+                    MagicHandyTheme.dimens.paletteWidth,
+                    segmentedWidthFor(segments.map { it.label }),
+                )
+            Segmented(
+                segments = segments,
+                selected = palette,
+                onSelect = { onIntent(UserIntent.SetPalette(it)) },
+                modifier = Modifier.weight(1f).widthIn(min = width),
+            )
+        }
+        Text(
+            Words.paletteUse(palette),
+            style = MagicHandyTheme.type.small,
+            color = MagicHandyTheme.colors.textSecondary,
         )
     }
+}
+
+/**
+ * Offers the Stop tile for Quick Settings. Android 13 and later add it on request; before that, the
+ * row explains how to add it by hand.
+ *
+ * @param observed whether the tile is there, as the tile itself last reported; null until it has.
+ */
+@Composable
+private fun StopTileRow(
+    request: ((onResult: (StopTileRequest) -> Unit) -> Unit)?,
+    observed: Boolean?,
+) {
+    var result by rememberSaveable { mutableStateOf<StopTileRequest?>(null) }
+    // The tile's own report is the truth once there is one; until then, Android's answer.
+    val isAdded = observed ?: (result == StopTileRequest.Added)
+    SettingRow(
+        label = stringResource(R.string.app_stop_tile),
+        description =
+            if (request == null || result == StopTileRequest.Failed)
+                stringResource(R.string.stop_tile_by_hand)
+            else null,
+        value =
+            when {
+                isAdded -> stringResource(R.string.stop_tile_added)
+                request != null -> stringResource(R.string.stop_tile_add)
+                else -> null
+            },
+        valueTone = if (isAdded) DotTone.Ok else null,
+        onClick = { request?.invoke { result = it } },
+        isFirst = false,
+    )
 }

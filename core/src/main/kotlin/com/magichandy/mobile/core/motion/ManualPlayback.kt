@@ -93,6 +93,11 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                 FollowTempo(timeline, timeline.maximumVelocity),
             )
         val buffered = owners.filterNot { it is com.magichandy.mobile.core.ports.TimedDevice }
+        val linear =
+            buffered
+                .mapNotNull { it.linearSampling }
+                .distinct()
+                .associateWith { LinearSampler(timeline, it) }
         var previous: Limits? = null
         var previousTarget: ManualTarget? = null
         var origin = d.clock.elapsed()
@@ -103,7 +108,10 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                     engine.state.value,
                     limits,
                     test,
-                    sampler.nextSampleMillis,
+                    maxOf(
+                        sampler.nextSampleMillis,
+                        linear.values.maxOfOrNull { it.nextMillis } ?: 0,
+                    ),
                     (d.clock.elapsed() - origin).inWholeMilliseconds,
                 ) ?: return engine.stop(null, stream = stream)
             val batch =
@@ -120,6 +128,9 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                     !sendToOwners(stream, owners.filter { it.startupPosition != null }, batch, true)
             )
                 return engine.stop(null, stream = stream)
+            val linearBatches = linear.mapValues { (_, fit) ->
+                batch.copy(linearPoints = fit.through(batch.frames.last().timeMillis, limits))
+            }
             val linked = batch.isFirst && owners.size > 1 && buffered.any { it.linkedStart != null }
             if (
                 linked &&
@@ -127,13 +138,19 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                         stream,
                         buffered.filter { it.linkedStart != null },
                         batch.copy(deferPlay = true),
+                        linearBatches = linearBatches,
                     )
             )
                 return engine.stop(null, stream = stream)
             if (linked) origin = d.clock.elapsed()
             if (
-                !sendToOwners(stream, buffered, batch, origin = origin.takeIf { linked }) ||
-                    !engine.state.value.plays(stream)
+                !sendToOwners(
+                    stream,
+                    buffered,
+                    batch,
+                    origin = origin.takeIf { linked },
+                    linearBatches = linearBatches,
+                ) || !engine.state.value.plays(stream)
             ) {
                 engine.stop(null, stream = stream)
                 return
@@ -184,13 +201,22 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
         batch: MotionBatch,
         prepare: Boolean = false,
         origin: Duration? = null,
+        linearBatches: Map<com.magichandy.mobile.core.ports.LinearSampling, MotionBatch> =
+            emptyMap(),
     ): Boolean = coroutineScope {
         owners
             .map { owner ->
                 async(d.dispatchers.io) {
                     if (origin != null && owner.linkedStart != null)
                         engine.startBuffered(stream, owner, origin)
-                    else engine.write(stream, owner, batch, prepare)
+                    else
+                        engine.write(
+                            stream,
+                            owner,
+                            linearBatches[owner.linearSampling]?.copy(deferPlay = batch.deferPlay)
+                                ?: batch,
+                            prepare,
+                        )
                 }
             }
             .awaitAll()

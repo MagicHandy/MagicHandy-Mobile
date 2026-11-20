@@ -74,6 +74,20 @@ fun ChatScreen(
             modifier = Modifier.padding(horizontal = MagicHandyTheme.dimens.m),
         )
         Transcript(state, onIntent, Modifier.weight(1f))
+        val reply = state.chat.reply
+        ReplyAnnouncer(
+            reply = reply,
+            finalText =
+                (state.chat.entries.lastOrNull() as? ChatEntry.Message)
+                    ?.takeIf { it.author == Author.Persona }
+                    ?.text,
+            // The Stop receipt already says why a reply stopped after Stop.
+            interruption =
+                (reply as? ReplyState.Interrupted)
+                    ?.cause
+                    ?.takeIf { it != InterruptCause.MotionStopped }
+                    ?.let { interruptionText(it) },
+        )
         ChatDeck(state = state, isTyping = isTyping, onIntent = onIntent, onOpenLive = onOpenLive)
     }
 }
@@ -293,17 +307,21 @@ private fun StreamingText(text: String) {
     )
 }
 
+/** Why a reply was discarded, in the interrupted bubble and for TalkBack. */
+@Composable
+private fun interruptionText(cause: InterruptCause): String =
+    stringResource(
+        when (cause) {
+            InterruptCause.MotionStopped -> R.string.reply_interrupted_stopped
+            InterruptCause.ConnectionLost -> R.string.reply_interrupted_connection
+            InterruptCause.AppInBackground -> R.string.reply_interrupted_background
+            InterruptCause.ProviderError -> R.string.reply_interrupted_provider
+        }
+    )
+
 @Composable
 private fun InterruptedReply(cause: InterruptCause, onSendAgain: () -> Unit) {
-    val text =
-        stringResource(
-            when (cause) {
-                InterruptCause.MotionStopped -> R.string.reply_interrupted_stopped
-                InterruptCause.ConnectionLost -> R.string.reply_interrupted_connection
-                InterruptCause.AppInBackground -> R.string.reply_interrupted_background
-                InterruptCause.ProviderError -> R.string.reply_interrupted_provider
-            }
-        )
+    val text = interruptionText(cause)
     Column(verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.s)) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val shape = MagicHandyTheme.shapes.personaBubble

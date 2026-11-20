@@ -12,11 +12,19 @@ import com.magichandy.mobile.core.api.Percent
 import kotlin.time.Duration
 import kotlinx.coroutines.flow.StateFlow
 
+/** The last observation delivered by Android's tile lifecycle. */
+public enum class TilePresence {
+    Unknown,
+    Added,
+    Removed,
+}
+
 /** The mobile settings document. All Stop and motion evidence lives outside this document. */
 @kotlinx.serialization.Serializable
 public data class Preferences(
     public val adultsOnly: Boolean = false,
     public val coyoteNotes: Boolean = false,
+    @kotlinx.serialization.Serializable(with = StoredPalette::class)
     public val palette: Palette = Palette.SteelAzure,
     public val language: AppLanguage = AppLanguage.System,
     public val mode: MotionMode = MotionMode.Layered,
@@ -28,6 +36,7 @@ public data class Preferences(
     public val finishAfter: Duration? = null,
     public val askedNotifications: Boolean = false,
     public val refusalFallback: com.magichandy.mobile.core.api.ConnectionId? = null,
+    public val stopTile: TilePresence = TilePresence.Unknown,
 )
 
 /** A field carries its typed update function and stable persisted name. */
@@ -38,6 +47,8 @@ private constructor(public val name: String, internal val set: (Preferences, T) 
 
     /** Fields accepted by revisioned patches. */
     public companion object {
+        public val StopTile: PreferenceField<TilePresence> =
+            PreferenceField("stop_tile") { s, v -> s.copy(stopTile = v) }
         public val AskedNotifications: PreferenceField<Boolean> =
             PreferenceField("asked_notifications") { s, v -> s.copy(askedNotifications = v) }
         /** Explicit local role for one hosted refusal retry. */
@@ -51,7 +62,7 @@ private constructor(public val name: String, internal val set: (Preferences, T) 
             PreferenceField("coyote_notes") { s, v -> s.copy(coyoteNotes = v) }
         /** Selected visual palette. */
         public val PaletteChoice: PreferenceField<Palette> =
-            PreferenceField("palette") { s, v -> s.copy(palette = v) }
+            PreferenceField("palette") { s, v -> s.copy(palette = v.current()) }
         /** Selected UI language or system default. */
         public val Language: PreferenceField<AppLanguage> =
             PreferenceField("language") { s, v -> s.copy(language = v) }

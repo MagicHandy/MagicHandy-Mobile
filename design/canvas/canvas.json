@@ -34,6 +34,7 @@
     "V-CoyoteLive.dc.html": {"x": 470, "y": 8796, "w": 390, "h": 844, "title": "Coyote strength on Live", "page": "v1"},
     "V-AddVibrator.dc.html": {"x": 940, "y": 8796, "w": 390, "h": 844, "title": "Add a vibrator · choose one", "page": "v1"},
     "V-RefusalFallback.dc.html": {"x": 1410, "y": 8796, "w": 390, "h": 844, "title": "If the chat model refuses", "page": "v1"},
+    "V-AddHandyIntiface.dc.html": {"x": 1880, "y": 8796, "w": 390, "h": 844, "title": "The Handy through Intiface Central", "page": "v1"},
     "Main.dc.html": {"x": 0, "y": 0, "w": 2270, "h": 820, "title": "Five directions at a glance", "page": "explore"},
     "GT-Chat.dc.html": {"x": 0, "y": 1200, "w": 390, "h": 844, "title": "Graphite Touch · Chat", "page": "explore"},
     "GD-Chat.dc.html": {"x": 470, "y": 1200, "w": 390, "h": 844, "title": "Graphite Deck · Chat", "page": "explore"},

@@ -13,6 +13,14 @@ public interface MagicHandyCore {
     /** The latest immutable snapshot of everything the UI shows. */
     public val state: StateFlow<AppState>
 
+    /** Read a redacted report of at most 256 KiB. Sharing is an explicit UI action. */
+    public suspend fun diagnosticsReport(): DiagnosticsReport =
+        DiagnosticsReport("MagicHandy-diagnostics.txt", "Diagnostics unavailable\n")
+
+    /** Wait for the result of this exact form. Existing implementations can report Unsupported. */
+    public suspend fun submit(intent: FormIntent): FormResult =
+        FormResult.Rejected(FormReason.Unsupported)
+
     /** Queues [intent] and returns at once. Its effect appears in [state]. */
     public fun dispatch(intent: UserIntent)
 
@@ -31,6 +39,9 @@ public interface MagicHandyCore {
     /** Refresh the OS access shown on Devices and App settings. */
     public fun updateSystemAccess(notificationsAllowed: Boolean, batteryUnrestricted: Boolean) {}
 
+    /** Publish the observed tile lifecycle state from System UI. */
+    public fun updateStopTileAdded(added: Boolean) {}
+
     /** Persist the first notification prompt across activity and process recreation. */
     public fun notificationPermissionRequested() {}
 
@@ -44,6 +55,10 @@ public interface MagicHandyCore {
      * empty list.
      */
     public suspend fun intifaceVibrators(address: String): List<IntifaceChoice> = emptyList()
+
+    /** Read the linear features of an explicitly named bridge, without selecting or moving one. */
+    public suspend fun intifaceLinearActuators(address: String): List<IntifaceLinearChoice> =
+        emptyList()
 
     /** The VacuGlide's physical speed buttons adjust only the top of its own motor range. */
     public fun stepTempoRange(device: DeviceId, direction: StepDirection) {}

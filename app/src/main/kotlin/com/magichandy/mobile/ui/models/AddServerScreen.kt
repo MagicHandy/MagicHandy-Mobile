@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -24,25 +25,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.ServerCheck
 import com.magichandy.mobile.core.api.ServerCheckFailure
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.FormRefusal
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.DotTone
 import com.magichandy.mobile.ui.components.Hint
 import com.magichandy.mobile.ui.components.PageHeader
+import com.magichandy.mobile.ui.components.PushDown
 import com.magichandy.mobile.ui.components.Segment
 import com.magichandy.mobile.ui.components.Segmented
 import com.magichandy.mobile.ui.components.StatusLabel
 import com.magichandy.mobile.ui.components.TextInput
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /** Add a server on your network (board V-AddServer): an address, a check, then a test. */
@@ -50,6 +59,7 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 fun AddServerScreen(
     state: AppState,
     onIntent: (UserIntent) -> Unit,
+    submit: suspend (form: FormIntent) -> FormResult,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -91,7 +101,7 @@ fun AddServerScreen(
             )
         }
         when (check) {
-            is ServerCheck.Found -> FoundServer(check, onIntent, onBack)
+            is ServerCheck.Found -> FoundServer(check, onIntent, submit, onBack)
             is ServerCheck.Failed -> Hint(failureText(check.cause))
             ServerCheck.Idle,
             is ServerCheck.Checking -> Unit
@@ -100,27 +110,33 @@ fun AddServerScreen(
 }
 
 @Composable
-private fun FoundServer(
+private fun ColumnScope.FoundServer(
     found: ServerCheck.Found,
     onIntent: (UserIntent) -> Unit,
+    submit: suspend (form: FormIntent) -> FormResult,
     onBack: () -> Unit,
 ) {
+    // The page closes once the server answered its test turn and was saved.
+    val submission = rememberFormSubmission(submit)
     val colors = MagicHandyTheme.colors
     var capability by rememberSaveable(found.selectedModel) { mutableStateOf(found.suggested) }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        StatusLabel(
-            DotTone.Ok,
-            stringResource(R.string.add_server_found, Words.provider(found.provider)),
-        )
-        if (!found.isEncrypted) {
-            Text(
-                stringResource(R.string.separator) +
-                    stringResource(R.string.add_server_not_encrypted),
-                style = MagicHandyTheme.type.caption,
-                color = colors.warn,
-            )
-        }
-    }
+    // One line of text, so a long server type and the warning wrap together like a sentence.
+    val warning =
+        if (found.isEncrypted) null
+        else stringResource(R.string.separator) + stringResource(R.string.add_server_not_encrypted)
+    StatusLabel(
+        DotTone.Ok,
+        buildAnnotatedString {
+            append(stringResource(R.string.add_server_found, Words.provider(found.provider)))
+            if (warning != null) {
+                withStyle(
+                    SpanStyle(color = colors.warn, fontSize = MagicHandyTheme.type.caption.fontSize)
+                ) {
+                    append(warning)
+                }
+            }
+        },
+    )
     Text(stringResource(R.string.add_server_model), style = MagicHandyTheme.type.small)
     ModelPicker(found.models, found.selectedModel) { onIntent(UserIntent.SelectServerModel(it)) }
     Text(stringResource(R.string.add_server_capability), style = MagicHandyTheme.type.small)
@@ -164,6 +180,8 @@ private fun FoundServer(
     }
     val name =
         stringResource(R.string.add_server_name, Words.provider(found.provider), found.address)
+    PushDown()
+    FormRefusal(submission)
     Row(
         horizontalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.s),
         modifier = Modifier.padding(top = MagicHandyTheme.dimens.s),
@@ -174,14 +192,17 @@ private fun FoundServer(
             modifier = Modifier.weight(1f),
         )
         AppButton(
-            stringResource(R.string.add_server_save),
+            stringResource(
+                if (submission.isSending) R.string.form_saving else R.string.add_server_save
+            ),
             {
-                onIntent(
-                    UserIntent.SaveServer(name, found.address, found.selectedModel, capability)
+                submission.send(
+                    UserIntent.SaveServer(name, found.address, found.selectedModel, capability),
+                    onBack,
                 )
-                onBack()
             },
             kind = ButtonKind.Primary,
+            isEnabled = !submission.isSending,
             modifier = Modifier.weight(1.6f),
         )
     }

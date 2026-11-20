@@ -16,6 +16,7 @@ import com.magichandy.mobile.core.api.ConnectionKind
 import com.magichandy.mobile.core.api.ControlKind
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceStatus
+import com.magichandy.mobile.core.api.FormReason
 import com.magichandy.mobile.core.api.LimitKind
 import com.magichandy.mobile.core.api.MotionMode
 import com.magichandy.mobile.core.api.MotionSource
@@ -35,6 +36,7 @@ object Words {
     fun family(family: DeviceFamily): String =
         stringResource(
             when (family) {
+                DeviceFamily.LinearActuator -> R.string.family_linear_actuator
                 DeviceFamily.Handy -> R.string.family_handy
                 DeviceFamily.Vibrator -> R.string.family_vibrator
                 DeviceFamily.Coyote -> R.string.family_coyote
@@ -163,12 +165,48 @@ object Words {
             }
         )
 
+    /** Why the core refused a form, in words the person can act on. */
+    @Composable
+    fun formReason(reason: FormReason): String =
+        stringResource(
+            when (reason) {
+                FormReason.InvalidKey -> R.string.form_invalid_key
+                FormReason.InvalidAddress -> R.string.form_invalid_address
+                FormReason.InvalidName -> R.string.form_invalid_name
+                FormReason.InvalidModel -> R.string.form_invalid_model
+                FormReason.Unsupported -> R.string.form_unsupported
+                FormReason.ConsentRequired -> R.string.form_consent_required
+                FormReason.Unreachable -> R.string.form_unreachable
+                FormReason.ProviderRefused -> R.string.form_provider_refused
+                FormReason.Duplicate -> R.string.form_duplicate
+                FormReason.ChooseDevice -> R.string.form_choose_device
+                FormReason.NotFound -> R.string.form_not_found
+                FormReason.RunInProgress -> R.string.form_run_in_progress
+                FormReason.ReconcileDevice -> R.string.form_reconcile_device
+                FormReason.Busy -> R.string.form_busy
+                FormReason.StorageUnavailable -> R.string.form_storage_unavailable
+            }
+        )
+
+    /** What each palette is for, under the palette choice in App settings. */
+    @Composable
+    fun paletteUse(palette: Palette): String =
+        stringResource(
+            when (palette) {
+                Palette.SteelAzure -> R.string.palette_steel_azure_use
+                Palette.OledBlack,
+                Palette.Lowlight -> R.string.palette_oled_black_use
+                Palette.HighContrast -> R.string.palette_high_contrast_use
+            }
+        )
+
     @Composable
     fun palette(palette: Palette): String =
         stringResource(
             when (palette) {
                 Palette.SteelAzure -> R.string.palette_steel_azure
-                Palette.Lowlight -> R.string.palette_lowlight
+                Palette.OledBlack,
+                Palette.Lowlight -> R.string.palette_oled_black
                 Palette.HighContrast -> R.string.palette_high_contrast
             }
         )

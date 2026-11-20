@@ -10,19 +10,15 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
-import okhttp3.OkHttpClient
-
-internal data class Motor(val index: Int, val steps: Int)
-
-private data class Target(val index: Int, val name: String, val gap: Int, val motors: List<Motor>)
 
 public class IntifaceVibrator
 private constructor(
     override val device: DeviceRef,
-    private val bridge: ButtplugSocket,
-    private val target: Target,
+    private val lease: BridgeLease,
     private val maximum: () -> Percent,
 ) : TimedDevice {
+    private val target = lease.feature
+    private val bridge = lease.socket
     override val stopTimeout: kotlin.time.Duration = 2.seconds
     override val interval: kotlin.time.Duration = maxOf(100, target.gap).milliseconds
     private val readout = kotlinx.coroutines.flow.MutableStateFlow<DeviceOutput?>(null)
@@ -35,18 +31,15 @@ private constructor(
     private var previousMillis = 0L
 
     override val checkConnection: suspend () -> Boolean = {
-        val list = bridge.request("RequestDeviceList", "DeviceList")["Devices"] as? JsonArray
-        list.orEmpty().any {
-            (it as? JsonObject)?.get("DeviceIndex") == JsonPrimitive(target.index)
-        }
+        bridge.features().singleOrNull { it.choice.identity == target.choice.identity }?.index ==
+            target.index
     }
 
-    public fun close() {
-        bridge.close()
-    }
+    public suspend fun close(): Unit = lease.close()
 
     override suspend fun output(slice: OutputSlice, fence: OutputFence): WriteResult {
         if (!fence.isCurrent()) return WriteResult.Stale
+        val token = lease.generation
         val g = fence.epoch to fence.streamGeneration
         if (generation != g) {
             generation = g
@@ -72,7 +65,11 @@ private constructor(
                 )
             }
         if (steps != last) {
-            bridge.request("ScalarCmd", data = levels(steps), allowed = fence::isCurrent)
+            bridge.request(
+                "ScalarCmd",
+                data = levels(steps),
+                allowed = { fence.isCurrent() && lease.current(token) },
+            )
             last = steps
         }
         val fraction =
@@ -107,6 +104,7 @@ private constructor(
     }
 
     override suspend fun stop(fence: OutputFence): StopEvidence = supervisorScope {
+        lease.invalidate()
         val zero = async {
             try {
                 bridge.request(
@@ -121,8 +119,11 @@ private constructor(
         }
         val all =
             try {
-                bridge.request("StopAllDevices", allowed = fence::isCurrent)
-                true
+                if (fence.wholeBridge) lease.session.stopAll(fence.epoch, fence::isCurrent)
+                else {
+                    lease.stopDevice(fence::isCurrent)
+                    true
+                }
             } catch (_: IOException) {
                 false
             }
@@ -133,118 +134,22 @@ private constructor(
     }
 
     public companion object {
-        /**
-         * Discover endpoints using the v3 handshake and device list. This issues no actuator
-         * command.
-         */
-        public suspend fun choices(client: OkHttpClient, address: String): List<IntifaceChoice> {
-            val bridge = ButtplugSocket {}
-            return try {
-                bridge.open(client, address)
-                bridge.identify()
-                bridge.vibrators().map { IntifaceChoice(it.index, it.name) }
-            } finally {
-                bridge.close()
-            }
-        }
-
-        /**
-         * Requires one identifiable vibrator or an explicitly selected device index. Linear devices
-         * are excluded.
-         */
         public suspend fun connect(
-            ref: DeviceRef,
-            address: String,
-            selectedIndex: Int?,
-            client: OkHttpClient,
-            scope: CoroutineScope,
+            hub: IntifaceHub,
+            row: SavedDevice,
             maximum: () -> Percent,
             lost: () -> Unit,
         ): IntifaceVibrator {
-            val bridge = ButtplugSocket(lost)
-            try {
-                bridge.open(client, address)
-                val info = bridge.identify()
-                val offered = bridge.vibrators()
-                val chosen =
-                    offered.singleOrNull { selectedIndex == null || it.index == selectedIndex }
-                        ?: throw IOException("Select one vibrator")
-                bridge.deviceIndex = chosen.index
-                bridge.request(
-                    "StopDeviceCmd",
-                    data = buildJsonObject { put("DeviceIndex", chosen.index) },
+            if (row.ref.family != DeviceFamily.Vibrator) throw BridgeSelectionRequired()
+            val lease =
+                hub.claim(
+                    row.address ?: throw BridgeSelectionRequired(),
+                    row.bridgeIdentity ?: throw BridgeSelectionRequired(),
+                    row.ref.family,
+                    lost,
                 )
-                val timeout = info["MaxPingTime"]?.jsonPrimitive?.longOrNull ?: 0
-                if (timeout > 0)
-                    scope.launch {
-                        try {
-                            while (isActive) {
-                                delay((timeout / 2).coerceAtLeast(1))
-                                bridge.request("Ping")
-                            }
-                        } catch (_: IOException) {
-                            if (bridge.close()) lost()
-                        }
-                    }
-                return IntifaceVibrator(ref, bridge, chosen, maximum)
-            } catch (e: Throwable) {
-                bridge.close()
-                throw e
-            }
+            return IntifaceVibrator(row.ref, lease, maximum)
         }
-    }
-}
-
-private suspend fun ButtplugSocket.identify(): JsonObject {
-    val info =
-        request(
-            "RequestServerInfo",
-            "ServerInfo",
-            buildJsonObject {
-                put("ClientName", "MagicHandy")
-                put("MessageVersion", 3)
-            },
-        )
-    if (info["MessageVersion"] != JsonPrimitive(3)) throw IOException("Unsupported bridge version")
-    return info
-}
-
-private suspend fun ButtplugSocket.vibrators(): List<Target> {
-    val peers =
-        request("RequestDeviceList", "DeviceList")["Devices"] as? JsonArray
-            ?: throw IOException("Invalid bridge device list")
-    return peers.take(128).mapNotNull { entry ->
-        val d = entry as? JsonObject ?: return@mapNotNull null
-        val commands = d["DeviceMessages"] as? JsonObject ?: return@mapNotNull null
-        if (
-            "LinearCmd" in commands ||
-                d["DeviceName"]?.jsonPrimitive?.content.orEmpty().contains("Handy", true)
-        )
-            return@mapNotNull null
-        val features =
-            (commands["ScalarCmd"] as? JsonArray).orEmpty().mapIndexedNotNull { index, f ->
-                val o = f.jsonObject
-                val count = o["StepCount"]?.jsonPrimitive?.intOrNull ?: 0
-                if (o["ActuatorType"] == JsonPrimitive("Vibrate") && count in 1..65535)
-                    Motor(index, count)
-                else null
-            }
-        if (features.isEmpty()) null
-        else
-            Target(
-                (d["DeviceIndex"] as? JsonPrimitive)?.intOrNull?.takeIf { it >= 0 }
-                    ?: return@mapNotNull null,
-                (d["DeviceName"] as? JsonPrimitive)
-                    ?.content
-                    .orEmpty()
-                    .filterNot(Char::isISOControl)
-                    .take(120),
-                (d["DeviceMessageTimingGap"]?.jsonPrimitive?.intOrNull ?: 0).coerceIn(
-                    0,
-                    1000,
-                ),
-                features,
-            )
     }
 }
 

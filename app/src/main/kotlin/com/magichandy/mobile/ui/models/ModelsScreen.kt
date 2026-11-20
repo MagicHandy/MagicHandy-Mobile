@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,8 +14,12 @@ import androidx.compose.ui.res.stringResource
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.ConnectionStatus
+import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.ModelConnection
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.FormRefusal
+import com.magichandy.mobile.ui.components.AnchoredColumn
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.Caption
 import com.magichandy.mobile.ui.components.Card
@@ -30,6 +31,7 @@ import com.magichandy.mobile.ui.components.PageHeader
 import com.magichandy.mobile.ui.components.SettingRow
 import com.magichandy.mobile.ui.components.StatusLabel
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /** Where the Models routes can go next. */
@@ -44,7 +46,7 @@ data class ModelExits(
 @Composable
 fun ModelsScreen(
     state: AppState,
-    onIntent: (UserIntent) -> Unit,
+    submit: suspend (form: FormIntent) -> FormResult,
     exits: ModelExits,
     modifier: Modifier = Modifier,
 ) {
@@ -75,13 +77,16 @@ fun ModelsScreen(
         if (models.connections.isEmpty()) {
             Hint(stringResource(R.string.models_empty))
         } else {
+            // Removing waits for the core, which refuses while a run uses the connection.
+            val removal = rememberFormSubmission(submit)
             Card(contentPadding = PaddingValues(horizontal = MagicHandyTheme.dimens.m)) {
                 models.connections.forEachIndexed { index, connection ->
                     ConnectionRow(connection, index == 0) {
-                        onIntent(UserIntent.RemoveConnection(connection.id))
+                        removal.send(UserIntent.RemoveConnection(connection.id)) {}
                     }
                 }
             }
+            FormRefusal(removal)
         }
         Caption(stringResource(R.string.models_add))
         Card(contentPadding = PaddingValues(horizontal = MagicHandyTheme.dimens.m)) {
@@ -168,12 +173,10 @@ private fun ConnectionRow(connection: ModelConnection, isFirst: Boolean, onRemov
 @Composable
 internal fun Page(modifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
     val dimens = MagicHandyTheme.dimens
-    Column(
-        modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(start = dimens.m, end = dimens.m, bottom = dimens.s),
-        verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.formGap),
+    AnchoredColumn(
+        modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = dimens.m, end = dimens.m, bottom = dimens.s),
+        verticalArrangement = Arrangement.spacedBy(dimens.formGap),
         content = content,
     )
 }

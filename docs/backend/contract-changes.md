@@ -1,6 +1,33 @@
 # UI contract changes
 
-All additions below keep existing UI implementations and constructors source-compatible, apart from the noted consideration for exhaustive enum or sealed-type consumers. The current UI compiles.
+## Last non-UI items, 2026-11-20
+
+| Addition | Meaning and compatibility |
+|---|---|
+| `intifaceLinearActuators(address)` and `IntifaceLinearChoice` | Read-only v3 lookup. Returns the device index, feature index, device name, descriptor and opaque selection. The default method returns an empty list. |
+| `AddIntifaceLinear(address, deviceIndex = null, actuatorIndex = null, selection = null)` | Adds one linear feature. Null indices select a single eligible result. With several axes, submit both indices and the selection from the visible row. `IntifaceChoice.selection` and `AddIntiface.selection` also default to null. A fresh list must still uniquely identify the selected device. A recycled numeric slot needs the opaque selection. |
+| `DeviceFamily.LinearActuator` and `DeviceSettings.LinearActuator(isReversed = false)` | Distinguish generic linear hardware from The Handy. Generic devices have no Handy model setting. The Handy keeps `DeviceFamily.Handy` and its Intiface connection kind. Both expose stroke output and the possibility that the last move finishes after link loss. **Exhaustive consumers need the new branches.** |
+| `FormIntent`, `FormResult`, `FormReason` and `MagicHandyCore.submit(form)` | These changes let a form await its own durable result. Existing form intents remain `UserIntent`s for dispatch. The default method returns `Rejected(Unsupported)`. `Accepted` signals that the requested change was committed. `Rejected` carries only a localizable enum. Stop is outside the form type. |
+| `MagicHandyCore.diagnosticsReport()` and `DiagnosticsReport(fileName, text)` | An explicit read-only call supplies a safe basename and a UTF-8 report at most 256 KiB. Existing implementations return a small unavailable report by default. |
+| `AppSettingsState.isStopTileAdded: Boolean? = null` and `updateStopTileAdded(added)` | Null means Android has supplied no observation. Added, removed and listening callbacks persist the last observed value. The default core method is a no-op for existing fakes. |
+| `Palette.OledBlack` | Added by the UI owner. Persisted Lowlight and calls from older clients select OLED black. Steel Azure remains the default. The Lowlight constant stays readable for older data. |
+
+### Form completion
+
+| Intent | Acceptance | Actionable rejection |
+|---|---|---|
+| `AddCloudHandy` | Saved a named connection and its credential handle. | Key outside 5–64 ASCII letters and digits, invalid name, missing adult acknowledgement, or duplicate connection key. |
+| `AddAutoblowDevice` | Saved the selected Ultra or VacuGlide and its token handle. | Unsupported family, token outside 1–256 printable non-space ASCII characters, invalid name, missing acknowledgement, or token already saved. |
+| `AddIntiface`, `AddIntifaceLinear` | Refetched the device list and saved the unique identity of the chosen feature. | Invalid address, missing acknowledgement, unreachable bridge, ambiguous or changed choice, duplicate device. |
+| `SaveServer` | The named server completed an inert readiness turn for the requested model and the binding was saved. | Invalid address, model or name, private-address policy, unreachable server, provider refusal, duplicate model at that address or a superseding check. |
+| `SaveOpenRouter` | Saved the model configuration and credential handle. Cloud device and OpenRouter credential forms check local syntax. A successful save makes no claim about remote acceptance of the credential. | Invalid key, invalid model or duplicate model with the same credential. |
+| `Rename` | Committed the device name. | Empty, overlong or invalid name, duplicate name, or missing device. |
+| `Remove` | Released the owner if connected, erased its credential and removed the saved row. | Missing device, connection still opening, active participation or evidence still requiring reconciliation. |
+| `RemoveConnection` | Removed the model, its role bindings and credential, and cleared an associated refusal fallback. | Missing connection or an active run using that role. |
+
+All forms can report storage failure or a busy or closed submission lane. A failed row deletion restores a removed credential only if its handle is still empty. No reason includes a credential, address, provider message or form input.
+
+## Earlier M0 to M4 contract
 
 | API | Default and reason |
 |---|---|

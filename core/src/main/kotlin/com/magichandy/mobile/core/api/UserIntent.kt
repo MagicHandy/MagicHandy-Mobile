@@ -110,18 +110,29 @@ public sealed interface UserIntent {
 
     /** Saves a Handy Cloud connection using its secret connection key. */
     public data class AddCloudHandy(public val name: String, public val connectionKey: Secret) :
-        UserIntent
+        FormIntent
 
     /** Adds an Autoblow Ultra or a VacuGlide by its device token. */
     public data class AddAutoblowDevice(
         public val family: DeviceFamily,
         public val name: String,
         public val deviceToken: Secret,
-    ) : UserIntent
+    ) : FormIntent
 
     /** Adds Intiface Central at [address], on this phone or on the local network. */
-    public data class AddIntiface(public val address: String, public val deviceIndex: Int? = null) :
-        UserIntent
+    public data class AddIntiface(
+        public val address: String,
+        public val deviceIndex: Int? = null,
+        public val selection: String? = null,
+    ) : FormIntent
+
+    /** Save the linear feature chosen in the last lookup. Null selects the only offered feature. */
+    public data class AddIntifaceLinear(
+        public val address: String,
+        public val deviceIndex: Int? = null,
+        public val actuatorIndex: Int? = null,
+        public val selection: String? = null,
+    ) : FormIntent
 
     /** Connecting ends at Connected and idle. It never starts motion. */
     public data class Connect(public val device: DeviceId) : UserIntent
@@ -137,11 +148,11 @@ public sealed interface UserIntent {
     public data class SetLead(public val device: DeviceId) : UserIntent
 
     /** Changes the display name of a saved device. */
-    public data class Rename(public val device: DeviceId, public val name: String) : UserIntent
+    public data class Rename(public val device: DeviceId, public val name: String) : FormIntent
 
     /**
-     * Saves the Handy mounting for its next Start or Resume. Buffered points keep their stream's
-     * orientation.
+     * Handy HSP applies mounting at the next Start or Resume. Intiface linear endpoints capture
+     * mounting when queued and use the current stroke window at wire submission.
      */
     public data class SetReversed(public val device: DeviceId, public val isReversed: Boolean) :
         UserIntent
@@ -153,7 +164,7 @@ public sealed interface UserIntent {
     public data class TestMotion(public val device: DeviceId) : UserIntent
 
     /** Removes the saved device configuration. */
-    public data class Remove(public val device: DeviceId) : UserIntent
+    public data class Remove(public val device: DeviceId) : FormIntent
 
     /** Records that the person has read the Coyote connection notes. */
     public data object AcknowledgeCoyoteNotes : UserIntent
@@ -197,7 +208,7 @@ public sealed interface UserIntent {
         public val address: String,
         public val model: String,
         public val capability: CapabilityLevel,
-    ) : UserIntent
+    ) : FormIntent
 
     /** Starts the browser sign-in flow for a ChatGPT connection. */
     public data object StartChatGptSignIn : UserIntent
@@ -211,10 +222,10 @@ public sealed interface UserIntent {
         public val model: String,
         public val capability: CapabilityLevel,
         public val isReasoningOn: Boolean,
-    ) : UserIntent
+    ) : FormIntent
 
     /** Removes the model connection and its associated credential. */
-    public data class RemoveConnection(public val connection: ConnectionId) : UserIntent
+    public data class RemoveConnection(public val connection: ConnectionId) : FormIntent
 
     // App
 

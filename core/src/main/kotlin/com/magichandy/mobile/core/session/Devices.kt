@@ -103,6 +103,7 @@ internal class Devices(
 
     private suspend fun open(id: DeviceId, connection: Connection) {
         var attached = false
+        var needsSelection = false
         try {
             val ready =
                 withContext(d.dispatchers.io) {
@@ -165,6 +166,9 @@ internal class Devices(
                     }
             )
                 safety.retryRecovery(id)
+        } catch (_: com.magichandy.mobile.core.ports.BridgeSelectionRequired) {
+            needsSelection = true
+            record(DiagnosticKind.DeviceConnectionFailed)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -173,6 +177,7 @@ internal class Devices(
             if (!attached && !connection.closing) {
                 connection.closing = true
                 withContext(NonCancellable) { release(id, connection, lost = true) }
+                if (needsSelection) edit(id) { it.copy(status = DeviceStatus.NeedsSetup) }
             }
         }
     }
@@ -296,12 +301,15 @@ internal class Devices(
     }
 
     suspend fun setReversed(id: DeviceId, isReversed: Boolean) {
-        val settings =
-            ui.value.devices.devices.firstOrNull { it.id == id }?.settings as? DeviceSettings.Handy
-                ?: return
-        if (settings.isReversed == isReversed) return
-        if (d.devices.setHandyReversed(id, isReversed))
-            edit(id) { it.copy(settings = settings.copy(isReversed = isReversed)) }
+        val prior = ui.value.devices.devices.firstOrNull { it.id == id }?.settings
+        val next =
+            when (prior) {
+                is DeviceSettings.Handy -> prior.copy(isReversed = isReversed)
+                is DeviceSettings.LinearActuator -> prior.copy(isReversed = isReversed)
+                else -> return
+            }
+        if (prior != next && d.devices.setHandyReversed(id, isReversed))
+            edit(id) { it.copy(settings = next) }
     }
 
     fun projectSafety() {

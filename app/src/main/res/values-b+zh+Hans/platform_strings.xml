@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="platform_channel">活动连接</string>
+    <string name="platform_active">MagicHandy · 运行中</string>
+    <string name="platform_stop">停止</string>
+    <string name="platform_tile">停止运动</string>
+    <string name="platform_pace">节奏 %1$d</string>
+    <string name="platform_next">%1$d 秒后下一次调整</string>
+</resources>

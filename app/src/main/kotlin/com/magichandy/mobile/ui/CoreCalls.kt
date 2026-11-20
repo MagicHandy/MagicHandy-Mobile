@@ -3,7 +3,12 @@ package com.magichandy.mobile.ui
 import com.magichandy.mobile.core.api.ConnectionId
 import com.magichandy.mobile.core.api.CoyoteChannel
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DiagnosticsReport
+import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormReason
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.IntifaceChoice
+import com.magichandy.mobile.core.api.IntifaceLinearChoice
 import com.magichandy.mobile.core.api.MagicHandyCore
 
 /**
@@ -12,6 +17,10 @@ import com.magichandy.mobile.core.api.MagicHandyCore
  *
  * @property findVibrators lists the vibrators an Intiface bridge reports at an address. It returns
  *   an empty list when the bridge can't be reached, and never moves anything.
+ * @property findLinearActuators lists the strokers an Intiface bridge reports at an address, The
+ *   Handy among them, in the same way.
+ * @property submit sends a form and waits for the core to save it or say why it can't.
+ * @property diagnosticsReport builds the redacted report that App settings shares.
  * @property setRefusalFallback sets the local connection that retries a refused message once, or
  *   null for Off.
  * @property setCoyoteLimits sets a disconnected Coyote's channel limits, from 0 to 200.
@@ -19,15 +28,21 @@ import com.magichandy.mobile.core.api.MagicHandyCore
  */
 class CoreCalls(
     val findVibrators: suspend (address: String) -> List<IntifaceChoice>,
+    val findLinearActuators: suspend (address: String) -> List<IntifaceLinearChoice>,
+    val submit: suspend (form: FormIntent) -> FormResult,
+    val diagnosticsReport: suspend () -> DiagnosticsReport,
     val setRefusalFallback: (connection: ConnectionId?) -> Unit,
     val setCoyoteLimits: (device: DeviceId, maximumA: Int, maximumB: Int) -> Unit,
     val stepCoyote: (device: DeviceId, channel: CoyoteChannel, increase: Boolean) -> Unit,
 ) {
     companion object {
-        /** Calls that do nothing, for previews and sample states. */
+        /** Calls that do nothing, for previews and sample states. Forms are refused. */
         val None =
             CoreCalls(
                 findVibrators = { emptyList() },
+                findLinearActuators = { emptyList() },
+                submit = { FormResult.Rejected(FormReason.Unsupported) },
+                diagnosticsReport = { DiagnosticsReport("MagicHandy-diagnostics.txt", "") },
                 setRefusalFallback = {},
                 setCoyoteLimits = { _, _, _ -> },
                 stepCoyote = { _, _, _ -> },
@@ -37,6 +52,9 @@ class CoreCalls(
         fun of(core: MagicHandyCore): CoreCalls =
             CoreCalls(
                 findVibrators = { core.intifaceVibrators(it) },
+                findLinearActuators = { core.intifaceLinearActuators(it) },
+                submit = { core.submit(it) },
+                diagnosticsReport = { core.diagnosticsReport() },
                 setRefusalFallback = core::setRefusalFallback,
                 setCoyoteLimits = core::setCoyoteLimits,
                 stepCoyote = core::stepCoyote,

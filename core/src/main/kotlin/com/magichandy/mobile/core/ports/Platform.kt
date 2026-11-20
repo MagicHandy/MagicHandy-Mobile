@@ -33,11 +33,19 @@ public enum class DiagnosticKind {
     AccountRejected,
     AccountUnavailable,
     WriteFenced,
+    /** Immediate linear playback exhausted its queue or missed its allowed delivery window. */
+    IntifaceStarved,
     ClockSyncUnavailable,
 }
 
+/** Only a timestamp and an allowed event category may cross the reporting boundary. */
+public data class DiagnosticEvent(public val at: Instant, public val kind: DiagnosticKind)
+
 /** A capped rotating event ring in production. Called off the Stop and output paths. */
 public fun interface DiagnosticsSink {
+    /** Read a bounded suffix in chronological order. */
+    public suspend fun recent(limit: Int): List<DiagnosticEvent> = emptyList()
+
     /** Append one event and enforce the implementation's cap. */
     public suspend fun record(at: Instant, kind: DiagnosticKind)
 }

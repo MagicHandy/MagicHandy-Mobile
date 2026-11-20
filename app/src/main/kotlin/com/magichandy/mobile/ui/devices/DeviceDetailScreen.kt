@@ -21,11 +21,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceSettings
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.DeviceSummary
+import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.FormRefusal
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.Banner
@@ -43,6 +47,7 @@ import com.magichandy.mobile.ui.components.ToggleRow
 import com.magichandy.mobile.ui.components.ValueMenu
 import com.magichandy.mobile.ui.components.withMonoReadouts
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -54,6 +59,7 @@ import kotlin.time.Duration.Companion.minutes
  * @param isBatteryUnrestricted whether Android lets the app run without battery limits.
  * @param hasAcknowledgedCoyoteNotes whether the Coyote's safety notes were read, which its limits
  *   need.
+ * @param submit renames or removes the device, and says why when the core can't.
  */
 @Composable
 fun DeviceDetailScreen(
@@ -61,6 +67,7 @@ fun DeviceDetailScreen(
     isBatteryUnrestricted: Boolean,
     hasAcknowledgedCoyoteNotes: Boolean,
     onIntent: (UserIntent) -> Unit,
+    submit: suspend (form: FormIntent) -> FormResult,
     onSetCoyoteLimits: (device: DeviceId, maximumA: Int, maximumB: Int) -> Unit,
     onBack: () -> Unit,
     onOpenBatterySettings: () -> Unit,
@@ -85,15 +92,15 @@ fun DeviceDetailScreen(
                 onOpenBatterySettings,
             )
             MotionTest(device, onIntent)
-            DeviceSection(device, settings, onIntent)
+            DeviceSection(device, settings, onIntent, submit)
         } else {
             if (settings is DeviceSettings.Coyote) {
                 CoyoteLimits(device, settings, hasAcknowledgedCoyoteNotes, onSetCoyoteLimits)
             }
-            DeviceSection(device, settings, onIntent)
+            DeviceSection(device, settings, onIntent, submit)
             MotionTest(device, onIntent)
         }
-        BottomActions(device, onIntent, onBack)
+        BottomActions(device, onIntent, submit, onBack)
     }
 }
 
@@ -162,9 +169,10 @@ private fun DeviceSection(
     device: DeviceSummary,
     settings: DeviceSettings,
     onIntent: (UserIntent) -> Unit,
+    submit: suspend (form: FormIntent) -> FormResult,
 ) {
     Card(caption = stringResource(R.string.device_section)) {
-        NameRow(device, onIntent)
+        NameRow(device, submit)
         FixedRow(
             label = stringResource(R.string.device_connection),
             value = Words.connection(device.connection),
@@ -193,6 +201,15 @@ private fun DeviceSection(
                     value = Words.percent(settings.maxLevel),
                     isFirst = false,
                 )
+            // A stroker other than The Handy has no model to set, only its mounting.
+            is DeviceSettings.LinearActuator ->
+                ToggleRow(
+                    label = stringResource(R.string.handy_reverse),
+                    description = stringResource(R.string.linear_reverse_desc),
+                    isOn = settings.isReversed,
+                    onChange = { onIntent(UserIntent.SetReversed(device.id, it)) },
+                    isFirst = false,
+                )
             // The Coyote's limits have their own card above (CoyoteLimits).
             is DeviceSettings.Coyote,
             DeviceSettings.AutoblowUltra,
@@ -202,9 +219,10 @@ private fun DeviceSection(
 }
 
 @Composable
-private fun NameRow(device: DeviceSummary, onIntent: (UserIntent) -> Unit) {
+private fun NameRow(device: DeviceSummary, submit: suspend (form: FormIntent) -> FormResult) {
     var isEditing by rememberSaveable { mutableStateOf(false) }
     var draft by rememberSaveable(device.id.value) { mutableStateOf(device.name) }
+    val submission = rememberFormSubmission(submit)
     if (!isEditing) {
         SettingRow(
             label = stringResource(R.string.field_name),
@@ -217,20 +235,35 @@ private fun NameRow(device: DeviceSummary, onIntent: (UserIntent) -> Unit) {
         )
         return
     }
-    Row(
-        Modifier.padding(vertical = MagicHandyTheme.dimens.s),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        TextInput(draft, { draft = it }, stringResource(R.string.field_name), Modifier.weight(1f))
-        AppButton(
-            stringResource(R.string.action_save),
-            {
-                onIntent(UserIntent.Rename(device.id, draft.trim()))
-                isEditing = false
-            },
-            kind = ButtonKind.Primary,
-            isEnabled = draft.isNotBlank(),
-            modifier = Modifier.padding(start = MagicHandyTheme.dimens.s),
+    Column(Modifier.padding(vertical = MagicHandyTheme.dimens.s)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            TextInput(
+                draft,
+                {
+                    draft = it
+                    submission.edited()
+                },
+                stringResource(R.string.field_name),
+                Modifier.weight(1f),
+            )
+            AppButton(
+                stringResource(
+                    if (submission.isSending) R.string.form_saving else R.string.action_save
+                ),
+                {
+                    submission.send(UserIntent.Rename(device.id, draft.trim())) {
+                        isEditing = false
+                    }
+                },
+                kind = ButtonKind.Primary,
+                isEnabled = draft.isNotBlank() && !submission.isSending,
+                modifier = Modifier.padding(start = MagicHandyTheme.dimens.s),
+            )
+        }
+        FormRefusal(
+            submission,
+            Modifier.padding(top = MagicHandyTheme.dimens.xs),
+            duplicate = R.string.form_duplicate_name,
         )
     }
 }
@@ -343,21 +376,37 @@ private fun MotionTest(device: DeviceSummary, onIntent: (UserIntent) -> Unit) {
             )
             Hint(stringResource(R.string.vacuglide_test_desc))
         } else {
+            // A test runs at the Coyote's current strength, which is zero whenever nothing plays,
+            // so it couldn't be felt: the Coyote gets Check alone.
+            val canTest = device.family != DeviceFamily.Coyote
             Row(horizontalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.s)) {
                 AppButton(
                     stringResource(R.string.device_check),
                     { onIntent(UserIntent.CheckConnection(device.id)) },
                     modifier = Modifier.weight(1f),
                 )
-                AppButton(
-                    stringResource(R.string.device_test),
-                    { onIntent(UserIntent.TestMotion(device.id)) },
-                    kind = ButtonKind.Start,
-                    isEnabled = device.status == DeviceStatus.Connected,
-                    modifier = Modifier.weight(1f),
-                )
+                if (canTest) {
+                    AppButton(
+                        stringResource(R.string.device_test),
+                        { onIntent(UserIntent.TestMotion(device.id)) },
+                        kind = ButtonKind.Start,
+                        isEnabled = device.status == DeviceStatus.Connected,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
-            Hint(stringResource(R.string.device_check_test_note))
+            Hint(
+                stringResource(
+                    when (device.family) {
+                        DeviceFamily.Coyote -> R.string.device_check_note_coyote
+                        DeviceFamily.Vibrator -> R.string.device_check_test_note_vibrator
+                        DeviceFamily.Handy,
+                        DeviceFamily.LinearActuator,
+                        DeviceFamily.AutoblowUltra,
+                        DeviceFamily.VacuGlide -> R.string.device_check_test_note
+                    }
+                )
+            )
         }
     }
 }
@@ -367,12 +416,16 @@ private fun MotionTest(device: DeviceSummary, onIntent: (UserIntent) -> Unit) {
 private fun BottomActions(
     device: DeviceSummary,
     onIntent: (UserIntent) -> Unit,
+    submit: suspend (form: FormIntent) -> FormResult,
     onBack: () -> Unit,
 ) {
     val isLinked =
         device.status == DeviceStatus.Connected ||
             device.status == DeviceStatus.Playing ||
             device.status == DeviceStatus.Paused
+    // The page closes once the core has removed the device; until then it says why it can't.
+    val removal = rememberFormSubmission(submit)
+    FormRefusal(removal, Modifier.padding(top = MagicHandyTheme.dimens.s))
     Row(
         horizontalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.s),
         modifier = Modifier.padding(top = MagicHandyTheme.dimens.s),
@@ -389,11 +442,9 @@ private fun BottomActions(
                 if (device.settings is DeviceSettings.Handy) R.string.device_remove_handy
                 else R.string.device_remove
             ),
-            {
-                onIntent(UserIntent.Remove(device.id))
-                onBack()
-            },
+            { removal.send(UserIntent.Remove(device.id), onBack) },
             kind = ButtonKind.Destructive,
+            isEnabled = !removal.isSending,
             modifier = Modifier.weight(1f),
         )
     }

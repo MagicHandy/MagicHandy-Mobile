@@ -23,6 +23,38 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class MotionEngineTest {
     @Test
+    fun `global emergency supersedes an isolated owner Stop already awaiting its reply`() =
+        runTest {
+            val engine = EngineFixture(this).engine
+            val owner = FakeOwner("selected")
+            val scopes = mutableListOf<Boolean>()
+            val release = CompletableDeferred<Unit>()
+            val distinct =
+                object : com.magichandy.mobile.core.ports.DeviceTransport by owner {
+                    override suspend fun stop(
+                        fence: com.magichandy.mobile.core.ports.OutputFence
+                    ): StopEvidence {
+                        scopes += fence.wholeBridge
+                        if (!fence.wholeBridge) release.await()
+                        return StopEvidence.Unconfirmed(UnconfirmedCause.BridgeOnly)
+                    }
+                }
+            engine.attach(distinct)
+            engine.stop(null, disconnecting = distinct)
+            runCurrent()
+            engine.stop(StopSource.QuickSettingsTile)
+            runCurrent()
+            assertEquals(listOf(false, true), scopes)
+            assertEquals(
+                UnconfirmedCause.BridgeOnly,
+                engine.state.value.receipt?.outcomes?.single()?.cause,
+            )
+            release.complete(Unit)
+            runCurrent()
+            assertEquals(1, engine.state.value.receipt?.pressCount)
+        }
+
+    @Test
     fun `Stop fences admission immediately and a stalled owner cannot delay another acknowledgement`() =
         runTest {
             val (engine, slow, fast) =

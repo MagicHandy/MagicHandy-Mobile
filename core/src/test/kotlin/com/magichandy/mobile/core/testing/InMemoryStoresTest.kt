@@ -78,7 +78,7 @@ internal class InMemoryStoresTest {
         )
         val result = store.state.value
         assertEquals(2L, result.revision)
-        assertEquals(Palette.Lowlight, result.values.palette)
+        assertEquals(Palette.OledBlack, result.values.palette)
         assertEquals(AppLanguage.Japanese, result.values.language)
         assertFalse(result.values.memoryOn)
         assertFalse(store.patch(3, listOf(PreferenceField.Memory.edit(true))))

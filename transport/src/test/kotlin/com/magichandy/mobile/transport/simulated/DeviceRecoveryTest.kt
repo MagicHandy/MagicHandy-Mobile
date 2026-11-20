@@ -35,7 +35,33 @@ internal class DeviceRecoveryTest {
     @Test
     fun `local checks reconcile only unresolved devices without touching any transport`() =
         runTest {
-            val f = DebugFixture(this)
+            val f =
+                DebugFixture(this) { d ->
+                    d.copy(
+                        devices =
+                            object : DeviceDirectory by d.devices {
+                                override suspend fun connect(
+                                    device: DeviceId,
+                                    ownerScope: CoroutineScope,
+                                ): DeviceTransport? {
+                                    val owner = d.devices.connect(device, ownerScope) ?: return null
+                                    if (device != DeviceId("coyote")) return owner
+                                    return object :
+                                        com.magichandy.mobile.core.ports.TimedDevice by (owner
+                                            as com.magichandy.mobile.core.ports.TimedDevice) {
+                                        override suspend fun stop(
+                                            fence: OutputFence
+                                        ): StopEvidence {
+                                            owner.stop(fence)
+                                            return StopEvidence.Unconfirmed(
+                                                UnconfirmedCause.NoReply
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                    )
+                }
             f.onboard()
             f.send(UserIntent.AcknowledgeCoyoteNotes)
             val bridge = DeviceId("vibrator")
@@ -44,6 +70,8 @@ internal class DeviceRecoveryTest {
             listOf(bridge, writeOnly, confirmed).forEach(f::connect)
             f.send(UserIntent.StartMotion)
             f.core.emergencyStop(StopSource.AppFooter)
+            runCurrent()
+            advanceTimeBy(60)
             runCurrent()
             val before = f.devices.output.value
             val initial = requireNotNull(f.core.state.value.stopReceipt)

@@ -1,8 +1,10 @@
 package com.magichandy.mobile.ui.devices
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,9 +30,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.DeviceFamily
-import com.magichandy.mobile.core.api.IntifaceChoice
+import com.magichandy.mobile.core.api.FormIntent
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.CoreCalls
+import com.magichandy.mobile.ui.FormRefusal
+import com.magichandy.mobile.ui.FormSubmission
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.Banner
@@ -38,14 +43,20 @@ import com.magichandy.mobile.ui.components.BannerTone
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.Card
 import com.magichandy.mobile.ui.components.Hint
+import com.magichandy.mobile.ui.components.PushDown
 import com.magichandy.mobile.ui.components.TextInput
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.settings.ChoiceList
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun AddCoyote(state: AppState, onIntent: (UserIntent) -> Unit, onDone: () -> Unit) {
+internal fun ColumnScope.AddCoyote(
+    state: AppState,
+    onIntent: (UserIntent) -> Unit,
+    onDone: () -> Unit,
+) {
     val colors = MagicHandyTheme.colors
     val acknowledged = state.devices.hasAcknowledgedCoyoteNotes
     // Once the notes are acknowledged, the box stays ticked and locked.
@@ -53,13 +64,11 @@ internal fun AddCoyote(state: AppState, onIntent: (UserIntent) -> Unit, onDone: 
     val isChecked = acknowledged || isTicked
     var isScanning by rememberSaveable { mutableStateOf(false) }
     Card(
-        caption = stringResource(R.string.add_coyote_before),
         contentPadding =
             PaddingValues(
-                start = MagicHandyTheme.dimens.m,
-                end = MagicHandyTheme.dimens.m,
-                bottom = MagicHandyTheme.dimens.s,
-            ),
+                horizontal = MagicHandyTheme.dimens.m,
+                vertical = MagicHandyTheme.dimens.s,
+            )
     ) {
         val notes =
             listOf(
@@ -111,6 +120,7 @@ internal fun AddCoyote(state: AppState, onIntent: (UserIntent) -> Unit, onDone: 
             defaultName = Words.family(DeviceFamily.Coyote),
         )
     } else {
+        PushDown()
         AppButton(
             stringResource(R.string.add_coyote_find),
             {
@@ -150,74 +160,176 @@ internal fun CheckBox(isChecked: Boolean) {
     }
 }
 
-/** How far finding the vibrators at an Intiface address has got. */
-internal sealed interface VibratorSearch {
-    data object NotStarted : VibratorSearch
+/** How far finding the devices at an Intiface address has got. */
+internal sealed interface BridgeSearch<out T> {
+    data object NotStarted : BridgeSearch<Nothing>
 
-    data object Finding : VibratorSearch
+    data object Finding : BridgeSearch<Nothing>
 
     /** What the bridge at [address] reported; empty when it couldn't be reached. */
-    data class Found(val address: String, val choices: List<IntifaceChoice>) : VibratorSearch
+    data class Found<T>(val address: String, val choices: List<T>) : BridgeSearch<T>
+}
+
+/** The words for one kind of device behind Intiface, so vibrators and strokers share a setup. */
+internal class BridgeWords(
+    @param:StringRes val lead: Int,
+    @param:StringRes val find: Int,
+    @param:StringRes val finding: Int,
+    @param:StringRes val findAgain: Int,
+    @param:StringRes val noneTitle: Int,
+    @param:StringRes val noneBody: Int,
+    @param:StringRes val hint: Int,
+    @param:StringRes val connect: Int,
+)
+
+internal val VibratorWords =
+    BridgeWords(
+        lead = R.string.add_vibrator_desc,
+        find = R.string.vibrator_find,
+        finding = R.string.vibrator_finding,
+        findAgain = R.string.vibrator_find_again,
+        noneTitle = R.string.vibrator_none_title,
+        noneBody = R.string.vibrator_none_body,
+        hint = R.string.vibrator_find_hint,
+        connect = R.string.vibrator_connect,
+    )
+
+internal val StrokerWords =
+    BridgeWords(
+        lead = R.string.add_linear_desc,
+        find = R.string.linear_find,
+        finding = R.string.linear_finding,
+        findAgain = R.string.linear_find_again,
+        noneTitle = R.string.linear_none_title,
+        noneBody = R.string.linear_none_body,
+        hint = R.string.linear_find_hint,
+        connect = R.string.vibrator_connect,
+    )
+
+/** Adds a vibrator through Intiface Central (board V-AddVibrator). */
+@Composable
+internal fun ColumnScope.AddVibrator(calls: CoreCalls, onDone: () -> Unit) {
+    AddBridgeDevice(
+        words = VibratorWords,
+        find = calls.findVibrators,
+        name = { it.name },
+        detail = { stringResource(R.string.vibrator_device, it.deviceIndex) },
+        form = { address, choice ->
+            UserIntent.AddIntiface(address, choice.deviceIndex, choice.selection)
+        },
+        submission = rememberFormSubmission(calls.submit),
+        onDone = onDone,
+    )
 }
 
 /**
- * Adds a vibrator through Intiface Central (board V-AddVibrator). The person finds the vibrators at
- * an address, then connects the one they pick; a bridge with one vibrator has it picked already.
- * Finding only asks the bridge, and never moves anything.
+ * Adds The Handy, or another stroker, through Intiface Central (board V-AddHandyIntiface). The core
+ * names The Handy by what Intiface reports, so one picker serves both. Intiface answers Stop for
+ * the device, so the caveat comes first.
  */
 @Composable
-internal fun AddVibrator(
-    findVibrators: suspend (address: String) -> List<IntifaceChoice>,
-    onIntent: (UserIntent) -> Unit,
+internal fun ColumnScope.AddStroker(calls: CoreCalls, onDone: () -> Unit) {
+    IntifaceStopCaveat()
+    AddBridgeDevice(
+        words = StrokerWords,
+        find = calls.findLinearActuators,
+        name = { it.name },
+        detail = { stringResource(R.string.linear_device, it.deviceIndex, it.actuatorIndex) },
+        form = { address, choice ->
+            UserIntent.AddIntifaceLinear(
+                address,
+                choice.deviceIndex,
+                choice.actuatorIndex,
+                choice.selection,
+            )
+        },
+        submission = rememberFormSubmission(calls.submit),
+        onDone = onDone,
+    )
+}
+
+/** Intiface acknowledges Stop on the device's behalf, which doesn't prove it stopped. */
+@Composable
+internal fun IntifaceStopCaveat() {
+    Banner(
+        tone = BannerTone.Warn,
+        title = stringResource(R.string.intiface_caveat_title),
+        body = stringResource(R.string.intiface_caveat_body),
+    )
+}
+
+/**
+ * Finds the devices of one kind at an Intiface address, then connects the one picked; a bridge with
+ * one has it picked already. Finding only asks the bridge and never moves anything. The form stays
+ * open until the core has saved the device, and says why if it can't.
+ */
+@Composable
+private fun <T> ColumnScope.AddBridgeDevice(
+    words: BridgeWords,
+    find: suspend (address: String) -> List<T>,
+    name: (T) -> String,
+    detail: @Composable (T) -> String,
+    form: (address: String, choice: T) -> FormIntent,
+    submission: FormSubmission,
     onDone: () -> Unit,
 ) {
     var address by rememberSaveable { mutableStateOf(DEFAULT_INTIFACE_ADDRESS) }
-    var search by remember { mutableStateOf<VibratorSearch>(VibratorSearch.NotStarted) }
-    var selected by remember { mutableStateOf<IntifaceChoice?>(null) }
+    var search by remember { mutableStateOf<BridgeSearch<T>>(BridgeSearch.NotStarted) }
+    var selected by remember { mutableStateOf<T?>(null) }
     val scope = rememberCoroutineScope()
-    VibratorSetup(
+    BridgeSetup(
+        words = words,
         address = address,
         search = search,
         selected = selected,
+        name = name,
+        detail = detail,
+        submission = submission,
         onAddressChange = {
             address = it
-            search = VibratorSearch.NotStarted
+            search = BridgeSearch.NotStarted
             selected = null
+            submission.edited()
         },
         onFind = {
             val target = address.trim()
-            search = VibratorSearch.Finding
+            search = BridgeSearch.Finding
             selected = null
+            submission.edited()
             scope.launch {
-                val choices = findVibrators(target)
+                val choices = find(target)
                 // Editing the address meanwhile makes this answer stale.
-                if (search == VibratorSearch.Finding) {
-                    search = VibratorSearch.Found(target, choices)
+                if (search == BridgeSearch.Finding) {
+                    search = BridgeSearch.Found(target, choices)
                     selected = choices.singleOrNull()
                 }
             }
         },
-        onSelect = { selected = it },
-        onConnect = { found, choice ->
-            onIntent(UserIntent.AddIntiface(found.address, choice.deviceIndex))
-            onDone()
+        onSelect = {
+            selected = it
+            submission.edited()
         },
+        onConnect = { found, choice -> submission.send(form(found.address, choice), onDone) },
     )
 }
 
-/** The stateless content of [AddVibrator], for a given [search] and choice. */
+/** The stateless content of [AddBridgeDevice], for a given [search] and choice. */
 @Composable
-internal fun VibratorSetup(
+internal fun <T> ColumnScope.BridgeSetup(
+    words: BridgeWords,
     address: String,
-    search: VibratorSearch,
-    selected: IntifaceChoice?,
+    search: BridgeSearch<T>,
+    selected: T?,
+    name: (T) -> String,
+    detail: @Composable (T) -> String,
+    submission: FormSubmission,
     onAddressChange: (String) -> Unit,
     onFind: () -> Unit,
-    onSelect: (IntifaceChoice) -> Unit,
-    onConnect: (VibratorSearch.Found, IntifaceChoice) -> Unit,
+    onSelect: (T) -> Unit,
+    onConnect: (BridgeSearch.Found<T>, T) -> Unit,
 ) {
     Text(
-        stringResource(R.string.add_vibrator_desc),
+        stringResource(words.lead),
         style = MagicHandyTheme.type.small,
         color = MagicHandyTheme.colors.textSecondary,
     )
@@ -228,55 +340,61 @@ internal fun VibratorSetup(
         placeholder = stringResource(R.string.field_intiface_address_hint),
         keyboardType = KeyboardType.Uri,
     )
-    val found = search as? VibratorSearch.Found
+    val found = search as? BridgeSearch.Found<T>
     AppButton(
         stringResource(
             when (search) {
-                VibratorSearch.NotStarted -> R.string.vibrator_find
-                VibratorSearch.Finding -> R.string.vibrator_finding
-                is VibratorSearch.Found -> R.string.vibrator_find_again
+                BridgeSearch.NotStarted -> words.find
+                BridgeSearch.Finding -> words.finding
+                is BridgeSearch.Found -> words.findAgain
             }
         ),
         onFind,
         kind = if (found == null) ButtonKind.Primary else ButtonKind.Outline,
-        isEnabled = address.isNotBlank() && search != VibratorSearch.Finding,
+        isEnabled = address.isNotBlank() && search != BridgeSearch.Finding,
         modifier = Modifier.fillMaxWidth(),
     )
     if (found != null && found.choices.isEmpty()) {
         Banner(
             tone = BannerTone.Warn,
-            title = stringResource(R.string.vibrator_none_title),
-            body = stringResource(R.string.vibrator_none_body),
+            title = stringResource(words.noneTitle),
+            body = stringResource(words.noneBody),
         )
     } else if (found != null) {
         Card(caption = stringResource(R.string.vibrator_found, found.choices.size)) {
             ChoiceList(
                 options = found.choices,
                 selected = selected,
-                label = { it.name },
-                description = { stringResource(R.string.vibrator_device, it.deviceIndex) },
+                label = { name(it) },
+                description = detail,
                 onSelect = onSelect,
             )
         }
     }
-    Hint(stringResource(R.string.vibrator_find_hint))
+    Hint(stringResource(words.hint))
     if (found != null && found.choices.isNotEmpty()) {
+        PushDown()
+        FormRefusal(submission)
         AppButton(
-            selected?.let { stringResource(R.string.vibrator_connect, it.name) }
-                ?: stringResource(R.string.action_connect),
+            when {
+                submission.isSending -> stringResource(R.string.form_saving)
+                selected != null -> stringResource(words.connect, name(selected))
+                else -> stringResource(R.string.action_connect)
+            },
             { selected?.let { onConnect(found, it) } },
             kind = ButtonKind.Primary,
-            isEnabled = selected != null,
+            isEnabled = selected != null && !submission.isSending,
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
 @Composable
-internal fun AddAutoblow(family: DeviceFamily, onIntent: (UserIntent) -> Unit, onDone: () -> Unit) {
+internal fun ColumnScope.AddAutoblow(family: DeviceFamily, calls: CoreCalls, onDone: () -> Unit) {
     val defaultName = Words.family(family)
     var name by rememberSaveable { mutableStateOf(defaultName) }
     var token by remember { mutableStateOf("") }
+    val submission = rememberFormSubmission(calls.submit)
     if (family == DeviceFamily.VacuGlide) {
         Banner(
             tone = BannerTone.Danger,
@@ -290,22 +408,36 @@ internal fun AddAutoblow(family: DeviceFamily, onIntent: (UserIntent) -> Unit, o
         style = MagicHandyTheme.type.small,
         color = MagicHandyTheme.colors.textSecondary,
     )
-    TextInput(name, { name = it }, stringResource(R.string.field_name))
+    TextInput(
+        name,
+        {
+            name = it
+            submission.edited()
+        },
+        stringResource(R.string.field_name),
+    )
     TextInput(
         token,
-        { token = it },
+        {
+            token = it
+            submission.edited()
+        },
         stringResource(R.string.field_device_token),
         placeholder = stringResource(R.string.field_device_token_hint),
         isSecret = true,
     )
+    PushDown()
+    FormRefusal(submission)
     AppButton(
-        stringResource(R.string.action_connect),
+        stringResource(if (submission.isSending) R.string.form_saving else R.string.action_connect),
         {
-            onIntent(UserIntent.AddAutoblowDevice(family, name.trim(), Secret(token.trim())))
-            onDone()
+            submission.send(
+                UserIntent.AddAutoblowDevice(family, name.trim(), Secret(token.trim())),
+                onDone,
+            )
         },
         kind = ButtonKind.Primary,
-        isEnabled = name.isNotBlank() && token.isNotBlank(),
+        isEnabled = name.isNotBlank() && token.isNotBlank() && !submission.isSending,
         modifier = Modifier.fillMaxWidth(),
     )
 }

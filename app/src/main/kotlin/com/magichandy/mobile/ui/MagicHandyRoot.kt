@@ -68,8 +68,10 @@ fun MagicHandyRoot(
     val onIntent: (UserIntent) -> Unit = remember(core) { { core.dispatch(it) } }
     val onStop: (StopSource) -> Unit = remember(core) { { core.emergencyStop(it) } }
     val calls = remember(core) { CoreCalls.of(core) }
-    MagicHandyTheme(state.app.palette) {
-        AppContent(state, onIntent, onStop, calls, openLive, onLiveOpened)
+    LocalizedUi(state.app.language) {
+        MagicHandyTheme(state.app.palette) {
+            AppContent(state, onIntent, onStop, calls, openLive, onLiveOpened)
+        }
     }
 }
 
@@ -246,6 +248,7 @@ private fun RouteContent(
                     isBatteryUnrestricted = system.isBatteryUnrestricted,
                     hasAcknowledgedCoyoteNotes = state.devices.hasAcknowledgedCoyoteNotes,
                     onIntent = onIntent,
+                    submit = calls.submit,
                     onSetCoyoteLimits = calls.setCoyoteLimits,
                     onBack = { nav.pop() },
                     onOpenBatterySettings = links.openBatterySettings,
@@ -257,7 +260,7 @@ private fun RouteContent(
                 family = route.family,
                 state = state,
                 onIntent = onIntent,
-                findVibrators = calls.findVibrators,
+                calls = calls,
                 onBack = { nav.pop() },
                 onDone = { nav.pop() },
             )
@@ -266,6 +269,7 @@ private fun RouteContent(
                 state = state,
                 system = system,
                 links = rememberSystemLinks(),
+                diagnostics = rememberDiagnosticsShare(calls.diagnosticsReport),
                 onIntent = onIntent,
                 onBack = { nav.pop() },
                 onOpenModels = { nav.push(Route.Models) },
@@ -273,7 +277,7 @@ private fun RouteContent(
         Route.Models ->
             ModelsScreen(
                 state = state,
-                onIntent = onIntent,
+                submit = calls.submit,
                 exits =
                     ModelExits(
                         back = { nav.pop() },
@@ -282,8 +286,8 @@ private fun RouteContent(
                         addChatGpt = { nav.push(Route.ChatGptSetup) },
                     ),
             )
-        Route.AddServer -> AddServerScreen(state, onIntent, onBack = { nav.pop() })
-        Route.OpenRouterSetup -> OpenRouterScreen(onIntent, onBack = { nav.pop() })
+        Route.AddServer -> AddServerScreen(state, onIntent, calls.submit, onBack = { nav.pop() })
+        Route.OpenRouterSetup -> OpenRouterScreen(calls.submit, onBack = { nav.pop() })
         Route.ChatGptSetup -> ChatGptScreen(state, onIntent, onBack = { nav.pop() })
     }
 }

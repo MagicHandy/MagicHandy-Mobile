@@ -107,7 +107,7 @@ Because the mobile app doesn't have to track the desktop, it can be optimized fo
 | Live control | <ul><li>Stop, Pause, Resume and Edge.</li><li>Speed, stroke window and direction limits.</li></ul> |
 | Devices | See §8. |
 | Model connections | <ul><li>ChatGPT sign-in.</li><li>OpenRouter.</li><li>Servers on the local network: Ollama and llama.cpp, plus other OpenAI-compatible servers.</li><li>All capability contracts, so Gemma-class models on LAN servers get their tuned Simple and Intermediate contracts. The UI shows three levels; Advanced selects its no-reasoning contract automatically when reasoning is off for a connection.</li></ul> |
-| Settings | <ul><li>Device and model limits.</li><li>Language: en, es, pt-BR, ja, zh-Hans.</li><li>Palettes: Steel Azure, Lowlight and High Contrast are proposed (§12); the alternative is the 8 brand palettes (ADR 0073) plus Lowlight.</li><li>A redacted diagnostics export.</li></ul> |
+| Settings | <ul><li>Device and model limits.</li><li>Language: en, es, pt-BR, ja, zh-Hans.</li><li>Palettes: a minimal dark set for phones, Steel Azure, OLED black and High contrast (§12, decision 3).</li><li>A redacted diagnostics export.</li></ul> |
 
 **Out of scope:**
 
@@ -237,7 +237,7 @@ The port will be read far more often than it is written: in parity passes agains
 - Composables take state and lambdas, never the core or a view model. `Modifier` is the first optional parameter.
 - Colours, type, spacing and shapes come only from the theme's tokens: no raw hex or dp values in screens.
 - Every icon-only control has a content description, and every target is at least 48 dp.
-- Every screen has previews of its main states (idle, playing and failure) in Steel Azure and Lowlight, plus one at 200% font scale.
+- Every screen has previews of its main states (idle, playing and failure) in Steel Azure and OLED black, plus one at 200% font scale. A screenshot test compares each preview with its recorded image.
 
 **Tests**
 
@@ -324,7 +324,7 @@ Motion and device changes are ported only when they fix a safety bug or matter o
 |---|---|---|---|
 | The Handy (fw4, API v3) | Handy Cloud API over HTTPS | Same as desktop. If the app dies, the Handy pauses when its HSP buffer runs out. | M1 |
 | The Handy | Native Bluetooth via Android GATT (`handy4` profile) | <ul><li>Request MTU 517; payloads up to 512 bytes.</li><li>GATT allows one operation at a time, so writes go through a queue.</li><li>Stop and teardown use RPC 715.</li><li>Uncertain writes are never retried; they retire the link, as on desktop.</li></ul> | M1 |
-| The Handy via Intiface | Buttplug over WebSocket to Intiface Central | Proposed for removal on mobile (§12, decision 1). Until then it is offered as on desktop, with its warning: Intiface can acknowledge Stop without delivering it. | M3 |
+| The Handy and other strokers via Intiface | Buttplug over WebSocket to Intiface Central | Kept, as on desktop (§12, decision 1): The Handy, or any other linear actuator, with its warning that Intiface can acknowledge Stop without delivering it. | M3 |
 | Several Handys | Any mix of the above | Named connections and linked sessions, as on desktop (ADR 0054). No promise of physical sync. | M3 |
 | Vibrators | Buttplug over WebSocket to Intiface Central on the phone or the LAN | <ul><li>The Intiface app must be running; verify it survives in the background.</li><li>Model-controlled level per ADR 0061.</li></ul> | M3 |
 | DG-LAB Coyote 3.0 | Android GATT (`coyote3` profile), write without response | <ul><li>100 ms packet cadence.</li><li>Output stops when packets stop.</li><li>Explicit scan, with no fallback to another device.</li><li>Its safety notes are acknowledged before the first connection.</li></ul> | M3 |
@@ -430,16 +430,21 @@ Decided on 2026-11-18:
 - The pattern library is not part of the app (§15).
 - Settings that can wait go in one compact menu, with the motion mode behind its own menu (§14).
 
-**Still open.** The canvas's "Needs your decision" card lists the same eight:
+**The eight questions from the canvas's "Needs your decision" card**, all now settled:
 
-1. **The Handy via Intiface:** remove this route on mobile. Bluetooth and Cloud reach the same Handy without Intiface's Stop caveat, so the device stays supported; only this connection method goes. It is an explicit exception to device parity. Until you decide, it stays in M3 with a persistent caveat, and an acknowledgement from the bridge alone reports Stop as unconfirmed.
+1. **Intiface: full support, decided 2026-11-20.** The Handy, and any other linear actuator, connect through Intiface Central as on the desktop, alongside vibrators. A persistent caveat says Stop through the bridge can't be confirmed, and an acknowledgement from the bridge alone reports Stop as unconfirmed.
 2. **Personas:** only the built-in presets in v1. Importing persona archives comes later, because it parses untrusted archives (desktop risk R27).
-3. **Palettes:** Steel Azure, Lowlight and High Contrast, instead of the eight desktop palettes plus Lowlight.
-4. **Settings in the bottom row:** an action that opens the compact sheet over the current screen, with App settings as its last row. The canvas draws it this way.
+3. **Palettes: a minimal dark set tailored to phones, decided 2026-11-20.** Steel Azure (the default), OLED black (true black, which OLED screens draw with their pixels off) and High contrast. Lowlight is retired and loads as OLED black. The eight desktop palettes stay on the desktop.
+4. **Settings in the bottom row: confirmed on 2026-11-20, at least for now.** It's an action that opens the compact sheet over the current screen, with App settings as its last row.
 5. **Edge:** Astra suggests deferring it, since it adds a fourth motion state to test on every device. The canvas keeps it on Chat and Live, because you asked for Edge on the phone remote.
 6. **ChatGPT sign-in:** allow a few seconds of loopback callback during sign-in, the one exception to "no local server", if M0 finds no supported app redirect.
 7. **Memory:** off by default, with review and clear in its sheet.
 8. **VacuGlide check-in:** every 15 minutes by default, with Off on its device page. This answers the earlier open question.
+
+Decisions 2 and 5 to 8 were settled on 2026-11-19 as proposed. From the 2026-11-19 review, decided on 2026-11-20 with the remaining work:
+
+- **Forms wait for the core.** A form closes only once the core has saved what it submitted. A refusal keeps the input on screen with the reason.
+- **The motor test stays at 1.5 seconds,** as the core runs it, and the copy says "for a moment".
 
 **Carried forward unless you object:**
 
@@ -491,7 +496,7 @@ Instrument's faders and Native's floating Stop were not carried forward; Native 
   - Stop's fill #C43C36;
   - radii of 10, 6 and 4 dp, no glow and no violet.
 - **Type:** Inter, as on the canvas, with JetBrains Mono for numeric readouts such as paces, timers, latencies and signal strengths. Both are bundled under the SIL Open Font License (`third_party/fonts`), so every phone renders the boards' type.
-- **Palettes:** Steel Azure, Lowlight (true black #000000, surface #111111, warm text #E9E4DB and #BEB9B2) and High Contrast, with the semantic colours fixed (§12, decision 3).
+- **Palettes:** Steel Azure, OLED black (ground, wells and the bar behind the tabs and Stop at #000000, cards at #0B0C0D, with Steel Azure's text greys) and High contrast, with the semantic colours fixed (§12, decision 3). A unit test holds each to the desktop's contrast rules (ADR 0073).
 
 ### 14.2 The app frame
 

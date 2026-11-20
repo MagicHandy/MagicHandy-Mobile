@@ -14,10 +14,21 @@ public data class SavedDevice(
     public val address: String? = null,
     public val credential: SecretHandle? = null,
     public val deviceIndex: Int? = null,
+    /**
+     * Fingerprint of the selected device and feature. A discovery index alone cannot identify
+     * hardware.
+     */
+    public val bridgeIdentity: String? = null,
 )
 
 /** Device connection boundary. Connecting an owner verifies it and leaves it idle. */
 public interface DeviceDirectory : RecoveryStops {
+    /**
+     * Fence and stop live shared bridge sessions, including a discovery lease without a selected
+     * device.
+     */
+    public fun stopOpenBridges(epoch: Epoch) {}
+
     /** Editable durable rows and explicit discovery, when supported by this adapter. */
     public val configuration: DeviceConfiguration?
         get() = null

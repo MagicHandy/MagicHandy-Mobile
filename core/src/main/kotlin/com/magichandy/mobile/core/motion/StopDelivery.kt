@@ -31,7 +31,10 @@ internal class StopDelivery(
 ) {
     fun send(attempt: StopAttempt) {
         val id = attempt.target.device.id
-        val fence = OutputFence(attempt.epoch) { current.value.pending[id] === attempt }
+        val fence =
+            OutputFence(attempt.epoch, wholeBridge = attempt.wholeBridge) {
+                current.value.pending[id] === attempt
+            }
         val timeout = attempt.target.timeout
         val worker =
             scope.launch(stopIo, start = CoroutineStart.LAZY) {

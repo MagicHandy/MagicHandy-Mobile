@@ -64,7 +64,8 @@ internal class CoreNotice(private val context: Context) {
             )
         fun base() =
             Notification.Builder(context, channel)
-                .setSmallIcon(android.R.drawable.ic_media_pause)
+                .setSmallIcon(R.drawable.ic_stat_star)
+                .setColor(context.getColor(R.color.brand_accent))
                 .setContentTitle(context.getString(R.string.platform_active))
                 .setShowWhen(false)
                 .setOngoing(true)

@@ -26,7 +26,9 @@ internal class MobileReleasesTest {
             assertEquals(UpdateCheck.UpToDate, feed.check("0.10.3"))
             body = "[]"
             assertEquals(UpdateCheck.Failed, feed.check("0.1.0"))
-            status = 404
-            assertEquals(UpdateCheck.UpToDate, feed.check("0.1.0"))
+            for (denied in listOf(401, 403, 404, 429, 503)) {
+                status = denied
+                assertEquals(UpdateCheck.Failed, feed.check("0.1.0"))
+            }
         }
 }

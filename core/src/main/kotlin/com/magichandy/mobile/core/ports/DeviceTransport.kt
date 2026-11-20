@@ -24,7 +24,14 @@ public data class DeviceRef(
     public val afterLoss: AfterLossBehaviour
         get() =
             when (family) {
-                DeviceFamily.Handy -> AfterLossBehaviour.PausesWhenBufferRunsOut
+                DeviceFamily.LinearActuator -> AfterLossBehaviour.FinishesLastMove
+                DeviceFamily.Handy ->
+                    if (
+                        connection == ConnectionKind.IntifaceOnPhone ||
+                            connection == ConnectionKind.IntifaceOnNetwork
+                    )
+                        AfterLossBehaviour.FinishesLastMove
+                    else AfterLossBehaviour.PausesWhenBufferRunsOut
                 DeviceFamily.Vibrator -> AfterLossBehaviour.StopsWhenAppDisconnects
                 DeviceFamily.Coyote -> AfterLossBehaviour.GoesSilent
                 DeviceFamily.AutoblowUltra -> AfterLossBehaviour.FinishesLastMove
@@ -41,6 +48,7 @@ internal constructor(
     public val epoch: Epoch,
     /** A fresh stream after Resume, within the same Stop epoch and journaled run. */
     public val streamGeneration: Long = 0,
+    public val wholeBridge: Boolean = true,
     private val check: () -> Boolean,
 ) {
     /** True while this motion lease or this exact outstanding Stop attempt can still write. */
@@ -55,6 +63,8 @@ public data class MotionBatch(
     public val isFirst: Boolean,
     /** Prepare and append this first batch, holding Play until every linked buffer is ready. */
     public val deferPlay: Boolean = false,
+    /** Full precision points fitted by the engine for an immediate-mode linear owner. */
+    public val linearPoints: List<LinearPoint> = emptyList(),
 ) {
     init {
         require(frames.isNotEmpty() && frames.hasIncreasingTimes())
@@ -91,6 +101,10 @@ public sealed interface StopEvidence {
 
 /** One device owner. All output enters here from the single motion engine. */
 public interface DeviceTransport {
+    /** Capabilities for engine-owned fitting of an immediate linear stream. */
+    public val linearSampling: LinearSampling?
+        get() = null
+
     /** Optional read-only check of the attached generation or remote device state. */
     public val checkConnection: (suspend () -> Boolean)?
         get() = null

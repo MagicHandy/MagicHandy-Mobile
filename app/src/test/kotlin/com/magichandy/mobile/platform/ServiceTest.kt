@@ -21,9 +21,14 @@ internal class SyntheticApp : Application(), CoreOwner {
             simulatedDependencies(CoroutineScope(SupervisorJob() + Dispatchers.Default))
         )
     }
+    val tileEvents = mutableListOf<Boolean>()
     val stops = mutableListOf<StopSource>()
     override val core by lazy {
         object : MagicHandyCore by fake {
+            override fun updateStopTileAdded(added: Boolean) {
+                tileEvents += added
+            }
+
             override fun emergencyStop(source: StopSource) {
                 stops += source
             }
@@ -62,6 +67,27 @@ internal class ServiceTest {
         service.get().onTaskRemoved(Intent())
         assertEquals(listOf(StopSource.TaskRemoved), app.stops)
         service.destroy()
+    }
+
+    @Test
+    fun tileReportsAdditionListeningAndRemoval() {
+        val service = Robolectric.buildService(StopTileService::class.java).create().get()
+        service.onTileAdded()
+        service.onStartListening()
+        service.onTileRemoved()
+        assertEquals(listOf(true, true, false), app.tileEvents)
+        assertTrue(app.stops.isEmpty())
+    }
+
+    @Test
+    fun allowingNotificationsRepostsTheOngoingNotification() {
+        // Android hides a notification posted before the person allows them, and nothing else
+        // about the service changes when they do, so the permission itself must count as a change.
+        val state = app.core.state.value
+        val refused = state.copy(app = state.app.copy(notificationsAllowed = false))
+        val allowed = state.copy(app = state.app.copy(notificationsAllowed = true))
+        assertTrue(serviceView(refused, "Vibrator") != serviceView(allowed, "Vibrator"))
+        assertEquals(serviceView(allowed, "Vibrator"), serviceView(allowed, "Vibrator"))
     }
 
     @Test

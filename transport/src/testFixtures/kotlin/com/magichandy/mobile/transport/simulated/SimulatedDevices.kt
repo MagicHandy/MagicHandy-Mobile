@@ -54,12 +54,13 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
                     DeviceSettings.Handy("handy_original", false),
                 ),
                 item(
-                    "vibrator",
-                    "Vibrator",
-                    DeviceFamily.Vibrator,
-                    ConnectionKind.IntifaceOnPhone,
-                    DeviceSettings.Vibrator(Percent(70)),
-                ),
+                        "vibrator",
+                        "Vibrator",
+                        DeviceFamily.Vibrator,
+                        ConnectionKind.IntifaceOnPhone,
+                        DeviceSettings.Vibrator(Percent(70)),
+                    )
+                    .copy(address = "ws://127.0.0.1:12345", bridgeIdentity = "sim-vibration"),
                 item(
                     "coyote",
                     "Coyote 3.0",
@@ -88,6 +89,24 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
 
     override val configuration: com.magichandy.mobile.core.ports.DeviceConfiguration =
         object : com.magichandy.mobile.core.ports.DeviceConfiguration {
+            override suspend fun bridgeTargets(address: String) =
+                listOf(
+                    com.magichandy.mobile.core.ports.BridgeTarget(
+                        0,
+                        "Simulated vibrator",
+                        "sim-vibration",
+                        DeviceFamily.Vibrator,
+                    ),
+                    com.magichandy.mobile.core.ports.BridgeTarget(
+                        1,
+                        "Simulated linear actuator",
+                        "sim-linear",
+                        DeviceFamily.LinearActuator,
+                        0,
+                        "Axis",
+                    ),
+                )
+
             override suspend fun intifaceVibrators(address: String) =
                 listOf(com.magichandy.mobile.core.api.IntifaceChoice(0, "Simulated vibrator"))
 
@@ -129,8 +148,13 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
         while (true) {
             val all = catalog.value
             val row = all.firstOrNull { it.ref.id == device } ?: return false
-            val settings = row.settings as? DeviceSettings.Handy ?: return false
-            val updated = row.copy(settings = settings.copy(isReversed = isReversed))
+            val settings =
+                when (val old = row.settings) {
+                    is DeviceSettings.Handy -> old.copy(isReversed = isReversed)
+                    is DeviceSettings.LinearActuator -> old.copy(isReversed = isReversed)
+                    else -> return false
+                }
+            val updated = row.copy(settings = settings)
             if (catalog.compareAndSet(all, all.map { if (it == row) updated else it })) return true
         }
     }
@@ -145,6 +169,44 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
     private val unavailable = MutableStateFlow<Set<DeviceId>>(emptySet())
     private val connections = MutableStateFlow<Map<DeviceId, Owner>>(emptyMap())
 
+    private val coyotes =
+        java.util.concurrent.ConcurrentHashMap<
+            DeviceId,
+            com.magichandy.mobile.transport.coyote.CoyoteSession,
+        >()
+
+    private suspend fun connectCoyote(
+        row: SavedDevice,
+        ownerScope: CoroutineScope,
+    ): DeviceTransport {
+        val id = row.ref.id
+        val link =
+            SimulatedCoyoteLink(ownerScope) { a, b, zero ->
+                outputs.update { all ->
+                    val prior = all.getValue(id)
+                    all +
+                        (id to
+                            prior.copy(
+                                strengthA = a,
+                                strengthB = b,
+                                batches = prior.batches + if (zero) 0 else 1,
+                                stops = prior.stops + if (zero) 1 else 0,
+                            ))
+                }
+            }
+        val session =
+            com.magichandy.mobile.transport.coyote.CoyoteSession.connect(
+                row.ref,
+                ScanResultId(id.value),
+                BluetoothConnector { _, _, _ -> link },
+                ownerScope,
+                { saved.single { it.ref.id == id }.settings as DeviceSettings.Coyote },
+                { lost.tryEmit(id) },
+            )
+        coyotes[id] = session
+        return session
+    }
+
     private fun item(
         id: String,
         name: String,
@@ -156,6 +218,8 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
     override suspend fun connect(device: DeviceId, ownerScope: CoroutineScope): DeviceTransport? {
         val savedDevice = saved.firstOrNull { it.ref.id == device } ?: return null
         if (device in unavailable.value) return null
+        if (savedDevice.ref.family == DeviceFamily.Coyote)
+            return connectCoyote(savedDevice, ownerScope)
         val radio =
             if (
                 savedDevice.ref.family == DeviceFamily.Handy &&
@@ -182,12 +246,14 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
     }
 
     override suspend fun disconnect(device: DeviceId) {
+        coyotes.remove(device)?.close()
         connections.value[device]?.session?.disconnect()
         connections.update { it - device }
     }
 
     /** Drop only this device's link. A persistent-speed motor keeps the last accepted speed. */
     public suspend fun loseLink(id: DeviceId) {
+        coyotes.remove(id)?.close()
         connections.value[id]?.radio?.retire()
         unavailable.update { it + id }
         connections.update { it - id }
@@ -203,6 +269,8 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
 
     /** Simulate loss of host-owned connections. Persistent devices continue independently. */
     public fun hostDied() {
+        coyotes.values.forEach { it.close() }
+        coyotes.clear()
         connections.value.values.forEach { it.radio?.retire() }
         connections.value = emptyMap()
         saved.filterNot { it.ref.family == DeviceFamily.VacuGlide }.forEach { idle(it.ref.id) }
@@ -230,6 +298,7 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
         rememberStop(device.id)
         return when (device.family) {
             DeviceFamily.Coyote -> StopEvidence.Unconfirmed(UnconfirmedCause.NoReply)
+            DeviceFamily.LinearActuator,
             DeviceFamily.Vibrator -> StopEvidence.Unconfirmed(UnconfirmedCause.BridgeOnly)
             DeviceFamily.Handy,
             DeviceFamily.AutoblowUltra,
@@ -279,6 +348,7 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
                     is DeviceSettings.VacuGlide ->
                         batch.pace.value.coerceIn(0, settings.tempoRange.last)
                     is DeviceSettings.Handy,
+                    is DeviceSettings.LinearActuator,
                     DeviceSettings.AutoblowUltra -> batch.pace.value
                 }
             while (true) {

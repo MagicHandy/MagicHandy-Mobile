@@ -73,4 +73,6 @@ public data class CoreDependencies(
     public val servers: com.magichandy.mobile.core.ports.ModelServers? = null,
     /** User-triggered public release metadata check. */
     public val releases: com.magichandy.mobile.core.ports.ReleaseFeed? = null,
+    /** Android API level supplied by the application, omitted on a plain JVM. */
+    public val androidApi: Int? = null,
 )

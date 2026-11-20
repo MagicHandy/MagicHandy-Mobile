@@ -104,10 +104,12 @@ internal class DebugBackendTest {
             assertEquals(0, f.devices.output.value.getValue(coyote).strengthA)
             f.core.emergencyStop(StopSource.Notification)
             runCurrent()
+            advanceTimeBy(60)
+            runCurrent()
             val receipt = assertNotNull(f.core.state.value.stopReceipt)
             assertEquals(5, receipt.outcomes.size)
             assertEquals(
-                listOf(StopOutcome.Unconfirmed, StopOutcome.Unconfirmed),
+                listOf(StopOutcome.Unconfirmed, StopOutcome.Confirmed),
                 receipt.outcomes.take(2).map { it.outcome },
             )
             assertEquals(

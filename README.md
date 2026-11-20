@@ -1,4 +1,4 @@
-# MagicHandy Mobile
+# <img src="design/brand/mark.svg" width="40" alt=""> MagicHandy Mobile
 
 Talk to an AI companion that sets the pace, or let Autopilot run the session, with **Stop always one tap away**. MagicHandy Mobile brings the chat and device control of the [MagicHandy](https://github.com/MagicHandy/MagicHandy) desktop app to your Android phone.
 
@@ -19,7 +19,8 @@ Talk to an AI companion that sets the pace, or let Autopilot run the session, wi
 - **Hand the session to Autopilot.** It changes things on its own. You choose how often, whether it checks in with you (Off, Talk, or Talk and adjust), and an optional finish target, such as "build to the end over twenty minutes". Saying it in the chat works too.
 - **Stay in control on Live.** See the pace being sent, set the top speed and stroke limits that every source has to respect, pause motion, or hold at the edge.
 - **Use more than one device.** Run several devices together. A device you connect mid-session joins the next run, never the current one.
-- **Choose a look.** Steel Azure, Lowlight (true black, for the dark) or High Contrast.
+- **Choose a look.** Steel Azure, OLED black (true black: on an OLED screen it uses less power and doesn't glow in a dark room) or High contrast.
+- **Use it in your language.** English, Spanish, Brazilian Portuguese, Japanese or Simplified Chinese, following the phone or chosen in App settings.
 
 ## Safety comes first
 
@@ -33,14 +34,17 @@ Talk to an AI companion that sets the pace, or let Autopilot run the session, wi
 
 | Device | Connects through | If the phone loses it |
 |---|---|---|
-| **The Handy**, one or several | Bluetooth, or the Handy Cloud | It pauses on its own when its motion buffer runs out. |
-| **Vibrators** | [Intiface Central](https://intiface.com/central/), running on the phone or on your network | Intiface Central should stop it when the app disconnects. |
+| **The Handy**, one or several | Bluetooth, the Handy Cloud, or [Intiface Central](https://intiface.com/central/) | It pauses on its own when its motion buffer runs out. |
+| **Other strokers** | Intiface Central, running on the phone or on your network | It finishes its last move, then stops. |
+| **Vibrators** | Intiface Central, running on the phone or on your network | Intiface Central should stop it when the app disconnects. |
 | **DG-LAB Coyote 3.0** | Bluetooth, after you read its safety notes | It goes silent when the pulses stop. |
 | **Autoblow Ultra** | The Autoblow cloud | It finishes its last move, then stops. |
 | **VacuGlide** | The Autoblow cloud | It may keep its last speed: switch it off at the device. |
 
 > [!WARNING]
 > **A VacuGlide can keep running after the phone loses it.** So the app sends Stop the moment the connection drops and again when it returns. It also checks in every 15 minutes by default, and if no one answers within a minute, the whole run stops.
+>
+> **Stop through Intiface Central can't be confirmed.** Intiface answers Stop on the device's behalf, which doesn't prove the device stopped, so the app reports it as unconfirmed. Keep a way to switch the device off within reach.
 
 ## AI models
 
@@ -67,11 +71,9 @@ The model runs with that provider or on your server, not on the phone. Each conn
 - A supported device. The Handy over Bluetooth and the Coyote also need Bluetooth on the phone.
 - A model connection: a ChatGPT account, an OpenRouter key or your own server.
 
-The app is in English for now. Spanish, Brazilian Portuguese, Japanese and Simplified Chinese are planned for v1.
-
 ## Getting the app
 
-There's no release yet. When v1 is ready, signed APKs and their SHA-256 checksums will be published on [GitHub Releases](https://github.com/MagicHandy/MagicHandy-Mobile/releases). The app checks for updates only when you ask it to, in App settings.
+There's no release yet. When v1 is ready, signed APKs and their SHA-256 checksums will be published on [GitHub Releases](https://github.com/MagicHandy/MagicHandy-Mobile/releases). The app checks for updates only when you ask it to, in App settings. Maintainers prepare a release with the [release guide](docs/release.md).
 
 ## For developers
 

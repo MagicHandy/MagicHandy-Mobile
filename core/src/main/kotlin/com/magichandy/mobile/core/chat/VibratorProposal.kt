@@ -18,7 +18,11 @@ internal fun AppState.vibratorContext(): String {
     }
     if (!hasVibration) return ""
     return if (
-        rows.any { it.family == DeviceFamily.Handy || it.family == DeviceFamily.AutoblowUltra }
+        rows.any {
+            it.family == DeviceFamily.Handy ||
+                it.family == DeviceFamily.AutoblowUltra ||
+                it.family == DeviceFamily.LinearActuator
+        }
     )
         "/vibrator"
     else "/vibrator-only"

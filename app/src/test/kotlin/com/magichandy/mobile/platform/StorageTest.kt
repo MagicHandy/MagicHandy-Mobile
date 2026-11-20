@@ -25,6 +25,133 @@ internal class StorageTest {
     private val at = Instant.fromEpochMilliseconds(123)
 
     @org.junit.Test
+    fun savedLowlightLoadsAsOledBlackAndTheNextPatchPersistsTheCurrentName() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val db = Room.inMemoryDatabaseBuilder(context, PlatformDatabase::class.java).build()
+        try {
+            withContext(Dispatchers.IO) {
+                db.records()
+                    .put(
+                        Document(
+                            "settings",
+                            """{"revision":4,"values":{"palette":"Lowlight","adultsOnly":true},"changedAt":{"palette":4}}""",
+                        )
+                    )
+            }
+            val stores = RoomStores(db, scope)
+            stores.awaitReady()
+            assertEquals(Palette.OledBlack, stores.settings.state.value.values.palette)
+            assertEquals(4L, stores.settings.state.value.revision)
+            assertTrue(stores.settings.state.value.values.adultsOnly)
+            assertTrue(stores.settings.patch(4, listOf(PreferenceField.Memory.edit(true))))
+            val saved = withContext(Dispatchers.IO) { requireNotNull(db.records().get("settings")) }
+            assertTrue("OledBlack" in saved)
+            assertFalse("Lowlight" in saved)
+            assertTrue(
+                stores.settings.patch(
+                    5,
+                    listOf(PreferenceField.PaletteChoice.edit(Palette.Lowlight)),
+                )
+            )
+            assertEquals(Palette.OledBlack, stores.settings.state.value.values.palette)
+        } finally {
+            scope.cancel()
+            db.close()
+        }
+    }
+
+    @org.junit.Test
+    fun tilePresenceSurvivesReopenAndStartsUnknown() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val db = Room.inMemoryDatabaseBuilder(context, PlatformDatabase::class.java).build()
+        try {
+            val first = RoomStores(db, scope)
+            first.awaitReady()
+            assertEquals(TilePresence.Unknown, first.settings.state.value.values.stopTile)
+            assertTrue(
+                first.settings.patch(0, listOf(PreferenceField.StopTile.edit(TilePresence.Added)))
+            )
+            val second = RoomStores(db, scope)
+            second.awaitReady()
+            assertEquals(TilePresence.Added, second.settings.state.value.values.stopTile)
+            assertTrue(
+                second.settings.patch(
+                    1,
+                    listOf(PreferenceField.StopTile.edit(TilePresence.Removed)),
+                )
+            )
+            val third = RoomStores(db, scope)
+            third.awaitReady()
+            assertEquals(TilePresence.Removed, third.settings.state.value.values.stopTile)
+        } finally {
+            scope.cancel()
+            db.close()
+        }
+    }
+
+    @org.junit.Test
+    fun shareProviderExposesOnlyDiagnosticsAndDropsUnrecognizedDiskText() = runBlocking {
+        val authority = context.packageName + ".diagnostics"
+        val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
+        val file = File(dir, "synthetic.txt")
+        val provider =
+            requireNotNull(
+                context.packageManager.resolveContentProvider(
+                    authority,
+                    android.content.pm.PackageManager.GET_META_DATA,
+                )
+            )
+        assertFalse(provider.exported)
+        assertTrue(provider.grantUriPermissions)
+        val xml =
+            requireNotNull(
+                provider.loadXmlMetaData(
+                    context.packageManager,
+                    "android.support.FILE_PROVIDER_PATHS",
+                )
+            )
+        val roots = mutableListOf<Pair<String, String>>()
+        xml.use {
+            while (it.next() != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                if (it.eventType == org.xmlpull.v1.XmlPullParser.START_TAG && it.depth == 2)
+                    roots += it.name to it.getAttributeValue(null, "path")
+            }
+        }
+        assertEquals(listOf("cache-path" to "diagnostics/"), roots)
+        // AndroidX compares slash-delimited canonical paths on Android.
+        if (File.separatorChar == '/')
+            assertEquals(
+                authority,
+                androidx.core.content.FileProvider.getUriForFile(context, authority, file)
+                    .authority,
+            )
+        assertFailsWith<IllegalArgumentException> {
+            androidx.core.content.FileProvider.getUriForFile(
+                context,
+                authority,
+                File(context.cacheDir, "private.txt"),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            androidx.core.content.FileProvider.getUriForFile(
+                context,
+                authority,
+                File(context.noBackupFilesDir, "journal"),
+            )
+        }
+        val stored = File(context.cacheDir, "test-ring").apply { mkdirs() }
+        File(stored, "events.log")
+            .writeText(
+                "1 StopRequested\n2 secret-test-token\n3 StopRequested http://127.0.0.1\n4 DeviceReconciled\n"
+            )
+        val entries = RotatingDiagnostics(stored).recent(10)
+        assertEquals(
+            listOf(DiagnosticKind.StopRequested, DiagnosticKind.DeviceReconciled),
+            entries.map { it.kind },
+        )
+    }
+
+    @org.junit.Test
     fun settingsAndMessagesCommitAtomically() = runBlocking {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val db = Room.inMemoryDatabaseBuilder(context, PlatformDatabase::class.java).build()
@@ -191,6 +318,14 @@ internal class StorageTest {
         assertFalse(vault.replace(handle, null, Secret("old")))
         assertEquals(Secret("synthetic secret"), vault.get(handle))
         assertFalse(File(dir, "vault").readBytes().decodeToString().contains("synthetic"))
+        val removed = vault.takeForRemoval(handle)
+        assertNull(vault.get(handle))
+        removed.restoreIfMissing()
+        assertEquals(Secret("synthetic secret"), vault.get(handle))
+        val earlier = vault.takeForRemoval(handle)
+        vault.put(handle, Secret("newer synthetic secret"))
+        earlier.restoreIfMissing()
+        assertEquals(Secret("newer synthetic secret"), vault.get(handle))
         vault.remove(handle)
         assertNull(vault.get(handle))
     }

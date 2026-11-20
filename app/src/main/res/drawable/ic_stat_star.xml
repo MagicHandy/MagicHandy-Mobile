@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The ongoing notification's status bar icon: the brand's small-size star (ADR 0073), since the
+     hand isn't legible at 24 dp. The system tints it, so it is drawn in white. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="52"
+    android:viewportHeight="52">
+    <group
+        android:translateX="-6"
+        android:translateY="-6">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M32,12.1 L37.82,26.09 L52.92,27.3 L41.42,37.16 L44.93,51.9 L32,44 L19.07,51.9 L22.58,37.16 L11.08,27.3 L26.18,26.09Z" />
+    </group>
+</vector>

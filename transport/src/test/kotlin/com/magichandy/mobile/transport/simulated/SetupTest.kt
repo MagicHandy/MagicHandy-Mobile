@@ -15,7 +15,7 @@ internal class SetupTest {
             val rows = f.core.state.value.devices.devices
             assertTrue(f.core.intifaceVibrators("https://invalid").isEmpty())
             assertEquals(
-                listOf(IntifaceChoice(0, "Simulated vibrator")),
+                listOf(IntifaceChoice(0, "Simulated vibrator", "sim-vibration")),
                 f.core.intifaceVibrators("127.0.0.1:12345"),
             )
             assertEquals(rows, f.core.state.value.devices.devices)

@@ -30,6 +30,8 @@ import com.magichandy.mobile.core.ports.ModelCatalog
 import com.magichandy.mobile.core.ports.NetworkState
 import com.magichandy.mobile.core.ports.Preferences
 import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.TilePresence
+import com.magichandy.mobile.core.ports.current
 
 internal val defaultPersona = PersonaRef(PersonaId(""), "MagicHandy", "")
 internal val strokeModes = listOf(MotionMode.Layered, MotionMode.Simple, MotionMode.Off)
@@ -102,9 +104,15 @@ internal fun AppState.preferences(p: Preferences): AppState =
         devices = devices.copy(hasAcknowledgedCoyoteNotes = p.coyoteNotes),
         app =
             app.copy(
-                palette = p.palette,
+                palette = p.palette.current(),
                 language = p.language,
                 hasAskedForNotifications = p.askedNotifications,
+                isStopTileAdded =
+                    when (p.stopTile) {
+                        TilePresence.Unknown -> null
+                        TilePresence.Added -> true
+                        TilePresence.Removed -> false
+                    },
             ),
         run = run.copy(limits = p.limits),
         autopilot =
