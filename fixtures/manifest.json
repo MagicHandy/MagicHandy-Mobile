@@ -1,0 +1,401 @@
+{
+  "cases": [
+    {
+      "case_id": "stroke-10",
+      "role": "motion-atlas",
+      "path": "motion/stroke-10.json",
+      "sha256": "e77c4d2c87bbd23326e066b2197d876f0ee1daf44a0a065356676b78c7eb58b4",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "stroke-25",
+      "role": "motion-atlas",
+      "path": "motion/stroke-25.json",
+      "sha256": "388da79cf88bf464038242bbd165a10141c3077a39cbba3b6d6d5c282f16c865",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "stroke-43",
+      "role": "motion-atlas",
+      "path": "motion/stroke-43.json",
+      "sha256": "efff70ebf3881f1d8a052277d9839ec26bd8fdcba66372c1dab0cf3af1f5f839",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "pulse-10",
+      "role": "motion-atlas",
+      "path": "motion/pulse-10.json",
+      "sha256": "c68a2e7f1ffe946bdd06b5767faff8c979c96e34a60d69cbd44fbdca4d3e0d84",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "pulse-25",
+      "role": "motion-atlas",
+      "path": "motion/pulse-25.json",
+      "sha256": "f11118d44ae1849ab2dee084c4432121c563a2f11ffdd3148823273843af5888",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "pulse-43",
+      "role": "motion-atlas",
+      "path": "motion/pulse-43.json",
+      "sha256": "5c97fa61daa3364e9f7dd3f7406b3e5e0ef46139ec2d0b72af37b18a4b5373d9",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tease-10",
+      "role": "motion-atlas",
+      "path": "motion/tease-10.json",
+      "sha256": "8c09a99faa498bdf86dc04843abdd7d686c7f84d62d6a0dd87471aff5a423ebc",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tease-25",
+      "role": "motion-atlas",
+      "path": "motion/tease-25.json",
+      "sha256": "35e4de34394d857c7dcd3d7907d29a7a8c562d63774b8afd72790a53c02ed720",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "tease-43",
+      "role": "motion-atlas",
+      "path": "motion/tease-43.json",
+      "sha256": "9d38f34e5770b77c1902608049a8febe7ddfed48af39b6647a9727c49fdb2e84",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "drift-10",
+      "role": "motion-atlas",
+      "path": "motion/drift-10.json",
+      "sha256": "ffd6e9a375bd6449e7209ee22833253edab5e52990be18fd4c336290666d9d60",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "drift-25",
+      "role": "motion-atlas",
+      "path": "motion/drift-25.json",
+      "sha256": "9d9be73f30c729c26eb3844b4427e429f481d5a42a6f88f0006f0ed6343f468a",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "drift-43",
+      "role": "motion-atlas",
+      "path": "motion/drift-43.json",
+      "sha256": "3df29e5797f2789d12c59c1753dae1ea441ae27de932d0b6e8bbc7f51a369e1a",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "easing-down-10",
+      "role": "motion-atlas",
+      "path": "motion/easing-down-10.json",
+      "sha256": "584f42b004160b60c044b70752b1bf53fbebb30a7cb477ee66bb3be3b398bab6",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "easing-down-25",
+      "role": "motion-atlas",
+      "path": "motion/easing-down-25.json",
+      "sha256": "6f4582daabced23ed89a700467193a2f766f97e8cf2744c00eeaf8d2ad1dd72d",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "easing-down-43",
+      "role": "motion-atlas",
+      "path": "motion/easing-down-43.json",
+      "sha256": "14286daa0c5c6e6eedbeac067a0b69053a852c6248945eb6d26b1e611f3c0e99",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "building-up-10",
+      "role": "motion-atlas",
+      "path": "motion/building-up-10.json",
+      "sha256": "542e18b9fcb7cf39057e66656fa7d54800664c4d5241e21ee253ada332fcd379",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "building-up-25",
+      "role": "motion-atlas",
+      "path": "motion/building-up-25.json",
+      "sha256": "30aadebd0ecfbe824129a14bcd225957bf4461ca70c5eccb0c5f6b840d011a89",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "building-up-43",
+      "role": "motion-atlas",
+      "path": "motion/building-up-43.json",
+      "sha256": "0c548fbc1c22c9265760ccb5d697c8649b43174539217a640e5e680e89957cfb",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "upper-accents-10",
+      "role": "motion-atlas",
+      "path": "motion/upper-accents-10.json",
+      "sha256": "97a80ae2d646d04270bee82a7710401966ffbc03adcf4e0c447594e52d216fed",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "upper-accents-25",
+      "role": "motion-atlas",
+      "path": "motion/upper-accents-25.json",
+      "sha256": "4abd5851fc904ad43a8e87ab3a38962fec388dd09a92400d0d9ca72077eb4395",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "upper-accents-43",
+      "role": "motion-atlas",
+      "path": "motion/upper-accents-43.json",
+      "sha256": "c39445d986dd30c35673e17c3dfe8ca54cefb4acc759c42317e6ecd333b4a7ca",
+      "mode": "bounded-ramp",
+      "settings_revision": 1,
+      "wall_unix_ms": 0,
+      "stream_start_ms": 0
+    },
+    {
+      "case_id": "handy-ble-01",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-01.json",
+      "sha256": "187481cc6ac434f19c83cc44990bbd8ee1b468096f59052e4f351405b2d1a545"
+    },
+    {
+      "case_id": "handy-ble-02",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-02.json",
+      "sha256": "9184448012900d6e2bff1375c49b0899767dae1ce652ae7bd481f2e51d4be6a9"
+    },
+    {
+      "case_id": "handy-ble-03",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-03.json",
+      "sha256": "66e36a0e68a77d5460f8e76ea8a565cafd6a42da2cccc364a51a1115ebed33d3"
+    },
+    {
+      "case_id": "handy-ble-04",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-04.json",
+      "sha256": "adc529e12568705fa665fc90988cbd9be70d2197e28c2ec485b9f34debf586e3"
+    },
+    {
+      "case_id": "handy-ble-05",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-05.json",
+      "sha256": "2b71005e34f467dd11ce0d7bee1b151bdb09bef6bb3145f9dd8d8df8746373e3"
+    },
+    {
+      "case_id": "handy-ble-06",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-06.json",
+      "sha256": "d4236b635a14ed6b373c4a2f6e5bf1d8cbe3017f9c7d640ea078d92c6d7621b3"
+    },
+    {
+      "case_id": "handy-ble-07",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-07.json",
+      "sha256": "f65ba26916ac22875a63c4204e04231bfccbc4579a403a9d6caf609b9e545573"
+    },
+    {
+      "case_id": "handy-ble-08",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-08.json",
+      "sha256": "c9e61771b1c29547237970afca44bc3824b249bb90a990d9aa484e54757f85c1"
+    },
+    {
+      "case_id": "handy-ble-09",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-09.json",
+      "sha256": "1880d233eb163949ce37ff17b32429509114f03dca3df9f268874a906967417a"
+    },
+    {
+      "case_id": "handy-ble-10",
+      "role": "ble-wire",
+      "path": "wire/handy-ble-10.json",
+      "sha256": "799b77bd659e5ec25ea4be59cfb5dfa0da974df293e0e049174ee66f58679601"
+    },
+    {
+      "case_id": "handy-cloud-stroke_window",
+      "role": "cloud-wire",
+      "path": "wire/handy-cloud-stroke_window.json",
+      "sha256": "05a9eda2dded937a50bf2d2c8ca943a53515d7e5fc1860de4388e2ab6048785f"
+    },
+    {
+      "case_id": "handy-cloud-hsp_setup",
+      "role": "cloud-wire",
+      "path": "wire/handy-cloud-hsp_setup.json",
+      "sha256": "c8e6a65d11af329c9415c035f79c7e344995464014441919fb217443e07a2361"
+    },
+    {
+      "case_id": "handy-cloud-points_add",
+      "role": "cloud-wire",
+      "path": "wire/handy-cloud-points_add.json",
+      "sha256": "01f4a1c8fa8446ac18f90e64e696a06dc84a95f63fbfb48a39a3c13776cdf44e"
+    },
+    {
+      "case_id": "handy-cloud-points_play",
+      "role": "cloud-wire",
+      "path": "wire/handy-cloud-points_play.json",
+      "sha256": "54a3d16aa519b1f87aec54eb92b2ec0877631f0f346a4777b7041da4d884cfcc"
+    },
+    {
+      "case_id": "handy-cloud-stop",
+      "role": "cloud-wire",
+      "path": "wire/handy-cloud-stop.json",
+      "sha256": "2de8cece7562357c7d484c12bc7d09acb80ca92704ada50f4143f25e489b2190"
+    },
+    {
+      "case_id": "terra-layered-en",
+      "role": "chat",
+      "path": "chat/terra-layered-en.json",
+      "sha256": "ae6166c42598f91f80406d4cb70e477c1f6a4569e66290a4311518d813cee1a2",
+      "locale": "en",
+      "capability": "advanced",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "terra-creative_v2-es",
+      "role": "chat",
+      "path": "chat/terra-creative_v2-es.json",
+      "sha256": "8312e555dc1a5b7da515ff12f58184fc91a5006edc4c8e29abf83e7c158258ca",
+      "locale": "es",
+      "capability": "advanced",
+      "mode": "creative_v2",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "terra-off-ja",
+      "role": "chat",
+      "path": "chat/terra-off-ja.json",
+      "sha256": "17cabcfc9be10adba993b1e53624a6d8ee210356e060bd8e29aedee7644ebf3e",
+      "locale": "ja",
+      "capability": "advanced",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "translations-en",
+      "role": "translations",
+      "path": "content/locales/en.json",
+      "sha256": "9602d01d8ee80253085f971e50e34691215fd9455da84ad27d3062330f899921",
+      "locale": "en"
+    },
+    {
+      "case_id": "translations-es",
+      "role": "translations",
+      "path": "content/locales/es.json",
+      "sha256": "e66563e2c7fa04a85116645a12f956453dfeac138a2f819a6d71c20675146d09",
+      "locale": "es"
+    },
+    {
+      "case_id": "translations-pt-BR",
+      "role": "translations",
+      "path": "content/locales/pt-BR.json",
+      "sha256": "ef831de5f43c07d91ac16ccb10c68c1fb2569693b2e9200773c16f32871ff42b",
+      "locale": "pt-BR"
+    },
+    {
+      "case_id": "translations-ja",
+      "role": "translations",
+      "path": "content/locales/ja.json",
+      "sha256": "e4683c2aaf26d854abf4076d4f8abddcf5a3c0c12f273747ba677e63fa4a2058",
+      "locale": "ja"
+    },
+    {
+      "case_id": "translations-zh-Hans",
+      "role": "translations",
+      "path": "content/locales/zh-Hans.json",
+      "sha256": "e381bddb7a73683b12d33ea907f37f6674a34d5718d21b71e7fbcacb7d41ab00",
+      "locale": "zh-Hans"
+    },
+    {
+      "case_id": "prompt-sets",
+      "role": "content",
+      "path": "content/prompt-sets.json",
+      "sha256": "efc2309014e9650e88fb1a987109ee25ff55ba7737ddc51a8b493e73dea93b65"
+    },
+    {
+      "case_id": "personas",
+      "role": "content",
+      "path": "content/personas.json",
+      "sha256": "951f8f36b1b34b9aac0138bc84d51fb7918685ee910935c937f265f5cbb8dc98"
+    },
+    {
+      "case_id": "notices",
+      "role": "content",
+      "path": "content/notices.json",
+      "sha256": "f32c5df2a1e7529302012f7c17d372719a447410d31a952483eed1534cd437a9"
+    },
+    {
+      "case_id": "brand-mark",
+      "role": "brand",
+      "path": "content/mark.svg",
+      "sha256": "812a59a649558aa08a0c5557bf6bff6541d88afeb139778f66a4ea2ccef42a7c"
+    },
+    {
+      "case_id": "brand-star",
+      "role": "brand",
+      "path": "content/star.svg",
+      "sha256": "99f285be9ca7b0fece1fc5762fda627e50d053e52304c1b38f351c63389b78f4"
+    }
+  ],
+  "format_version": 1,
+  "source_sha": "9a4c36cf41fa4ec6abeb4c72ae6b4790cab0430a"
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Graphite ground (plan §14.1), for the window and launcher icon only. -->
+    <color name="window_ground">#0E0F11</color>
+    <color name="launcher_mark">#5B9DD9</color>
+</resources>

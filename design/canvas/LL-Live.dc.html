@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lowlight live controls</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&amp;family=DM+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#000000;color:#efe4d3;font-family:'DM Sans',system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden;padding:18px 20px 10px}
+.mono{font-family:'DM Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer;background:transparent;border:0}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#8c8173}
+.done{height:44px;padding:0 4px;color:#e0a46c;font-size:15px;font-weight:500}
+.huge{display:flex;align-items:flex-end;gap:12px;margin-top:4px}
+.huge .n{font-size:96px;font-weight:300;line-height:.9;letter-spacing:-.04em}
+.huge .u{font-size:14px;color:#8c8173;margin-bottom:10px;line-height:1.4}
+.sec{margin-top:18px}
+.lab{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:#cdbfa9}
+.lab .v{font-size:26px;color:#efe4d3;font-weight:300}
+.track{height:2px;background:#2a231d;position:relative;margin:18px 0 14px}
+.fill{position:absolute;top:0;bottom:0;background:#e0a46c}
+.thumb{position:absolute;top:-13px;width:28px;height:28px;border-radius:50%;background:#000000;border:2px solid #e0a46c;box-sizing:border-box}
+.dev{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#8c8173;margin-top:6px}
+.rule{height:1px;background:#1c1714;margin:16px 0 0}
+.ap{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.aph{display:flex;align-items:baseline;gap:10px}
+.aph b{font-size:18px;font-weight:500}
+.acc{color:#e0a46c}
+.textbtns{display:flex;gap:18px}
+.textbtns button{height:44px;font-size:15px;color:#cdbfa9;padding:0}
+.rate{display:flex;justify-content:space-between}
+.rate button{width:36px;height:44px;font-size:14px;color:#8c8173;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.rate i{display:block;width:10px;height:10px;border-radius:50%;border:1.5px solid #5a5047}
+.rate .on{color:#efe4d3}
+.rate .on i{background:#e0a46c;border-color:#e0a46c}
+.pe{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
+.pe button{height:52px;border:1px solid #3a312a;border-radius:4px;font-size:15px;color:#efe4d3}
+.stop{height:64px;border-radius:4px;background:#cf3f37;color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.14em;margin-top:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="top"><span>Live · Autopilot is choosing</span><button class="done" type="button">Done</button></div>
+  <div class="huge"><span class="n">48</span><span class="u">% pace now<br>asked 50 · within your limits</span></div>
+  <div class="sec">
+    <div class="lab"><span>top speed</span><span class="v mono">80</span></div>
+    <div class="track"><div class="fill" style="left: 0; width: 80%"></div><div class="thumb" style="left: calc(80% - 14px)"></div></div>
+    <div class="lab"><span>stroke</span><span class="v mono">15 — 85</span></div>
+    <div class="track"><div class="fill" style="left: 15%; width: 70%"></div><div class="thumb" style="left: calc(15% - 14px)"></div><div class="thumb" style="left: calc(85% - 14px)"></div></div>
+    <div class="dev"><span>Handy · pace 48% · stroke 15–85</span><span>Vibrator · 40% of max 70 · follows the pace</span><span>Commanded values, not measurements.</span></div>
+  </div>
+  <div class="rule"></div>
+  <section class="ap" aria-label="Autopilot">
+    <div class="aph"><b>Autopilot</b><span class="acc">active · next change in 0:40</span></div>
+    <div class="textbtns"><button type="button">Pause Autopilot</button><button type="button">Stop Autopilot</button></div>
+    <div class="lab"><span>session buildup</span><span class="mono">42% of 20 min</span></div>
+    <div class="textbtns"><button type="button">autopilot settings ›</button></div>
+  </section>
+  <div class="pe"><button type="button">Pause</button><button type="button">Edge</button></div>
+  <button class="stop" type="button">STOP</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

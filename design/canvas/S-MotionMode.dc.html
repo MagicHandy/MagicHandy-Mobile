@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Motion mode menu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.behind{height:74px;padding:16px 12px 0;color:#4b5159;font-weight:600;font-size:17px}
+.sheet{flex:1;background:#121417;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:6px 14px 10px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.handle{width:36px;height:4px;border-radius:2px;background:#353b43;margin:2px auto 4px}
+.sh{display:flex;align-items:center;gap:4px;height:44px}
+.back{width:44px;height:44px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;margin-left:-10px}
+.sh b{font-size:17px;flex:1}
+.done{height:40px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#5b9dd9;font-weight:600;font-size:14px}
+.lead{margin:0 0 4px;color:#9aa1a9;font-size:13px;line-height:1.45}
+.list{background:#16181b;border:1px solid #262a30;border-radius:10px}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:3px 12px;padding:12px;border-top:1px solid #262a30}
+.opt:first-child{border-top:0}
+.opt.sel{background:rgba(91,157,217,.15)}
+.rad{grid-row:span 2;width:20px;height:20px;border-radius:50%;border:2px solid #9aa1a9;box-sizing:border-box;margin-top:1px}
+.sel .rad{border-color:#5b9dd9;background:radial-gradient(circle,#5b9dd9 0 4px,transparent 5px)}
+.on{font-weight:600;font-size:15px}
+.od{color:#9aa1a9;font-size:13px;line-height:1.4}
+.sub{grid-column:2;display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.subr{display:flex;align-items:center;justify-content:space-between;min-height:36px;font-size:13px;color:#c9c6c0}
+.tg{width:40px;height:24px;border-radius:12px;background:#353b43;position:relative;flex:none}
+.tg::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#9aa1a9}
+.note{font-size:12px;color:#9aa1a9;line-height:1.45;margin:4px 2px 0}
+.ft{background:#121417;border-top:1px solid #262a30;padding:8px 12px 10px}
+.stop{width:100%;height:56px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="behind" aria-hidden="true">Evening</div>
+  <section class="sheet" aria-label="Motion mode">
+    <div class="handle" aria-hidden="true"></div>
+    <div class="sh"><button class="back" type="button" aria-label="Back to Chat settings"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button><b>Motion mode</b><button class="done" type="button">Done</button></div>
+    <p class="lead">How the chat model and Autopilot may change motion. Terra at Advanced supports every mode.</p>
+    <div class="list" role="radiogroup" aria-label="Motion mode">
+      <div class="opt sel" role="radio" aria-checked="true" tabindex="0"><span class="rad"></span><span class="on">Layered</span><span class="od">The AI adjusts reach, location and pace separately and keeps the rest.</span></div>
+      <div class="opt" role="radio" aria-checked="false" tabindex="-1"><span class="rad"></span><span class="on">Simple</span><span class="od">A flowing phrase that keeps developing over many strokes.</span></div>
+      <div class="opt" role="radio" aria-checked="false" tabindex="-1"><span class="rad"></span><span class="on">Off</span><span class="od">The AI only talks and never moves the device.</span></div>
+    </div>
+    <p class="note">When the VacuGlide leads, the choices are Tempo and Off.</p>
+  </section>
+  <footer class="ft"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

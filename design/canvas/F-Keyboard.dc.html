@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Typing while playing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.hdr{display:flex;align-items:center;gap:10px;padding:16px 12px 8px}
+.t{font-size:16px;font-weight:600;flex:1}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.acc{background:#5b9dd9}
+.strip{margin:0 12px;height:44px;background:#16181b;border:1px solid #262a30;border-radius:6px;display:flex;align-items:center;gap:8px;padding:0 4px 0 10px;font-size:13px}
+.strip .mut{color:#9aa1a9}
+.live{margin-left:auto;height:36px;padding:0 10px;border:0;border-radius:6px;background:transparent;font-size:13px;font-weight:600;color:#5b9dd9}
+.log{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:12px;justify-content:flex-end}
+.bub{max-width:84%;background:#1d2024;border:1px solid #353b43;border-radius:10px 10px 10px 4px;padding:9px 12px;line-height:1.45}
+.bub.me{align-self:flex-end;background:#1b2634;border-color:#2c3e52;border-radius:10px 10px 4px 10px}
+.cmp{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#121417;border-top:1px solid #262a30}
+.stoprow{background:#121417;padding:0 12px 8px}
+.stop{width:100%;height:56px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+.field{flex:1;min-width:0;display:flex;align-items:center;gap:6px;background:#16181b;border:1px solid #5b9dd9;border-radius:10px;padding:2px 2px 2px 10px}
+.field input{flex:1;min-width:0;height:42px;border:0;background:transparent;color:#e9e7e2;font:16px Inter,sans-serif;outline:none}
+.send{width:44px;height:44px;border:0;border-radius:6px;background:#5b9dd9;display:grid;place-items:center;flex:none}
+.kb{height:300px;background:#1b1d21;display:grid;grid-template-rows:repeat(4,minmax(0,1fr));gap:8px;padding:12px 6px 18px}
+.kr{display:grid;gap:6px}
+.kr i{display:block;border-radius:6px;background:#2a2d32}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</helmet>
+<div class="app">
+  <header class="hdr"><span class="t">Evening</span><i class="dot ok"></i><i class="dot ok"></i></header>
+  <div class="strip" role="status"><i class="dot ok"></i><span>Playing</span><span class="mono">48%</span><span class="mut">·</span><i class="dot acc"></i><span class="mut">Autopilot</span><span class="mono">0:40</span><button class="live" type="button">Live</button></div>
+  <main class="log">
+    <div class="bub me">Perfect. Let Autopilot take over for a bit.</div>
+    <div class="bub">Autopilot has it. I'll build slowly and check in now and then.</div>
+  </main>
+  <div class="cmp">
+    <div class="field"><label class="sr" for="kb-msg">Message</label><input id="kb-msg" type="text" value="A little faster when it gets"><button class="send" type="button" aria-label="Send"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0b131c" stroke-width="2" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"></path></svg></button></div>
+  </div>
+  <div class="stoprow"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+  <div class="kb" aria-hidden="true">
+    <div class="kr" style="grid-template-columns: repeat(10, minmax(0, 1fr))"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="kr" style="grid-template-columns: repeat(9, minmax(0, 1fr)); padding: 0 16px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="kr" style="grid-template-columns: 1.4fr repeat(7, minmax(0, 1fr)) 1.4fr"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="kr" style="grid-template-columns: 1.4fr 1fr 5fr 1fr 1.4fr"><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

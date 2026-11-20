@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Autopilot settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.dim{flex:1;padding:16px;opacity:.3;font-weight:600;font-size:17px}
+.sheet{background:#16181b;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:4px 16px 12px;display:flex;flex-direction:column;gap:6px}
+.sh{display:flex;align-items:center;gap:4px;min-height:52px}
+.back{width:48px;height:48px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;margin-left:-12px}
+.sh b{font-size:18px;flex:1}
+.blk{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid #262a30}
+.sh + .blk{border-top:0}
+.lh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hint{margin:0;color:#9aa1a9;font-size:12px;line-height:1.45}
+.stp{display:flex;align-items:center;gap:6px}
+.stp button{width:48px;height:48px;border:1px solid #353b43;border-radius:6px;background:#1d2024;font-size:20px}
+.seg{display:grid;gap:3px;background:#0b0c0e;border:1px solid #262a30;border-radius:6px;padding:3px}
+.seg button{min-height:42px;border:0;border-radius:4px;background:transparent;color:#9aa1a9;font-size:13px;font-weight:600}
+.seg .on{background:#1d2024;color:#e9e7e2}
+.val{display:flex;align-items:center;gap:4px;min-height:44px;border:0;background:transparent;padding:0;color:#c9c6c0;font-size:14px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px 12px;background:#121417;border-top:1px solid #262a30}
+.tab{height:52px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500}
+.tab.open{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+.stopbar{background:#121417;padding:0 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="dim" aria-hidden="true">Evening</div>
+  <section class="sheet" role="dialog" aria-label="Autopilot settings">
+    <div class="sh"><button class="back" type="button" aria-label="Back to Settings"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button><b>Autopilot</b></div>
+    <div class="blk">
+      <div class="lh"><span>How often it changes</span><div class="stp"><button type="button" aria-label="Less often">−</button><span class="mono" style="width: 52px; text-align: center">5 of 8</span><button type="button" aria-label="More often">+</button></div></div>
+      <p class="hint">Higher means more frequent changes. The model picks the exact timing.</p>
+    </div>
+    <div class="blk">
+      <span>Check-ins</span>
+      <div class="seg" style="grid-template-columns: 1fr 1fr 1.4fr" role="group" aria-label="Check-ins"><button type="button" aria-pressed="false">Off</button><button type="button" aria-pressed="false">Talk</button><button class="on" type="button" aria-pressed="true">Talk + adjust</button></div>
+      <p class="hint">Messages from the companion while Autopilot runs. "Talk + adjust" may also change motion, within your limits.</p>
+    </div>
+    <div class="blk">
+      <span>Finish target</span>
+      <div class="seg" style="grid-template-columns: repeat(5, minmax(0, 1fr))" role="group" aria-label="Finish target"><button type="button" aria-pressed="false">Off</button><button type="button" aria-pressed="false">10 min</button><button class="on" type="button" aria-pressed="true">20 min</button><button type="button" aria-pressed="false">30 min</button><button type="button" aria-pressed="false">More</button></div>
+      <p class="hint">A target, not an automatic stop. Saying it in chat works too, for example "build to the end over twenty minutes".</p>
+    </div>
+    <div class="blk" style="padding-bottom: 0">
+      <div class="lh"><span>Planner model</span><button class="val" type="button">Same as chat · Terra<span style="color: #6b7178; font-size: 18px">›</span></button></div>
+    </div>
+  </section>
+  <nav class="tabs" aria-label="Main"><button class="tab" type="button">Chat</button><button class="tab" type="button">Devices</button><button class="tab open" type="button" aria-haspopup="dialog" aria-expanded="true">Settings</button></nav>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

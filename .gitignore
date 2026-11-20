@@ -1,0 +1,15 @@
+.gradle/
+.kotlin/
+build/
+captures/
+local.properties
+.idea/
+*.iml
+*.apk
+*.aab
+# Agent workspaces and desktop snapshots; never part of the repo.
+.work/
+
+# Raw agent transcripts and final messages from the design consultations: they hold local paths.
+design/**/run.log
+design/**/last-message.txt

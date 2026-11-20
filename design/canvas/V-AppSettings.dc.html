@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>App settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:4px 12px 8px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.nav{display:flex;align-items:center;gap:4px;color:#9aa1a9;font-size:13px}
+.back{width:48px;height:48px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center}
+h1{margin:0 0 2px;font-size:22px;font-weight:600}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;padding:8px 2px 2px}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:0 12px}
+.r{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;border:0;border-top:1px solid #262a30;background:transparent;padding:0;text-align:left;font-size:14px}
+.r:first-child{border-top:0}
+.r .k{flex:1}
+.r .v{color:#c9c6c0;font-size:13px;display:flex;align-items:center;gap:6px}
+.r .c{color:#6b7178;font-size:17px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}
+.seg{display:grid;grid-template-columns:repeat(3,auto);background:#0b0c0e;border:1px solid #262a30;border-radius:6px;padding:2px;gap:2px}
+.seg button{height:36px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:600}
+.seg .on{background:#1d2024;color:#e9e7e2}
+.danger{color:#f0a39f}
+.stopbar{background:#121417;border-top:1px solid #262a30;padding:10px 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <div class="nav"><button class="back" type="button" aria-label="Back to Settings"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button>Settings</div>
+    <h1>App settings</h1>
+    <div class="cap">Models</div>
+    <div class="card"><button class="r" type="button"><span class="k">Models and providers</span><span class="v">Terra · 3 saved</span><span class="c">›</span></button></div>
+    <div class="cap">Appearance</div>
+    <div class="card">
+      <div class="r"><span class="k">Palette</span><div class="seg" role="group" aria-label="Palette"><button class="on" type="button" aria-pressed="true">Steel Azure</button><button type="button" aria-pressed="false">Lowlight</button><button type="button" aria-pressed="false">High contrast</button></div></div>
+      <button class="r" type="button"><span class="k">Language</span><span class="v">System · English</span><span class="c">›</span></button>
+    </div>
+    <div class="cap">Safety and access</div>
+    <div class="card">
+      <div class="r"><span class="k">Stop on the lock screen</span><span class="v"><i class="dot ok"></i>On</span></div>
+      <button class="r" type="button"><span class="k">Battery use</span><span class="v"><i class="dot ok"></i>Unrestricted</span><span class="c">›</span></button>
+      <button class="r" type="button"><span class="k">Quick Settings tile</span><span class="v">Added</span><span class="c">›</span></button>
+    </div>
+    <div class="cap">Data</div>
+    <div class="card">
+      <button class="r" type="button"><span class="k">Share diagnostics</span><span class="v">Redacted</span><span class="c">›</span></button>
+      <button class="r danger" type="button"><span class="k">Delete all chats and memory</span><span class="c">›</span></button>
+    </div>
+    <div class="cap">About</div>
+    <div class="card"><button class="r" type="button"><span class="k">Version <span class="mono">1.0.0</span></span><span class="v">Check for update</span><span class="c">›</span></button></div>
+  </div>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

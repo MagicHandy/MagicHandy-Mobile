@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Graphite Deck chat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.hdr{display:flex;align-items:center;gap:10px;padding:16px 16px 8px}
+.t{font-size:16px;font-weight:600}
+.s{font-size:12px;color:#9aa1a9;margin-top:2px}
+.dots{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:12px;color:#9aa1a9}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.acc{background:#5b9dd9}
+.log{flex:1;overflow:hidden;padding:10px 14px 12px;display:flex;flex-direction:column;gap:16px;justify-content:flex-end}
+.ai{max-width:92%;line-height:1.5;color:#d9d6d0}
+.ai .who{font-size:12px;color:#9aa1a9;margin-bottom:4px}
+.me{align-self:flex-end;max-width:80%;background:#1b2634;border:1px solid #2c3e52;border-radius:10px 10px 4px 10px;padding:9px 12px;line-height:1.45}
+.receipt{margin-top:6px;font-size:12px;color:#9aa1a9}
+.caret{display:inline-block;width:2px;height:16px;background:#5b9dd9;vertical-align:-3px;margin-left:2px}
+.deck{background:#16181b;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:10px 12px 8px;display:flex;flex-direction:column;gap:8px}
+.now{height:48px;border:1px solid #262a30;border-radius:6px;background:#0b0c0e;display:flex;align-items:center;gap:10px;padding:0 10px;font-size:13px}
+.now .pace{font-size:20px;font-weight:600}
+.bar{flex:1;height:6px;border-radius:3px;background:#262a30;position:relative;min-width:40px}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:48%;border-radius:3px;background:#5b9dd9}
+.chips{display:grid;grid-template-columns:1.2fr 1.4fr 1fr 1fr;gap:6px}
+.chip{height:46px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
+.chip.on{background:rgba(91,157,217,.15);border-color:transparent}
+.field{display:flex;align-items:center;gap:8px;background:#0b0c0e;border:1px solid #4b5159;border-radius:10px;padding:4px 4px 4px 12px}
+.field input{flex:1;min-width:0;height:40px;border:0;background:transparent;color:#e9e7e2;font:16px Inter,sans-serif;outline:none}
+.send{width:44px;height:44px;border:0;border-radius:6px;background:#5b9dd9;display:grid;place-items:center}
+.stop{order:2;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.tab{height:44px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px}
+.tab.on{color:#e9e7e2;font-weight:600;background:#1d2024}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</helmet>
+<div class="app">
+  <header class="hdr">
+    <div><div class="t">Evening</div><div class="s">Companion · Terra · Advanced</div></div>
+    <div class="dots" aria-label="The Handy playing, Vibrator playing"><span><i class="dot ok"></i> Handy</span><span><i class="dot ok"></i> Vibrator</span></div>
+  </header>
+  <main class="log">
+    <div class="me">Slow it down a little and keep the strokes long.</div>
+    <div class="ai"><div class="who">Companion · 21:40</div>Easing off. Long, unhurried strokes for a while.<div class="receipt mono">→ Pace 62 to 48 · Stroke 15–85</div></div>
+    <div class="me">Perfect. Let Autopilot take over for a bit.</div>
+    <div class="ai"><div class="who">Companion · now</div>Autopilot has it. I'll build slowly and check in now and then<span class="caret"></span></div>
+  </main>
+  <section class="deck" aria-label="Controls">
+    <button class="now" type="button" aria-label="Now playing, open live controls"><i class="dot ok"></i><span class="pace mono">48%</span><span class="bar" aria-hidden="true"><i></i></span><span class="mono" style="color: #9aa1a9">15–85</span><i class="dot acc"></i><span class="mono">0:40</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9aa1a9" stroke-width="1.8" aria-hidden="true"><path d="M4 10l4-4 4 4"></path></svg></button>
+    <div class="chips" style="grid-template-columns: 1.5fr 1fr 1fr 48px">
+      <button class="chip on" type="button"><i class="dot acc"></i>Autopilot</button>
+      <button class="chip" type="button">Pause</button>
+      <button class="chip" type="button">Edge</button>
+      <button class="chip" type="button" aria-label="Chat settings"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5h12M2 11.5h12"></path><circle cx="6" cy="4.5" r="1.8" fill="#16181b"></circle><circle cx="10.5" cy="11.5" r="1.8" fill="#16181b"></circle></svg></button>
+    </div>
+    <div class="field"><label class="sr" for="gd-msg">Message</label><input id="gd-msg" type="text" placeholder="Message"><button class="send" type="button" aria-label="Send"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0b131c" stroke-width="2" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"></path></svg></button></div>
+    <button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button>
+    <nav class="tabs" aria-label="Main">
+      <button class="tab on" type="button" aria-current="page">Chat</button>
+      <button class="tab" type="button">Devices</button>
+      <button class="tab" type="button">Settings</button>
+    </nav>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Models</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.nav{display:flex;align-items:center;gap:4px;color:#9aa1a9;font-size:13px}
+.back{width:44px;height:44px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center}
+h1{margin:0;font-size:22px;font-weight:600}
+.sub{color:#9aa1a9;font-size:13px;margin-top:2px}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:2px 12px}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;padding:10px 0 4px}
+.r{display:flex;align-items:center;gap:10px;min-height:48px;border-top:1px solid #262a30}
+.cap + .r{border-top:0}
+.r .k{flex:1}
+.v{color:#c9c6c0;font-size:13px;text-align:right}
+.chev{color:#9aa1a9}
+.tg{width:44px;height:26px;border-radius:13px;background:#5b9dd9;position:relative;flex:none}
+.tg::after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#0b131c}
+.tg.off{background:#353b43}
+.tg.off::after{left:3px;right:auto;background:#9aa1a9}
+.p{display:grid;grid-template-columns:1fr auto;gap:3px 8px;padding:10px 0;border-top:1px solid #262a30}
+.cap + .p{border-top:0}
+.pn{font-weight:600;font-size:15px}
+.pd{font-size:12px;color:#9aa1a9;line-height:1.4}
+.st{display:flex;align-items:center;gap:6px;font-size:12px;justify-content:flex-end}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.faint{background:#4a5058}
+.lvl{font-size:11px;font-weight:600;border:1px solid #353b43;border-radius:4px;padding:2px 6px;color:#c9c6c0;justify-self:end}
+.lan{font-size:11px;color:#d8b66a}
+.add{height:44px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px}
+.hint{font-size:12px;color:#9aa1a9;line-height:1.45;margin:0}
+.ft{background:#121417;border-top:1px solid #262a30;padding:6px 12px 10px;display:flex;flex-direction:column-reverse;gap:6px}
+.stop{height:56px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tab{height:48px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500}
+.tab.on{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <div class="nav"><button class="back" type="button" aria-label="Back to Settings"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button>Settings</div>
+    <div><h1>Models</h1><div class="sub">Where chat and Autopilot send their requests.</div></div>
+    <div class="card">
+      <div class="cap">Model roles</div>
+      <div class="r"><span class="k">Chat</span><span class="v">ChatGPT · Terra<br>Advanced</span><span class="chev">›</span></div>
+      <div class="r"><span class="k">Autopilot</span><span class="v">Same as chat</span><span class="chev">›</span></div>
+    </div>
+    <div class="card">
+      <div class="cap">Providers</div>
+      <div class="p"><span class="pn">ChatGPT</span><span class="st"><i class="dot ok"></i>Ready</span><span class="pd">Signed in · uses your ChatGPT plan</span><span class="lvl">Advanced</span></div>
+      <div class="p"><span class="pn">OpenRouter</span><span class="st"><i class="dot ok"></i>Ready</span><span class="pd">Key saved · <span class="mono">deepseek-v4.1-flash</span></span><span class="lvl">Advanced</span></div>
+      <div class="p"><span class="pn">Ollama · Desktop PC</span><span class="st"><i class="dot ok"></i>Ready</span><span class="pd"><span class="mono">192.168.0.20:11434 · gemma4:12b</span><br><span class="lan">Local network · not encrypted</span></span><span class="lvl">Intermediate</span></div>
+      <div class="p"><span class="pn">llama.cpp · Desktop PC</span><span class="st"><i class="dot faint"></i>Not reachable</span><span class="pd"><span class="mono">192.168.0.20:8080 · gemma-4-e4b</span><br>Is the phone on the same Wi-Fi?</span><span class="lvl">Simple</span></div>
+    </div>
+    <button class="add" type="button">Add a provider</button>
+    <p class="hint">Chat messages, the persona and memories go to the chat model. A rejected reply is always repaired once. Network servers run on computers you control.</p>
+  </div>
+  <footer class="ft">
+    <button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button>
+    <nav class="tabs" aria-label="Main"><button class="tab" type="button">Chat</button><button class="tab" type="button">Devices</button><button class="tab on" type="button" aria-current="page">Settings</button></nav>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

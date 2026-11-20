@@ -1,0 +1,9 @@
+{
+  "body": {
+    "pause_on_starving": true,
+    "start_time": -123
+  },
+  "hex": "08011219fa35140885ffffffffffffffff011d0000803f200028011005",
+  "id": 5,
+  "path": "hsp/play"
+}

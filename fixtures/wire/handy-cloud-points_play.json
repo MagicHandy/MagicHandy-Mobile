@@ -1,0 +1,18 @@
+{
+  "auth": {
+    "api_major": 3,
+    "application_id": "app-public-id",
+    "connection_key_set": true,
+    "firmware_major": 4
+  },
+  "body": {
+    "loop": false,
+    "pause_on_starving": true,
+    "playback_rate": 1,
+    "start_time": 0
+  },
+  "method": "PUT",
+  "operation": "points_play",
+  "path": "hsp/play",
+  "transport": "handy_cloud_rest"
+}

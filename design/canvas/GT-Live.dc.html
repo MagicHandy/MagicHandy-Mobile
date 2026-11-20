@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Graphite Touch live controls</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.behind{height:64px;background:#0e0f11;opacity:.35;padding:16px 12px 0;font-weight:600}
+.sheet{flex:1;background:#121417;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:6px 12px 8px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.handle{width:36px;height:4px;border-radius:2px;background:#353b43;margin:2px auto 2px}
+.sh{display:flex;align-items:center;gap:8px}
+.sh b{font-size:17px}
+.done{margin-left:auto;height:40px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:#5b9dd9;font-weight:600;font-size:14px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.acc{background:#5b9dd9}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;display:flex;align-items:center;gap:8px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px}
+.mut{color:#9aa1a9}
+.hint{font-size:12px;color:#9aa1a9}
+.two{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.btn{height:44px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:14px;font-weight:600}
+.track{height:6px;border-radius:3px;background:#262a30;position:relative;margin:6px 0 4px}
+.fill{position:absolute;top:0;bottom:0;border-radius:3px;background:#5b9dd9}
+.thumb{position:absolute;top:-9px;width:24px;height:24px;border-radius:50%;background:#e9e7e2;border:2px solid #5b9dd9;box-sizing:border-box}
+.stops{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.stops button{height:36px;border:1px solid #353b43;border-radius:4px;background:transparent;font-size:12px;font-weight:600}
+.stops .on{background:#5b9dd9;border-color:#5b9dd9;color:#0b131c}
+.sel{height:36px;border:1px solid #4b5159;border-radius:6px;background:#0b0c0e;padding:0 10px;font-size:13px;display:flex;align-items:center;gap:6px}
+.prog{height:6px;border-radius:3px;background:#262a30;position:relative;flex:1}
+.ft{background:#121417;border-top:1px solid #262a30;padding:8px 12px 10px}
+.stop{width:100%;height:56px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="behind" aria-hidden="true">Evening</div>
+  <section class="sheet" aria-label="Live controls">
+    <div class="handle" aria-hidden="true"></div>
+    <div class="sh"><b>Live</b><i class="dot ok"></i><span class="mut">Playing · Autopilot is choosing</span><button class="done" type="button">Done</button></div>
+    <div class="card">
+      <div class="cap">Now playing</div>
+      <div class="row"><span>The Handy</span><span class="mono">Pace 48% of 50% · 15–85</span></div>
+      <div class="row"><span>Vibrator</span><span class="mono">40% of max 70 · follows</span></div>
+      <div class="hint">Commanded values, not measurements.</div>
+    </div>
+    <div class="two"><button class="btn" type="button">Pause</button><button class="btn" type="button">Edge · gentle hold</button></div>
+    <div class="card">
+      <div class="cap">Limits <span style="margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500">Apply immediately</span></div>
+      <div class="row"><span>Top speed</span><span class="mono">80%</span></div>
+      <div class="track"><div class="fill" style="left: 0; width: 80%"></div><div class="thumb" style="left: calc(80% - 12px)"></div></div>
+      <div class="row"><span>Stroke</span><span class="mono">15–85</span></div>
+      <div class="track"><div class="fill" style="left: 15%; width: 70%"></div><div class="thumb" style="left: calc(15% - 12px)"></div><div class="thumb" style="left: calc(85% - 12px)"></div></div>
+    </div>
+    <div class="card">
+      <div class="cap"><i class="dot acc"></i>Autopilot <span style="margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500" class="mono">next 0:40 · segment 3</span></div>
+      <div class="two"><button class="btn" type="button">Pause Autopilot</button><button class="btn" type="button">Stop Autopilot</button></div>
+      <div class="row"><span>Session buildup</span><span class="prog" aria-hidden="true"><span class="fill" style="left: 0; width: 42%"></span></span><span class="mono mut">42% of 20 min</span></div>
+      <button class="btn" type="button" style="display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-color: #262a30; font-weight: 500">Autopilot settings<span class="mut" style="font-size: 13px">Changes 5 of 8 · check-ins ›</span></button>
+    </div>
+  </section>
+  <footer class="ft"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

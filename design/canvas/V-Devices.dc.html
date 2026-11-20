@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Devices</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:16px 12px 8px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.h{display:flex;align-items:center;justify-content:space-between}
+.h b{font-size:22px;font-weight:600}
+.rd{display:flex;gap:12px;font-size:12px;color:#9aa1a9}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.faint{background:#4a5058}.ring{background:transparent;border:1.5px solid #9aa1a9;box-sizing:border-box}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;margin-top:6px}
+.list{background:#16181b;border:1px solid #262a30;border-radius:10px}
+.dr{display:grid;grid-template-columns:36px 1fr auto;gap:3px 10px;align-items:center;padding:10px 12px;border-top:1px solid #262a30;min-height:44px}
+.dr:first-child{border-top:0}
+.tile{grid-row:span 2;width:36px;height:36px;border-radius:6px;background:#1d2024;display:grid;place-items:center}
+.nm{font-weight:600;font-size:15px}
+.nm span{font-weight:400;color:#9aa1a9;font-size:13px}
+.stt{font-size:13px;display:flex;align-items:center;gap:6px;color:#9aa1a9}
+.stt b{color:#e9e7e2;font-weight:500}
+.act{grid-row:span 2;height:44px;min-width:44px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:600;border:1px solid #353b43;background:transparent}
+.act.fill{background:#5b9dd9;border-color:#5b9dd9;color:#0b131c}
+.act.chev{border-color:transparent;color:#9aa1a9;font-size:18px;padding:0 6px}
+.nx{grid-row:span 2;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:#9aa1a9}
+.tg{width:44px;height:26px;border-radius:13px;background:#5b9dd9;position:relative}
+.tg::after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#0b131c}
+.add{height:48px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px;margin-top:4px}
+.note{font-size:12px;color:#9aa1a9;margin:0}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px 12px;background:#121417;border-top:1px solid #262a30}
+.tab{height:52px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500}
+.tab.on{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+.stopbar{background:#121417;padding:0 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <div class="h"><b>Devices</b><div class="rd"><span><i class="dot ok"></i> Bluetooth on</span><span><i class="dot ok"></i> Online</span></div></div>
+    <div class="cap">In this run</div>
+    <div class="list">
+      <div class="dr"><span class="tile"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.4" aria-hidden="true"><rect x="5" y="1.5" width="6" height="13" rx="2"></rect><path d="M5 6h6"></path></svg></span><span class="nm">Bedroom Handy <span>The Handy</span></span><button class="act chev" type="button" aria-label="Bedroom Handy details">›</button><span class="stt"><i class="dot ok"></i><b>Playing</b> Bluetooth · battery 78%</span></div>
+      <div class="dr"><span class="tile"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.4" aria-hidden="true"><rect x="6" y="2" width="4" height="12" rx="2"></rect><path d="M3 6c-1 1.3-1 2.7 0 4M13 6c1 1.3 1 2.7 0 4"></path></svg></span><span class="nm">Vibrator</span><button class="act chev" type="button" aria-label="Vibrator details">›</button><span class="stt"><i class="dot ok"></i><b>Playing</b> Intiface on this phone</span></div>
+    </div>
+    <div class="cap">Not in this run</div>
+    <div class="list">
+      <div class="dr"><span class="tile"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.4" aria-hidden="true"><path d="M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z"></path></svg></span><span class="nm">Coyote 3.0</span><span class="nx"><span class="tg" role="img" aria-label="Joins the next run"></span>Next run</span><span class="stt"><i class="dot ok"></i><b>Connected</b> joins the next run</span></div>
+      <div class="dr"><span class="tile"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.4" aria-hidden="true"><rect x="4" y="2" width="8" height="12" rx="3"></rect><path d="M4 6h8M4 10h8"></path></svg></span><span class="nm">Autoblow Ultra</span><button class="act fill" type="button">Connect</button><span class="stt"><i class="dot faint"></i><b>Not connected</b> Autoblow cloud</span></div>
+      <div class="dr"><span class="tile"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.4" aria-hidden="true"><rect x="4" y="2" width="8" height="12" rx="3"></rect><path d="M6 5h4M6 8h4M6 11h4"></path></svg></span><span class="nm">VacuGlide</span><button class="act" type="button">Set up ›</button><span class="stt"><i class="dot ring"></i><b>Needs setup</b> device token</span></div>
+    </div>
+    <button class="add" type="button">Add a device</button>
+    <p class="note">Connecting never starts motion. A device that drops out rejoins only when a new run starts.</p>
+  </div>
+  <nav class="tabs" aria-label="Main"><button class="tab" type="button">Chat</button><button class="tab on" type="button" aria-current="page">Devices</button><button class="tab" type="button">Settings</button></nav>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

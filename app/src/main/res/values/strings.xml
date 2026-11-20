@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Grouped by screen (plan §5.5). Wording follows the v1 design boards. -->
+<resources>
+    <string name="app_name">MagicHandy</string>
+
+    <!-- Shared -->
+    <string name="stop">Stop</string>
+    <string name="stop_again">Stop again</string>
+    <string name="stop_all_motion">Stop all motion</string>
+    <string name="action_close">Close</string>
+    <string name="action_done">Done</string>
+    <string name="action_save">Save</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_reconnect">Reconnect</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="tab_chat">Chat</string>
+    <string name="tab_devices">Devices</string>
+    <string name="tab_settings">Settings</string>
+    <string name="back_to_chat">Back to chat</string>
+    <string name="back_to_devices">Back to Devices</string>
+    <string name="back_to_settings">Back to Settings</string>
+    <string name="back_to_models">Back to Models</string>
+    <string name="back_to_app_settings">Back to App settings</string>
+    <string name="back_to_page">Back to %1$s</string>
+    <string name="separator">" · "</string>
+    <!-- Joins two sentences. Languages written without spaces between sentences drop the space. -->
+    <string name="sentences">%1$s %2$s</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="percent">%1$d%%</string>
+    <string name="range">%1$d–%2$d</string>
+    <string name="minutes_short">%1$d min</string>
+    <string name="milliseconds_short">%1$d ms</string>
+    <string name="seconds_short">%1$s s</string>
+    <string name="context_tokens">%1$dK</string>
+
+    <!-- Device words -->
+    <string name="family_handy">The Handy</string>
+    <string name="family_vibrator">Vibrator</string>
+    <string name="family_coyote">Coyote 3.0</string>
+    <string name="family_autoblow_ultra">Autoblow Ultra</string>
+    <string name="family_vacuglide">VacuGlide</string>
+    <string name="connection_bluetooth">Bluetooth</string>
+    <string name="connection_handy_cloud">Handy Cloud</string>
+    <string name="connection_autoblow_cloud">Autoblow cloud</string>
+    <string name="connection_intiface_phone">Intiface on this phone</string>
+    <string name="connection_intiface_network">Intiface on your network</string>
+    <string name="status_needs_setup">Needs setup</string>
+    <string name="status_not_connected">Not connected</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_playing">Playing</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_lost">Connection lost</string>
+
+    <!-- Chat -->
+    <string name="chat_open_chats">Chats: %1$s</string>
+    <string name="chat_subtitle">%1$s · %2$s</string>
+    <string name="chat_subtitle_no_model">%1$s · no chat model yet</string>
+    <string name="chat_empty">Say hello, or tell %1$s what you\'d like.</string>
+    <string name="author_you">You</string>
+    <string name="time_now">now</string>
+    <string name="receipt_pace_change">Pace %1$d → %2$d</string>
+    <string name="receipt_pace">Pace %1$d</string>
+    <string name="receipt_stroke">Stroke %1$d–%2$d</string>
+    <string name="receipt_stroke_low">Stroke low %1$d</string>
+    <string name="receipt_stroke_high">Stroke high %1$d</string>
+    <string name="receipt_level">Level %1$d</string>
+    <string name="receipt_tempo">Tempo %1$d</string>
+    <string name="receipt_commanded">commanded</string>
+    <string name="motion_stopped_entry">Motion stopped · %1$s</string>
+    <string name="motion_stopped_entry_lost">Motion stopped · %1$s disconnected · %2$s</string>
+    <string name="reply_interrupted_stopped">Reply interrupted when motion stopped. Nothing was sent again.</string>
+    <string name="reply_interrupted_connection">Reply interrupted when the model connection dropped. Nothing was sent again.</string>
+    <string name="reply_interrupted_background">Reply interrupted when MagicHandy went to the background. Nothing was sent again.</string>
+    <string name="reply_interrupted_provider">The model returned an error, so the reply was discarded. Nothing was sent again.</string>
+    <string name="send_again">Send again</string>
+    <string name="composer_hint">Message</string>
+    <string name="composer_no_model">Set up a chat model to start</string>
+    <string name="composer_unreachable">The chat model isn\'t reachable</string>
+    <string name="composer_send">Send</string>
+
+    <!-- Now playing strip and deck -->
+    <string name="strip_playing">Playing · Pace %1$s commanded</string>
+    <string name="strip_paused">Paused · limits kept</string>
+    <string name="strip_edging">Edge · gentle hold</string>
+    <string name="strip_idle">Not playing · Live controls</string>
+    <string name="strip_stopped">Stopped</string>
+    <string name="strip_autopilot_off">Autopilot off</string>
+    <string name="strip_held_playing">Planning held · current segment still playing</string>
+    <string name="strip_held_stopped">Planning held · motion held</string>
+    <string name="strip_open_live">%1$s. Open live controls</string>
+    <string name="strip_next_change">%1$s. Autopilot next change in %2$s</string>
+    <string name="deck_autopilot">Autopilot</string>
+    <string name="deck_pause">Pause</string>
+    <string name="deck_resume">Resume</string>
+    <string name="deck_edge">Edge</string>
+
+    <!-- Banners -->
+    <string name="banner_lost_bluetooth">%1$s lost its Bluetooth link</string>
+    <string name="banner_lost_cloud">%1$s lost its cloud link</string>
+    <string name="banner_lost_intiface">%1$s lost its Intiface link</string>
+    <string name="banner_confirmed_stop">%1$s confirmed Stop.</string>
+    <string name="banner_reconnect_never_restarts">Reconnecting never restarts motion.</string>
+    <string name="banner_reconnect">Reconnect %1$s</string>
+    <string name="banner_held_title">Planning held</string>
+    <string name="banner_held_playing">The model connection dropped. The current segment is still playing, and planning resumes when the connection returns.</string>
+    <string name="banner_held_stopped">The model connection dropped. Motion is held until the connection returns.</string>
+    <string name="banner_check_in_title">Check-in</string>
+    <string name="banner_check_in_body">Still there? No answer within %1$s stops %2$s.</string>
+    <string name="banner_check_in_action">I\'m here</string>
+    <string name="banner_refused_title">Motion didn\'t start</string>
+    <string name="banner_refused_journal">MagicHandy couldn\'t save its safety record, so nothing moved. Free some storage and try again.</string>
+    <string name="banner_refused_no_device">No connected device is in the next run.</string>
+    <string name="banner_refused_mode_off">The motion mode is Off.</string>
+    <string name="banner_refused_service">Android didn\'t let MagicHandy keep running in the background, so nothing moved. Try again with the app open.</string>
+    <string name="banner_open_devices">Open Devices</string>
+    <string name="banner_open_settings">Open Settings</string>
+
+    <!-- What a device does when the app can't reach it -->
+    <string name="after_loss_short_pauses">%1$s pauses on its own when its motion buffer runs out.</string>
+    <string name="after_loss_short_intiface">Intiface Central should stop %1$s when the app disconnects.</string>
+    <string name="after_loss_short_silent">%1$s goes silent when the pulses stop.</string>
+    <string name="after_loss_short_last_move">%1$s finishes its last move, then stops.</string>
+    <string name="after_loss_short_keeps">%1$s may keep its last speed. Switch it off at the device.</string>
+
+    <!-- Live -->
+    <string name="live_title">Live</string>
+    <string name="live_pace_commanded">Pace commanded</string>
+    <string name="live_choosing_autopilot">%1$s · Autopilot is choosing</string>
+    <string name="live_choosing_chat">%1$s · Chat is choosing</string>
+    <string name="live_choosing_you">%1$s · Set by you</string>
+    <string name="live_idle">Nothing is playing</string>
+    <string name="live_start_motion">Start motion</string>
+    <string name="live_device_stroke_asked">%1$s of %2$s asked · %3$s</string>
+    <string name="live_device_stroke">%1$s · %2$s</string>
+    <string name="live_device_level_follows">%1$s of max %2$d · follows</string>
+    <string name="live_device_level">%1$s of max %2$d</string>
+    <string name="live_device_tempo">Tempo %1$s</string>
+    <string name="live_device_channels">A %1$d · B %2$d</string>
+    <string name="live_limits">Limits · every source</string>
+    <string name="limit_top_speed">Top speed</string>
+    <string name="limit_stroke_low">Stroke low</string>
+    <string name="limit_stroke_high">Stroke high</string>
+    <string name="limit_top_speed_inline">top speed</string>
+    <string name="limit_stroke_low_inline">stroke low</string>
+    <string name="limit_stroke_high_inline">stroke high</string>
+    <string name="limit_lower_top_speed">Lower top speed</string>
+    <string name="limit_raise_top_speed">Raise top speed</string>
+    <string name="limit_lower_stroke_low">Lower the stroke\'s low end</string>
+    <string name="limit_raise_stroke_low">Raise the stroke\'s low end</string>
+    <string name="limit_lower_stroke_high">Lower the stroke\'s high end</string>
+    <string name="limit_raise_stroke_high">Raise the stroke\'s high end</string>
+    <string name="live_pause_motion">Pause motion</string>
+    <string name="live_resume_motion">Resume motion</string>
+    <string name="live_edge">Edge · gentle hold</string>
+    <string name="live_edge_end">End gentle hold</string>
+    <string name="live_autopilot_active">Autopilot · Active</string>
+    <string name="live_autopilot_paused">Autopilot · Paused</string>
+    <string name="live_autopilot_held">Autopilot · Planning held</string>
+    <string name="live_autopilot_off">Autopilot · Off</string>
+    <string name="live_next_check">next check %1$s</string>
+    <string name="live_finish_target">Finish target in %1$s · building toward the end</string>
+    <string name="live_finish_target_set">Finish target %1$s · starts with the run</string>
+    <string name="live_start_autopilot">Start Autopilot</string>
+    <string name="live_pause_autopilot">Pause Autopilot</string>
+    <string name="live_resume_autopilot">Resume Autopilot</string>
+    <string name="live_turn_off">Turn off</string>
+    <string name="live_recent_changes">Recent changes</string>
+    <string name="live_recent_none">No changes yet in this run.</string>
+    <string name="recent_limited">Asked %1$d%% · commanded %2$d%% (%3$s)</string>
+    <string name="recent_commanded">Commanded %1$d%% · %2$s</string>
+    <string name="source_you">you</string>
+    <string name="source_chat">chat</string>
+    <string name="source_autopilot">Autopilot</string>
+    <string name="live_autopilot_settings">Autopilot settings</string>
+
+    <!-- Devices -->
+    <string name="devices_title">Devices</string>
+    <string name="devices_bluetooth_on">Bluetooth on</string>
+    <string name="devices_bluetooth_off">Bluetooth off</string>
+    <string name="devices_online">Online</string>
+    <string name="devices_offline">Offline</string>
+    <string name="devices_in_run">In this run</string>
+    <string name="devices_not_in_run">Not in this run</string>
+    <string name="devices_next_run">Next run</string>
+    <string name="devices_joins_next_run">joins the next run</string>
+    <string name="devices_joins_next_run_toggle">Joins the next run</string>
+    <string name="devices_battery">%1$s · battery %2$d%%</string>
+    <string name="devices_lead">%1$s · leads</string>
+    <string name="devices_set_up">Set up</string>
+    <string name="devices_details">%1$s details</string>
+    <string name="devices_checked_it">I\'ve checked it</string>
+    <string name="devices_add">Add a device</string>
+    <string name="devices_note">Connecting never starts motion. A device that drops out rejoins only when a new run starts.</string>
+    <string name="devices_empty">No devices yet. Add one to start.</string>
+    <string name="device_type_title">Add a device</string>
+    <string name="device_type_handy">Bluetooth on this phone, or Handy Cloud</string>
+    <string name="device_type_vibrator">Through Intiface Central, on this phone or your network</string>
+    <string name="device_type_coyote">DG-LAB e-stim over Bluetooth</string>
+    <string name="device_type_ultra">Autoblow cloud, with a device token</string>
+    <string name="device_type_vacuglide">Autoblow cloud. It keeps its last speed if the phone loses it.</string>
+
+    <!-- Adding devices -->
+    <string name="add_breadcrumb">Devices › Add</string>
+    <string name="add_handy_title">Connect The Handy</string>
+    <string name="add_handy_how">How it connects</string>
+    <string name="add_handy_bluetooth">Bluetooth on this phone</string>
+    <string name="add_handy_bluetooth_desc">Fastest Stop, and it works without internet. Keep the phone within a few metres.</string>
+    <string name="add_handy_cloud">Handy Cloud</string>
+    <string name="add_handy_cloud_desc">Needs internet and the connection key from the Handy app.</string>
+    <string name="add_nearby">Nearby · order stays put while you choose</string>
+    <string name="add_scanning">Looking for nearby devices…</string>
+    <string name="add_verifying">Verifying…</string>
+    <string name="add_verified">Verified</string>
+    <string name="add_verify_failed">Couldn\'t verify</string>
+    <string name="signal_strong">Strong signal · %1$s dBm</string>
+    <string name="signal_good">Good signal · %1$s dBm</string>
+    <string name="signal_weak">Weaker, maybe another room · %1$s dBm</string>
+    <string name="add_handy_note">MagicHandy checks the device before it can play. Once it\'s verified you can name it, for example \"Bedroom Handy\". Connecting never starts motion.</string>
+    <string name="scan_bluetooth_off">Bluetooth is off. Turn it on to find nearby devices.</string>
+    <string name="scan_permission_denied">MagicHandy needs the Nearby devices permission to find it.</string>
+    <string name="scan_nothing_found">Nothing found yet. Make sure it\'s on and close by.</string>
+    <string name="field_name">Name</string>
+    <string name="field_connection_key">Connection key</string>
+    <string name="field_connection_key_hint">From the Handy app</string>
+    <string name="field_device_token">Device token</string>
+    <string name="field_device_token_hint">From the Autoblow app</string>
+    <string name="add_cloud_connect">Connect over Handy Cloud</string>
+    <string name="add_coyote_before">Before you connect</string>
+    <string name="add_coyote_note_1">Do not use it with a pacemaker or other implant, a heart condition, epilepsy, or during pregnancy.</string>
+    <string name="add_coyote_note_2">Place electrodes below the waist only. Never across the chest or near the heart.</string>
+    <string name="add_coyote_note_3">Start at zero and raise strength slowly. MagicHandy never raises strength on its own.</string>
+    <string name="add_coyote_note_4">Stop sets both channels to zero and ends the pulses.</string>
+    <string name="add_coyote_ack">I have read these notes</string>
+    <string name="add_coyote_hint">Turn the Coyote on and close its own app first. You\'ll pick it from a list of nearby devices; it never connects on its own.</string>
+    <string name="add_coyote_find">Find nearby devices</string>
+    <string name="add_vibrator_title">Connect a vibrator</string>
+    <string name="add_vibrator_desc">Vibrators connect through Intiface Central. Run it on this phone, or on a computer on the same network.</string>
+    <string name="field_intiface_address">Intiface address</string>
+    <string name="field_intiface_address_hint">127.0.0.1:12345 on this phone</string>
+    <string name="add_vibrator_connect">Connect to Intiface</string>
+    <string name="add_autoblow_title">Connect %1$s</string>
+    <string name="add_autoblow_desc">Uses Autoblow\'s cloud and the device token from the Autoblow app.</string>
+
+    <!-- Device pages -->
+    <string name="device_status_line">%1$s · %2$s</string>
+    <string name="device_status_battery">%1$s · %2$s · battery %3$d%%</string>
+    <string name="device_status_latency">%1$s · %2$s · %3$d ms</string>
+    <string name="device_section">Device</string>
+    <string name="device_connection">Connection</string>
+    <string name="device_connection_desc">Changing it stops motion and disconnects.</string>
+    <string name="handy_model">Handy model</string>
+    <string name="handy_model_desc">Sets travel in millimetres and speed limits.</string>
+    <string name="handy_reverse">Reverse direction</string>
+    <string name="handy_reverse_desc">For a Handy mounted the other way up.</string>
+    <string name="device_check">Check connection</string>
+    <string name="device_test">Test motion</string>
+    <string name="device_check_test_note">Check never moves the device. Test plays a short, slow stroke on this device only, while nothing else is playing.</string>
+    <string name="device_remove_handy">Remove this Handy</string>
+    <string name="device_remove">Remove this device</string>
+    <string name="vibrator_max_level">Maximum level</string>
+    <string name="coyote_max_strength">Maximum strength</string>
+    <string name="coyote_max_strength_value">A %1$d · B %2$d</string>
+    <string name="vacuglide_warning_title">Stop goes through the internet</string>
+    <string name="vacuglide_warning_body">If the phone loses internet, or Android closes MagicHandy, the VacuGlide can keep its last speed. Then switch it off at the device.</string>
+    <string name="vacuglide_safeguards">Phone safeguards</string>
+    <string name="vacuglide_send_stop">Send Stop on connection loss</string>
+    <string name="vacuglide_send_stop_desc">Sent as the link drops and again when it returns. Offline, it can\'t be confirmed.</string>
+    <string name="vacuglide_always_on">Always on</string>
+    <string name="vacuglide_check_in">Check in while it runs</string>
+    <string name="check_in_every">Every %1$d min</string>
+    <string name="vacuglide_check_in_desc">No answer within a minute stops the VacuGlide.</string>
+    <string name="vacuglide_keep_running">Keep MagicHandy running</string>
+    <string name="vacuglide_keep_running_desc">Unrestricted battery use, so Android is less likely to close it.</string>
+    <string name="battery_allowed">Allowed</string>
+    <string name="battery_restricted">Restricted</string>
+    <string name="vacuglide_output">Output</string>
+    <string name="vacuglide_tempo_range">Tempo range</string>
+    <string name="vacuglide_tempo_range_desc">Slowest to fastest the motor may run.</string>
+    <string name="vacuglide_valve">Chat and Autopilot may step the stroke</string>
+    <string name="vacuglide_valve_desc">Up to three valve steps either way per session.</string>
+    <string name="vacuglide_test">Test motor</string>
+    <string name="vacuglide_test_desc">Runs slowly for a moment while nothing is playing.</string>
+
+    <!-- Settings sheet -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_motion_mode">Motion mode</string>
+    <string name="settings_style">Style</string>
+    <string name="settings_autopilot">Autopilot</string>
+    <string name="settings_persona">Persona</string>
+    <string name="settings_chat_model">Chat model</string>
+    <string name="settings_memory">Memory</string>
+    <string name="settings_app">App settings</string>
+    <string name="settings_autopilot_value">%1$d of %2$d · %3$s</string>
+    <string name="settings_chat_model_value">%1$s · %2$s</string>
+    <string name="settings_none">None</string>
+    <string name="mode_layered">Layered</string>
+    <string name="mode_simple">Simple</string>
+    <string name="mode_tempo">Tempo</string>
+    <string name="mode_off">Off</string>
+    <string name="mode_layered_desc">The AI adjusts reach, location and pace separately and keeps the rest.</string>
+    <string name="mode_simple_desc">A flowing phrase that keeps developing over many strokes.</string>
+    <string name="mode_tempo_desc">The AI sets the VacuGlide\'s tempo within its range.</string>
+    <string name="mode_off_desc">The AI only talks and never moves the device.</string>
+    <string name="motion_mode_subtitle">%1$s. Every mode works at every capability level.</string>
+    <string name="motion_mode_note">When a VacuGlide leads, the choices are Tempo and Off. Choosing Off while the AI is moving a device stops it first.</string>
+    <string name="style_gentle">Gentle</string>
+    <string name="style_balanced">Balanced</string>
+    <string name="style_intense">Intense</string>
+    <string name="style_hint">Style shapes the character of motion within your limits. It doesn\'t change the wording.</string>
+    <string name="capability_simple">Simple</string>
+    <string name="capability_intermediate">Intermediate</string>
+    <string name="capability_advanced">Advanced</string>
+    <string name="autopilot_frequency">How often it changes</string>
+    <string name="autopilot_frequency_value">%1$d of %2$d</string>
+    <string name="autopilot_frequency_hint">Higher means more frequent changes. The model picks the exact timing.</string>
+    <string name="autopilot_less_often">Less often</string>
+    <string name="autopilot_more_often">More often</string>
+    <string name="autopilot_check_ins">Check-ins</string>
+    <string name="check_ins_off">Off</string>
+    <string name="check_ins_talk">Talk</string>
+    <string name="check_ins_talk_adjust">Talk + adjust</string>
+    <string name="autopilot_check_ins_hint">Messages from %1$s while Autopilot runs. \"Talk + adjust\" may also change motion, within your limits.</string>
+    <string name="autopilot_finish">Finish target</string>
+    <string name="finish_more">More</string>
+    <string name="finish_shorter">Shorter finish target</string>
+    <string name="finish_longer">Longer finish target</string>
+    <string name="autopilot_finish_hint">A target, not an automatic stop. Saying it in chat works too, for example \"build to the end over twenty minutes\".</string>
+    <string name="autopilot_planner">Planner model</string>
+    <string name="planner_same_as_chat">Same as chat</string>
+    <string name="planner_same_as_chat_value">Same as chat · %1$s</string>
+    <string name="planner_hint">Autopilot plans its changes with this model.</string>
+    <string name="persona_hint">A change takes effect on the next reply.</string>
+    <string name="chat_model_manage">Models and providers</string>
+    <string name="memory_toggle">Remember across chats</string>
+    <string name="memory_desc">When on, %1$s can recall saved details in later chats. They stay on this phone and are sent to the chat model with your messages.</string>
+    <string name="memory_clear">Clear memory</string>
+    <string name="memory_clear_note">Clearing memory keeps your chats.</string>
+    <plurals name="memory_entries">
+        <item quantity="one">%d saved detail</item>
+        <item quantity="other">%d saved details</item>
+    </plurals>
+
+    <!-- Chats sheet -->
+    <string name="chats_title">Chats</string>
+    <string name="chats_new">New chat</string>
+
+    <!-- App settings -->
+    <string name="app_settings_title">App settings</string>
+    <string name="app_models">Models</string>
+    <plurals name="app_models_value">
+        <item quantity="one">%1$s · %2$d saved</item>
+        <item quantity="other">%1$s · %2$d saved</item>
+    </plurals>
+    <string name="app_appearance">Appearance</string>
+    <string name="app_palette">Palette</string>
+    <string name="palette_steel_azure">Steel Azure</string>
+    <string name="palette_lowlight">Lowlight</string>
+    <string name="palette_high_contrast">High contrast</string>
+    <string name="app_language">Language</string>
+    <string name="language_system">System</string>
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_spanish" translatable="false">Español</string>
+    <string name="language_portuguese_brazil" translatable="false">Português (Brasil)</string>
+    <string name="language_japanese" translatable="false">日本語</string>
+    <string name="language_chinese_simplified" translatable="false">简体中文</string>
+    <string name="app_safety">Safety and access</string>
+    <string name="app_lock_screen_stop">Stop on the lock screen</string>
+    <string name="app_battery">Battery use</string>
+    <string name="battery_unrestricted">Unrestricted</string>
+    <string name="battery_optimized">Optimized</string>
+    <string name="app_data">Data</string>
+    <string name="app_delete_all">Delete all chats and memory</string>
+    <string name="app_delete_confirm">Tap again to delete. This can\'t be undone; devices, models and settings stay.</string>
+    <string name="app_about">About</string>
+    <string name="app_version">Version</string>
+    <string name="app_check_update">Check for update</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_up_to_date">Up to date</string>
+    <string name="update_available">Version %1$s available</string>
+    <string name="update_failed">Couldn\'t check</string>
+    <string name="notifications_blocked_title">Lock-screen Stop is off</string>
+    <string name="notifications_blocked_body">Notifications are blocked, so Stop can\'t appear on the lock screen. The in-app Stop still works.</string>
+    <string name="notifications_open_settings">Open notification settings</string>
+
+    <!-- Models -->
+    <string name="models_title">Models</string>
+    <string name="models_roles">Roles</string>
+    <string name="role_chat">Chat</string>
+    <string name="role_autopilot">Autopilot</string>
+    <string name="models_saved">Saved connections</string>
+    <string name="models_empty">No model yet. Add one to start chatting.</string>
+    <string name="models_add">Add a provider</string>
+    <string name="provider_chatgpt">ChatGPT</string>
+    <string name="provider_chatgpt_desc">Sign in with your ChatGPT account</string>
+    <string name="provider_openrouter">OpenRouter</string>
+    <string name="provider_openrouter_desc">Your OpenRouter API key</string>
+    <string name="provider_lan">A server on your network</string>
+    <string name="provider_lan_desc">Ollama, llama.cpp or another OpenAI-compatible server</string>
+    <string name="provider_ollama">Ollama</string>
+    <string name="provider_llamacpp">llama.cpp</string>
+    <string name="provider_openai_compatible">an OpenAI-compatible server</string>
+    <string name="connection_ready">Ready</string>
+    <string name="connection_checking">Checking…</string>
+    <string name="connection_unreachable">Not reachable · same Wi-Fi?</string>
+    <string name="connection_needs_sign_in">Sign in again</string>
+    <string name="connection_not_encrypted">Not encrypted</string>
+    <string name="connection_remove">Remove %1$s</string>
+    <string name="add_server_title">Add a server on your network</string>
+    <string name="add_server_lead">Ollama, llama.cpp or another OpenAI-compatible server on a computer you control.</string>
+    <string name="field_address">Address</string>
+    <string name="field_address_hint">192.168.0.20:11434</string>
+    <string name="add_server_check">Check</string>
+    <string name="add_server_checking">Checking…</string>
+    <string name="add_server_found">Found %1$s</string>
+    <string name="add_server_not_encrypted">Not encrypted, local network</string>
+    <string name="add_server_model">Model</string>
+    <string name="add_server_capability">Capability</string>
+    <string name="add_server_suggested">Suggested</string>
+    <string name="add_server_context_tested">%1$s is tested at %2$s. It needs %3$s of context, and this server allows %4$s.</string>
+    <string name="add_server_context">%1$s needs %2$s of context at %3$s.</string>
+    <string name="add_server_ready">Ready · replied in %1$s</string>
+    <string name="add_server_test_again">Test again</string>
+    <string name="add_server_save">Save server</string>
+    <string name="add_server_name">%1$s at %2$s</string>
+    <string name="server_failure_invalid">That isn\'t an address. Use a host or IP and a port, like 192.168.0.20:11434.</string>
+    <string name="server_failure_unreachable">No answer. Is the server running, and is this phone on the same Wi-Fi?</string>
+    <string name="server_failure_not_model_server">Something answered, but it isn\'t a model server.</string>
+    <string name="server_failure_no_models">The server has no models yet. Pull one on the server, then check again.</string>
+    <string name="server_failure_not_private">Plain HTTP is only allowed on your local network. Use a local address.</string>
+    <string name="openrouter_lead">Chat through OpenRouter with your own API key. The key is stored encrypted on this phone.</string>
+    <string name="field_api_key">API key</string>
+    <string name="field_model">Model</string>
+    <string name="field_model_hint">provider/model</string>
+    <string name="openrouter_reasoning">Reasoning</string>
+    <string name="openrouter_reasoning_desc">With reasoning off, Advanced uses its no-reasoning contract.</string>
+    <string name="chatgpt_lead">Sign in with your ChatGPT account in the browser. MagicHandy uses GPT-6.1 Terra at Advanced, as the desktop app does.</string>
+    <string name="chatgpt_sign_in">Sign in with ChatGPT</string>
+    <string name="chatgpt_waiting">Finish signing in through the browser…</string>
+    <string name="chatgpt_cancel">Cancel sign-in</string>
+    <string name="sign_in_cancelled">Sign-in was cancelled.</string>
+    <string name="sign_in_rejected">ChatGPT didn\'t accept the sign-in. Try again.</string>
+    <string name="sign_in_network">Couldn\'t reach ChatGPT. Check the connection and try again.</string>
+
+    <!-- Before you start -->
+    <string name="onboarding_title">Before you start</string>
+    <string name="onboarding_adults_title">Adults only</string>
+    <string name="onboarding_adults_body">MagicHandy controls intimate devices. Use it responsibly and at your own risk.</string>
+    <string name="onboarding_adults_check">I am 18 or older</string>
+    <string name="onboarding_stop_title">Stop is always the red bar at the bottom</string>
+    <string name="onboarding_stop_body">Press it now to see. Nothing is connected, so nothing moves. It stops every device on every screen, and it stays above the keyboard while you type.</string>
+    <string name="onboarding_start">Start chatting</string>
+
+    <!-- Stop receipt -->
+    <string name="receipt_stopped">Stopped</string>
+    <string name="receipt_sent">Stop sent · %1$s</string>
+    <string name="receipt_no_device">No connected device to stop.</string>
+    <plurals name="receipt_confirmed">
+        <item quantity="one">%d confirmed</item>
+        <item quantity="other">%d confirmed</item>
+    </plurals>
+    <plurals name="receipt_pending">
+        <item quantity="one">%d pending</item>
+        <item quantity="other">%d pending</item>
+    </plurals>
+    <plurals name="receipt_unconfirmed">
+        <item quantity="one">%d unconfirmed</item>
+        <item quantity="other">%d unconfirmed</item>
+    </plurals>
+    <string name="receipt_list_separator">", "</string>
+    <string name="outcome_unconfirmed">%1$s · Stop unconfirmed</string>
+    <string name="outcome_pending">%1$s · Waiting for a reply</string>
+    <string name="outcome_confirmed">%1$s · Stopped</string>
+    <string name="outcome_confirmed_in">Confirmed over %1$s in %2$s.</string>
+    <string name="outcome_pending_detail">A reply can still arrive.</string>
+    <string name="cause_no_reply">No reply in time.</string>
+    <string name="cause_write_failed">The Stop command couldn\'t be sent.</string>
+    <string name="cause_bridge_only">Only Intiface Central replied.</string>
+    <string name="cause_link_lost">The link dropped before it confirmed.</string>
+    <string name="cause_offline">The phone is offline.</string>
+    <string name="cause_app_stopped">MagicHandy stopped before it confirmed.</string>
+    <string name="receipt_autopilot_off">Autopilot off</string>
+    <string name="receipt_reply_cancelled">The reply was cancelled</string>
+    <string name="receipt_autopilot_off_reply_cancelled">Autopilot off · the reply was cancelled</string>
+
+    <!-- Action notices from the core -->
+    <string name="notice_feature_unavailable">That isn\'t available in this build yet.</string>
+    <string name="notice_storage_unavailable">MagicHandy couldn\'t save that. Try again.</string>
+    <string name="notice_settings_conflict">That setting changed somewhere else. Open it again to see the current value.</string>
+    <string name="notice_reconcile_devices">A device\'s Stop is still unresolved. Check it on Devices before starting again.</string>
+    <string name="notice_run_already_active">Stop the current run before starting another or testing a motor.</string>
+
+    <!-- Run interrupted -->
+    <string name="interrupted_title">Run interrupted</string>
+    <string name="interrupted_lead">MagicHandy stopped unexpectedly at %1$s while motion was running. Stop was sent again to every saved cloud device just now. Anything uncertain is listed first.</string>
+    <string name="recovery_expected_paused">%1$s · expected paused</string>
+    <string name="recovery_not_confirmed">%1$s · not confirmed</string>
+    <string name="recovery_expected_silent">%1$s · expected silent</string>
+    <string name="recovery_expected_stopped">%1$s · expected stopped</string>
+    <string name="recovery_keeps_last_speed">It may still run at its last speed. Switch it off at the device.</string>
+    <string name="recovery_pauses">It pauses about two seconds after the app stops, when its motion buffer runs out. Not confirmed.</string>
+    <string name="recovery_intiface">Intiface Central should stop it when the app disconnects. Check it.</string>
+    <string name="recovery_silent">It goes silent when the pulses stop. Not confirmed.</string>
+    <string name="recovery_last_move">It finishes its last move, then stops. Not confirmed.</string>
+    <string name="interrupted_autopilot">Autopilot · off</string>
+    <string name="interrupted_autopilot_detail">It never restarts on its own. The chat is kept.</string>
+    <string name="interrupted_reconnect">Reconnect devices</string>
+</resources>

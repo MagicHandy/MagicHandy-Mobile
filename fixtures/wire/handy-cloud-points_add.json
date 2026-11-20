@@ -1,0 +1,30 @@
+{
+  "auth": {
+    "api_major": 3,
+    "application_id": "app-public-id",
+    "connection_key_set": true,
+    "firmware_major": 4
+  },
+  "body": {
+    "flush": true,
+    "points": [
+      {
+        "t": 0,
+        "x": 0
+      },
+      {
+        "t": 125,
+        "x": 50
+      },
+      {
+        "t": 250,
+        "x": 100
+      }
+    ],
+    "tail_point_stream_index": 2
+  },
+  "method": "PUT",
+  "operation": "points_add",
+  "path": "hsp/add",
+  "transport": "handy_cloud_rest"
+}

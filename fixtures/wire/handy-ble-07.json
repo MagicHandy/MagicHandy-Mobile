@@ -1,0 +1,9 @@
+{
+  "body": {
+    "clock_offset": -1234567890,
+    "rtd": 3
+  },
+  "hex": "0801120daa2c0808a38bb0990910031008",
+  "id": 8,
+  "path": "clock/offset/set"
+}

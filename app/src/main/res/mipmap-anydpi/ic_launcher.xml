@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TODO(M1): replace the placeholder mark with the brand mark and star (ADR 0073/0074). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/window_ground" />
+    <foreground android:drawable="@drawable/ic_launcher_mark" />
+    <monochrome android:drawable="@drawable/ic_launcher_mark" />
+</adaptive-icon>

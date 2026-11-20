@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>After Android closed the app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:22px 16px 10px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+h1{margin:0;font-size:22px;font-weight:600;line-height:1.25}
+.lead{margin:0;color:#c9c6c0;line-height:1.45}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:2px 12px}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;padding:10px 0 4px}
+.d{display:grid;grid-template-columns:12px 1fr;gap:3px 10px;padding:10px 0;border-top:1px solid #262a30}
+.cap + .d{border-top:0}
+.d .dot{margin-top:5px}
+.dn{font-weight:600}
+.dd{grid-column:2;font-size:13px;color:#c9c6c0;line-height:1.4}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+.idle{background:#9aa1a9}.warn{background:#d8b66a}.bad{background:#d6453f}
+.tip{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.tip p{margin:0;font-size:13px;color:#c9c6c0;line-height:1.45}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sec{height:44px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px}
+.pri{height:44px;border:0;border-radius:6px;background:#5b9dd9;color:#0b131c;font-weight:600;font-size:14px}
+.hint{font-size:12px;color:#9aa1a9;text-align:center;margin:0}
+.ft{background:#121417;border-top:1px solid #262a30;padding:8px 12px 10px}
+.stop{width:100%;height:56px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <h1>MagicHandy stopped unexpectedly while motion was running</h1>
+    <p class="lead">At <span class="mono">21:42</span>. Stop has just been sent again to every saved cloud device. Uncertain devices come first.</p>
+    <div class="card">
+      <div class="cap">What happened</div>
+      <div class="d"><i class="dot bad"></i><span class="dn">VacuGlide · Stop unconfirmed</span><span class="dd">It may still run at its last speed. Switch it off at the device.</span></div>
+      <div class="d"><i class="dot warn"></i><span class="dn">Vibrator · not confirmed</span><span class="dd">Intiface Central should stop it when the app disconnects. Check it.</span></div>
+      <div class="d"><i class="dot idle"></i><span class="dn">The Handy · expected paused</span><span class="dd">It pauses when its motion buffer runs out, about two seconds after the app stops. Not confirmed.</span></div>
+      <div class="d"><i class="dot idle"></i><span class="dn">Autopilot · off</span><span class="dd">It never restarts on its own.</span></div>
+    </div>
+    <div class="tip">
+      <b>Make this less likely</b>
+      <p>If Android closed MagicHandy to save battery, unrestricted battery use makes this less likely.</p>
+      <button class="sec" type="button">Allow unrestricted battery</button>
+    </div>
+    <div class="row" style="margin-top: auto"><button class="sec" type="button">Reconnect devices</button><button class="pri" type="button">Back to chat</button></div>
+    <p class="hint">Stop sends Stop to every saved device again, connected or not.</p>
+  </div>
+  <footer class="ft"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

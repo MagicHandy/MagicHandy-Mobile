@@ -1,0 +1,16 @@
+{
+  "auth": {
+    "api_major": 3,
+    "application_id": "app-public-id",
+    "connection_key_set": true,
+    "firmware_major": 4
+  },
+  "body": {
+    "max": 0.9,
+    "min": 0.1
+  },
+  "method": "PUT",
+  "operation": "stroke_window",
+  "path": "slider/stroke",
+  "transport": "handy_cloud_rest"
+}

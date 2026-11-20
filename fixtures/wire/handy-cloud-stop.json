@@ -1,0 +1,13 @@
+{
+  "auth": {
+    "api_major": 3,
+    "application_id": "app-public-id",
+    "connection_key_set": true,
+    "firmware_major": 4
+  },
+  "body": {},
+  "method": "PUT",
+  "operation": "stop",
+  "path": "hsp/stop",
+  "transport": "handy_cloud_rest"
+}

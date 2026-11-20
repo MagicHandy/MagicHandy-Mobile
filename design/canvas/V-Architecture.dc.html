@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Architecture</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.board{width:2270px;height:900px;box-sizing:border-box;background:#0b0c0e;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:18px;padding:32px 0 0}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.head{display:flex;align-items:baseline;gap:18px}
+.head b{font-size:28px}
+.head span{color:#9aa1a9;font-size:15px}
+.mods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.mod{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.mod h3{margin:0;font-size:20px;display:flex;align-items:baseline;gap:10px}
+.mod h3 span{font-size:13px;color:#9aa1a9;font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:13px;border:1px solid #353b43;border-radius:4px;padding:4px 8px;color:#d9d6d0}
+.mod p{margin:0;font-size:13px;color:#9aa1a9;line-height:1.5}
+.low{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:20px}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.card h4{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:7px;font-size:14px;line-height:1.45;color:#d9d6d0}
+.steps div{display:grid;grid-template-columns:22px 1fr;gap:8px}
+.steps i{font-style:normal;color:#5b9dd9;font-weight:700}
+.tbl{display:grid;grid-template-columns:150px 1fr;gap:7px 12px;font-size:14px;line-height:1.4;color:#d9d6d0}
+.tbl b{color:#e9e7e2;font-weight:600}
+</style>
+</helmet>
+<div class="board">
+  <div class="head"><b>Architecture · Kotlin only</b><span>Three modules, one engine, one process. No Go, no local server, no WebView.</span></div>
+  <div class="mods">
+    <div class="mod"><h3>:app<span>Android</span></h3><div class="chips"><span>Compose screens and sheets</span><span>Foreground service</span><span>Notification and tile</span><span>Android Bluetooth GATT</span><span>Room database</span><span>Keystore vault</span><span>Custom Tab sign-in</span><span>Network watcher</span><span>Debug simulators</span></div><p>The UI observes state and sends intents. Nothing here builds a motion command.</p></div>
+    <div class="mod"><h3>:core<span>pure Kotlin</span></h3><div class="chips"><span>Chat turns</span><span>Stop and motion control</span><span>Device manager</span><span>Autopilot planner</span><span>Chat contracts and repair</span><span>Motion engine</span><span>Clock and ports</span></div><p>Holds the session logic that lived in the desktop's HTTP layer. Chat and Autopilot emit semantic targets; only the engine dispatches.</p></div>
+    <div class="mod"><h3>:transport<span>JVM Kotlin</span></h3><div class="chips"><span>Handy Bluetooth and Cloud</span><span>Coyote packets</span><span>Buttplug over WebSocket</span><span>Autoblow cloud</span><span>ChatGPT Responses</span><span>OpenRouter</span><span>OpenAI-compatible and Ollama</span></div><p>Maps engine frames to exact wire bytes and requests. Tested byte for byte against fixtures exported from the desktop.</p></div>
+  </div>
+  <div class="low">
+    <div class="card"><h4>Stop path</h4><div class="steps"><div><i>1</i><span>Haptic on press, before any reply.</span></div><div><i>2</i><span>Advance the epoch; close admission; cancel the chat turn, Autopilot and retargets.</span></div><div><i>3</i><span>Stop every device in parallel on a priority path, each with its own deadline.</span></div><div><i>4</i><span>Receipt: confirmed, pending, unconfirmed or no device, uncertain first.</span></div><div><i>5</i><span>A late reply can update evidence, never reopen admission.</span></div></div></div>
+    <div class="card"><h4>Storage</h4><div class="tbl"><b>Room database</b><span>chats, memory, connections, revisioned settings</span><b>Run journal</b><span>atomic file, written before the first motion command; no journal, no start</span><b>Secrets vault</b><span>Keystore-sealed keys and tokens</span><b>Diagnostics</b><span>small redacted ring, shared only on request</span></div></div>
+    <div class="card"><h4>Lifecycle and order</h4><div class="tbl"><b>Service</b><span>runs while devices are connected, motion runs or Autopilot is on; chat-only replies stay with the screen</span><b>Exit</b><span>swipe-away stops all; cold start reads the journal, re-sends Stop to cloud devices, shows Run interrupted</span><b>Order</b><span class="mono" style="font-size: 13px">M0 fixtures + spike · M1 engine, Handy, hosted chat · M2 Autopilot · M3 LAN models, other devices · M4 VacuGlide, hardening</span></div></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2270,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

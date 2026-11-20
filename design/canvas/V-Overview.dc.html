@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MagicHandy Mobile v1 direction</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.board{width:2270px;height:900px;box-sizing:border-box;background:#0b0c0e;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;display:grid;grid-template-columns:520px 300px 470px 470px 430px;column-gap:20px;padding:36px 0 0}
+.col{display:flex;flex-direction:column;gap:14px}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+h1{margin:0;font-size:34px;line-height:1.1}
+h2{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;font-weight:600}
+p{margin:0;line-height:1.5;font-size:15px;color:#d9d6d0}
+.small{font-size:13px;color:#9aa1a9;line-height:1.5}
+ul{margin:0;padding-left:18px;line-height:1.6;font-size:14px;color:#d9d6d0}
+.phone{width:240px;height:440px;border:2px solid #353b43;border-radius:22px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;align-self:center}
+.band{border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;text-align:center;padding:4px}
+.b1{flex:1;background:#16181b;color:#9aa1a9}
+.b2{height:86px;background:#1d2024;color:#c9c6c0;flex-direction:column;gap:2px}
+.b3{height:40px;background:rgba(91,157,217,.15);color:#e9e7e2}
+.b4{height:46px;background:#c43c36;color:#ffffff}
+.sw{display:flex;gap:6px;align-items:center;font-size:13px}
+.sw i{display:block;width:26px;height:26px;border-radius:6px;border:1px solid rgba(255,255,255,.14)}
+.tbl{display:grid;grid-template-columns:1fr auto;gap:7px 12px;font-size:14px;align-items:center}
+.tag{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:2px 6px;justify-self:end}
+.rm{background:rgba(214,69,63,.16);color:#f0a39f}
+.df{background:rgba(216,182,106,.16);color:#e6cf97}
+.sp{background:rgba(91,157,217,.18);color:#bcd8f2}
+.dec{counter-reset:d;display:flex;flex-direction:column;gap:9px}
+.dec div{display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:14px;line-height:1.45;color:#d9d6d0}
+.dec b{color:#e9e7e2}
+.num{color:#5b9dd9;font-weight:700}
+</style>
+</helmet>
+<div class="board">
+  <div class="col">
+    <div style="display: flex; gap: 16px; align-items: center"><img src="/_blob/4be6eb488f7b9e8086030487dcdb77a1" alt="MagicHandy mark" style="width: 64px; height: 64px; border-radius: 14px"><h1>MagicHandy Mobile<br><span style="font-size: 22px; color: #9aa1a9; font-weight: 500">v1 direction · Graphite Mobile</span></h1></div>
+    <div class="card">
+      <p>A conversation you run from a phone in one hand. Connect the devices you want, then start motion yourself or let Autopilot take over. One line says what the app is commanding; tap it for Live. Settings that can wait sit in one compact sheet. Stop is always the last row.</p>
+      <p class="small">Not in v1: pattern library, video and funscripts, voice, Labs, desktop administration, model installs. On-device models come after v1.</p>
+    </div>
+    <div class="card">
+      <h2>Routes and sheets</h2>
+      <ul><li>Routes: Before you start · Chat · Live · Devices · Device setup and detail · App settings · Models · Provider setup · Run interrupted</li><li>Sheets: chats · settings · motion mode · Autopilot · persona · chat model · memory · device type · Stop receipt</li></ul>
+    </div>
+    <div class="card">
+      <h2>Palettes · semantic colours fixed</h2>
+      <div class="sw"><i style="background: #0e0f11"></i><i style="background: #16181b"></i><i style="background: #e9e7e2"></i><span>Steel Azure</span><i style="background: #000000; margin-left: 10px"></i><i style="background: #111111"></i><i style="background: #e9e4db"></i><span>Lowlight</span></div>
+      <div class="sw"><i style="background: #000000"></i><i style="background: #ffffff"></i><span>High Contrast</span><i style="background: #5b9dd9; margin-left: 10px"></i><i style="background: #287d42"></i><i style="background: #4fc06d"></i><i style="background: #d8b66a"></i><i style="background: #d6453f"></i><i style="background: #c43c36"></i><span>accent · start · ok · warn · fail · Stop</span></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="phone" aria-label="The app frame">
+      <div class="band b1">Content<br>chat · live · devices</div>
+      <div class="band b2"><span>Deck</span><span style="font-weight: 500; color: #9aa1a9">Now playing · Autopilot · Pause · Edge · composer</span></div>
+      <div class="band b3">Chat · Devices · Settings ▴</div>
+      <div class="band b4">Stop</div>
+    </div>
+    <p class="small" style="text-align: center">Tabs only on top-level screens. Sheets open above the footer. While typing, Stop sits directly above the keys.</p>
+  </div>
+  <div class="col">
+    <div class="card">
+      <h2>Cut or simplified for mobile</h2>
+      <div class="tbl">
+        <span>Pattern library and original Creative mode</span><span class="tag rm">Removed</span>
+        <span>Volume-key Stop, extra notification buttons</span><span class="tag rm">Removed</span>
+        <span>Keep going after a device fails</span><span class="tag rm">Removed</span>
+        <span>Nearby-server scan (enter the address)</span><span class="tag df">Deferred</span>
+        <span>Persona archive import</span><span class="tag df">Deferred</span>
+        <span>Session buildup bar → optional finish target</span><span class="tag sp">Simplified</span>
+        <span>Model roles: chat and Autopilot</span><span class="tag sp">Simplified</span>
+        <span>Three capability levels, one check-in control</span><span class="tag sp">Simplified</span>
+        <span>Chats save themselves; one controlling screen</span><span class="tag sp">Simplified</span>
+        <span>Chat-only replies don't keep the service alive</span><span class="tag sp">Simplified</span>
+        <span>Three code modules instead of about twelve</span><span class="tag sp">Simplified</span>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card">
+      <h2>Kept on purpose</h2>
+      <ul><li>Every desktop device family, including several Handys</li><li>Autopilot with the screen off</li><li>Layered, Simple and Off at every capability level</li><li>Edge, which you asked for on the phone remote</li><li>Style, memory, five languages</li><li>Notification, lock screen and tile Stop</li></ul>
+    </div>
+    <div class="card">
+      <h2>Rules nothing may break</h2>
+      <ul><li>One engine writes to devices; chat and Autopilot only ask</li><li>Stop fences late commands and reaches every device</li><li>Outcomes are never claimed without an acknowledgement</li><li>Connecting never starts motion; reconnecting never rejoins a run</li><li>The run journal is written before the first motion command</li></ul>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card">
+      <h2>Needs your decision</h2>
+      <div class="dec">
+        <div><span class="num">1</span><span><b>The Handy via Intiface:</b> remove on mobile. Bluetooth and Cloud reach the same Handy without Intiface's Stop caveat.</span></div>
+        <div><span class="num">2</span><span><b>Personas:</b> built-in presets only in v1.</span></div>
+        <div><span class="num">3</span><span><b>Palettes:</b> Steel Azure, Lowlight, High Contrast.</span></div>
+        <div><span class="num">4</span><span><b>Settings</b> as the third bottom item, opening the sheet (drawn).</span></div>
+        <div><span class="num">5</span><span><b>Edge:</b> Astra suggests deferring it; kept here.</span></div>
+        <div><span class="num">6</span><span><b>ChatGPT sign-in</b> may need a few seconds of loopback callback, the one exception to "no local server".</span></div>
+        <div><span class="num">7</span><span><b>Memory</b> off by default.</span></div>
+        <div><span class="num">8</span><span><b>VacuGlide check-in</b> every 15 minutes by default.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2270,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+package com.magichandy.mobile.core.testing
+
+import com.magichandy.mobile.core.api.ChatEntry
+import com.magichandy.mobile.core.api.ChatId
+import com.magichandy.mobile.core.api.ChatSummary
+import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.PersonaId
+import com.magichandy.mobile.core.ports.ChatArchive
+import com.magichandy.mobile.core.ports.ChatStore
+import com.magichandy.mobile.core.ports.ModelCatalog
+import com.magichandy.mobile.core.ports.ModelStore
+import com.magichandy.mobile.core.ports.PreferenceEdit
+import com.magichandy.mobile.core.ports.SavedChat
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.SettingsDocument
+import com.magichandy.mobile.core.ports.SettingsStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+/** In-process transactional chat and memory store for debug builds. */
+public class InMemoryChats : ChatStore {
+    private val current = MutableStateFlow(ChatArchive())
+    override val state: StateFlow<ChatArchive> = current.asStateFlow()
+
+    override suspend fun create(chat: ChatSummary) {
+        current.update {
+            if (chat.id in it.chats) it
+            else it.copy(chats = it.chats + (chat.id to SavedChat(chat, emptyList())))
+        }
+    }
+
+    override suspend fun append(
+        chat: ChatId,
+        entry: ChatEntry,
+        persona: PersonaId,
+        memories: List<String>,
+        admitted: () -> Boolean,
+    ): Boolean {
+        while (true) {
+            val old = current.value
+            val transcript = old.chats[chat] ?: return false
+            if (transcript.messages.any { it.id == entry.id }) return true
+            val next =
+                transcript.copy(
+                    summary = transcript.summary.copy(lastActivity = entry.at),
+                    messages = transcript.messages + entry,
+                )
+            val memory =
+                if (memories.isEmpty()) old.memory
+                else old.memory + (persona to (old.memory[persona].orEmpty() + memories))
+            val result = old.copy(chats = old.chats + (chat to next), memory = memory)
+            if (!admitted()) return false
+            if (current.compareAndSet(old, result)) return true
+        }
+    }
+
+    override suspend fun clearMemory(persona: PersonaId) {
+        current.update { it.copy(memory = it.memory - persona) }
+    }
+
+    override suspend fun clearAll() {
+        current.value = ChatArchive()
+    }
+}
+
+/** In-process named connections and role bindings for debug builds. */
+public class InMemoryModels(initial: ModelCatalog = ModelCatalog()) : ModelStore {
+    private val current = MutableStateFlow(initial)
+    override val state: StateFlow<ModelCatalog> = current.asStateFlow()
+
+    override suspend fun save(model: SavedModel) {
+        current.update {
+            it.copy(models = it.models + (model.info.id to model), chat = it.chat ?: model.info.id)
+        }
+    }
+
+    override suspend fun remove(id: ConnectionId) {
+        current.update {
+            it.copy(
+                models = it.models - id,
+                chat = it.chat?.takeUnless { role -> role == id },
+                planner = it.planner?.takeUnless { role -> role == id },
+            )
+        }
+    }
+
+    override suspend fun bindChat(id: ConnectionId) {
+        current.update { if (id in it.models) it.copy(chat = id) else it }
+    }
+
+    override suspend fun bindPlanner(id: ConnectionId?) {
+        current.update { if (id == null || id in it.models) it.copy(planner = id) else it }
+    }
+}
+
+/** In-memory implementation of the revisioned dirty-field settings transaction for debug builds. */
+public class InMemorySettings(initial: SettingsDocument = SettingsDocument()) : SettingsStore {
+    private val current = MutableStateFlow(initial)
+    override val state: StateFlow<SettingsDocument> = current.asStateFlow()
+
+    override suspend fun patch(baseRevision: Long, edits: List<PreferenceEdit>): Boolean {
+        while (true) {
+            val old = current.value
+            if (
+                baseRevision !in 0..old.revision ||
+                    edits.any { (old.changedAt[it.field] ?: 0) > baseRevision }
+            )
+                return false
+            if (edits.isEmpty()) return true
+            val revision = old.revision + 1
+            val next =
+                SettingsDocument(
+                    revision,
+                    edits.fold(old.values) { prefs, edit -> edit.apply(prefs) },
+                    old.changedAt + edits.associate { it.field to revision },
+                )
+            if (current.compareAndSet(old, next)) return true
+        }
+    }
+}

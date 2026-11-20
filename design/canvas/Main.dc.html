@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MagicHandy Mobile directions</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;family=DM+Sans:wght@300;400;500;700&amp;family=DM+Mono:wght@400;500&amp;family=Space+Grotesk:wght@400;500;700&amp;family=Space+Mono:wght@400;700&amp;family=Roboto:wght@400;500;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+.board{width:2270px;height:820px;box-sizing:border-box;background:#0b0c0e;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:28px;padding:40px 0 0}
+.top{display:flex;gap:40px;align-items:flex-start;padding:0 0 0 0}
+.brand{display:flex;gap:18px;align-items:center;width:390px;flex:none}
+.brand h1{margin:0;font-size:34px;line-height:1.1;font-weight:700}
+.brand p{margin:6px 0 0;color:#9aa1a9;font-size:14px;line-height:1.4}
+.principles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;flex:1;padding-right:0}
+.pr{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.pr b{font-size:15px}
+.pr span{color:#9aa1a9;font-size:13px;line-height:1.45}
+.cols{display:grid;grid-template-columns:repeat(5,390px);column-gap:80px}
+.col{border-radius:12px;padding:22px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;height:540px}
+.tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.name{font-size:28px;font-weight:700;line-height:1.1}
+.idea{font-size:14px;line-height:1.5;margin:0}
+.sw{display:flex;gap:8px}
+.sw i{display:block;width:34px;height:34px;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
+.type{display:flex;align-items:baseline;gap:14px}
+.type .big{font-size:40px;line-height:1}
+.type .num{font-size:22px}
+.cmp{display:flex;flex-direction:column;gap:10px;margin-top:auto}
+.row{display:flex;gap:10px;align-items:center}
+.notes{font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:4px}
+.notes b{font-weight:600}
+</style>
+</helmet>
+<div class="board">
+  <div class="top">
+    <div class="brand">
+      <img src="/_blob/4be6eb488f7b9e8086030487dcdb77a1" alt="MagicHandy mark" style="width: 72px; height: 72px; border-radius: 14px">
+      <div>
+        <h1>MagicHandy Mobile</h1>
+        <p>Design directions for chat, Autopilot and devices on Android. Sketches, not specs.</p>
+      </div>
+    </div>
+    <div class="principles">
+      <div class="pr"><b>Stop never moves</b><span>Same spot on every screen, in thumb reach, at least 56 dp. Red only for Stop. Also on the notification, lock screen and Quick Settings.</span></div>
+      <div class="pr"><b>Thumb zone first</b><span>Session controls live in the lower half. Anything changed once a session or less sits in one compact settings menu.</span></div>
+      <div class="pr"><b>Glance, then act</b><span>One-line Now playing. Status is a dot plus a word. Commanded values say they are commanded.</span></div>
+      <div class="pr"><b>Dark by default</b><span>Built for dim rooms and OLED screens. No glow, no flashing, reduced motion respected.</span></div>
+      <div class="pr"><b>Honest under failure</b><span>Unconfirmed Stop, a lost link or held motion is said plainly, with one next step.</span></div>
+      <div class="pr"><b>Survives Android</b><span>A foreground service keeps runs alive; if Android closes the app anyway, the next launch says what happened.</span></div>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="col" style="background: #16181b; border: 1px solid #262a30; font-family: Inter, system-ui, sans-serif">
+      <span class="tag" style="color: #5b9dd9">Adapted · Graphite</span>
+      <span class="name">Graphite Touch</span>
+      <p class="idea" style="color: #c9c6c0">The desktop's Graphite sized for thumbs. A reserved footer holds a full-width Stop row above three tabs, and the control cards open as sheets.</p>
+      <div class="sw"><i style="background: #0e0f11"></i><i style="background: #16181b"></i><i style="background: #1d2024"></i><i style="background: #e9e7e2"></i><i style="background: #5b9dd9"></i><i style="background: #287d42"></i><i style="background: #c43c36"></i></div>
+      <div class="type"><span class="big" style="font-weight: 600">Aa</span><span class="num" style="font-family: 'JetBrains Mono', monospace">Pace 48%</span><span style="color: #9aa1a9; font-size: 12px">Inter · JetBrains Mono</span></div>
+      <div class="notes" style="color: #c9c6c0"><span><b>Best for</b> continuity with the desktop and the phone remote, and the least new design work.</span><span><b>Watch</b> the two-row footer, which costs about 112 dp. Cards stay dense.</span></div>
+      <div class="cmp">
+        <div class="row" style="font-size: 13px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #4fc06d"></span><span>Playing</span><span style="color: #9aa1a9; font-family: 'JetBrains Mono', monospace">Pace 48%</span></div>
+        <button type="button" style="height: 44px; border: 0; border-radius: 6px; background: #287d42; color: #f2fbf4; font: 600 14px Inter, sans-serif">Start Autopilot</button>
+        <button type="button" style="height: 52px; border: 0; border-radius: 6px; background: #c43c36; color: #ffffff; font: 700 16px Inter, sans-serif; letter-spacing: .02em">Stop</button>
+      </div>
+    </div>
+    <div class="col" style="background: #16181b; border: 1px solid #262a30">
+      <span class="tag" style="color: #5b9dd9">Adapted · Graphite</span>
+      <span class="name">Graphite Deck</span>
+      <p class="idea" style="color: #c9c6c0">Graphite rebuilt for one hand. Every action sits in a bottom deck (Now playing, chips, composer, Stop, tabs), and the top half is for reading.</p>
+      <div class="sw"><i style="background: #0e0f11"></i><i style="background: #16181b"></i><i style="background: #1d2024"></i><i style="background: #e9e7e2"></i><i style="background: #5b9dd9"></i><i style="background: #287d42"></i><i style="background: #c43c36"></i></div>
+      <div class="type"><span class="big" style="font-weight: 600">Aa</span><span class="num" style="font-family: 'JetBrains Mono', monospace">48</span><span style="color: #9aa1a9; font-size: 12px">Inter · JetBrains Mono</span></div>
+      <div class="notes" style="color: #c9c6c0"><span><b>Best for</b> one-handed use, with nothing to reach for.</span><span><b>Watch</b> the tall deck, which shortens the transcript and must fold away when the keyboard opens.</span></div>
+      <div class="cmp">
+        <div class="row" style="gap: 8px"><button type="button" style="height: 44px; flex: 1; border: 1px solid #353b43; border-radius: 6px; background: transparent; color: #e9e7e2; font: 600 13px Inter, sans-serif">Pause</button><button type="button" style="height: 44px; flex: 1; border: 1px solid #353b43; border-radius: 6px; background: transparent; color: #e9e7e2; font: 600 13px Inter, sans-serif">Edge</button><button type="button" style="height: 44px; flex: 1.4; border: 0; border-radius: 6px; background: rgba(91,157,217,.15); color: #e9e7e2; font: 600 13px Inter, sans-serif">Autopilot on</button></div>
+        <button type="button" style="height: 56px; border: 0; border-radius: 6px; background: #c43c36; color: #ffffff; font: 700 17px Inter, sans-serif">Stop</button>
+      </div>
+    </div>
+    <div class="col" style="background: #000000; border: 1px solid #1c1714; font-family: 'DM Sans', sans-serif">
+      <span class="tag" style="color: #e0a46c">New</span>
+      <span class="name" style="font-weight: 500; color: #efe4d3">Lowlight</span>
+      <p class="idea" style="color: #cdbfa9">For dark rooms. True black for OLED, warm dimmed text, huge numerals you can read at a glance, and almost no chrome.</p>
+      <div class="sw"><i style="background: #000000"></i><i style="background: #0c0a09"></i><i style="background: #1c1714"></i><i style="background: #efe4d3"></i><i style="background: #e0a46c"></i><i style="background: #2f8a4f"></i><i style="background: #cf3f37"></i></div>
+      <div class="type"><span class="big" style="font-weight: 300; font-size: 56px; color: #efe4d3">48</span><span class="num" style="font-family: 'DM Mono', monospace; color: #cdbfa9">15–85</span><span style="color: #8c8173; font-size: 12px">DM Sans · DM Mono</span></div>
+      <div class="notes" style="color: #cdbfa9"><span><b>Best for</b> night use, battery life and glanceability.</span><span><b>Watch</b> daylight legibility. Keep contrast at AA even with the dim palette, and offer a day theme.</span></div>
+      <div class="cmp">
+        <div style="height: 2px; background: #2a231d; position: relative"><div style="position: absolute; left: 0; top: 0; height: 2px; width: 48%; background: #e0a46c"></div></div>
+        <button type="button" style="height: 60px; border: 0; border-radius: 4px; background: #cf3f37; color: #ffffff; font: 700 17px 'DM Sans', sans-serif; letter-spacing: .04em">STOP</button>
+      </div>
+    </div>
+    <div class="col" style="background: #18191b; border: 1px solid #2c2f34; font-family: 'Space Grotesk', sans-serif">
+      <span class="tag" style="color: #a9d4ff">New</span>
+      <span class="name">Instrument</span>
+      <p class="idea" style="color: #c9ccd2">A hardware remote. A readout window at the top, long faders and big keys below, usable without looking closely.</p>
+      <div class="sw"><i style="background: #18191b"></i><i style="background: #222428"></i><i style="background: #2c2f34"></i><i style="background: #0a1118"></i><i style="background: #a9d4ff"></i><i style="background: #2e8a4c"></i><i style="background: #c8372f"></i></div>
+      <div class="type"><span class="big" style="font-weight: 700">Aa</span><span class="num" style="font-family: 'Space Mono', monospace; color: #a9d4ff; background: #0a1118; padding: 2px 8px; border-radius: 4px">PACE 48</span><span style="color: #9aa1a9; font-size: 12px">Space Grotesk · Space Mono</span></div>
+      <div class="notes" style="color: #c9ccd2"><span><b>Best for</b> direct manual control and reading Autopilot at a glance, with large targets.</span><span><b>Watch</b> how little it feels like a chat app. Faders need careful TalkBack support.</span></div>
+      <div class="cmp">
+        <div class="row" style="gap: 8px"><button type="button" style="height: 52px; flex: 1; border: 1px solid #3a3e44; border-radius: 8px; background: #2c2f34; color: #e6e8eb; font: 700 13px 'Space Grotesk', sans-serif; letter-spacing: .08em">PAUSE</button><button type="button" style="height: 52px; flex: 1; border: 1px solid #3a3e44; border-radius: 8px; background: #2c2f34; color: #e6e8eb; font: 700 13px 'Space Grotesk', sans-serif; letter-spacing: .08em">EDGE</button></div>
+        <button type="button" style="height: 64px; border: 1px solid #e0544c; border-radius: 10px; background: #c8372f; color: #ffffff; font: 700 18px 'Space Grotesk', sans-serif; letter-spacing: .12em">STOP</button>
+      </div>
+    </div>
+    <div class="col" style="background: #111418; border: 1px solid #272a30; font-family: Roboto, sans-serif; border-radius: 24px">
+      <span class="tag" style="color: #a8c8ef">New</span>
+      <span class="name" style="font-weight: 500">Native</span>
+      <p class="idea" style="color: #c4c6cf">Android's own patterns (Material 3): tonal surfaces, large rounded shapes, a navigation bar, and Stop as a floating action above it.</p>
+      <div class="sw"><i style="background: #111418; border-radius: 17px"></i><i style="background: #1d2024; border-radius: 17px"></i><i style="background: #272a30; border-radius: 17px"></i><i style="background: #e2e2e9; border-radius: 17px"></i><i style="background: #a8c8ef; border-radius: 17px"></i><i style="background: #2e8a4c; border-radius: 17px"></i><i style="background: #c43c36; border-radius: 17px"></i></div>
+      <div class="type"><span class="big" style="font-weight: 400">Aa</span><span class="num" style="font-family: 'Roboto Mono', monospace">48%</span><span style="color: #8e9099; font-size: 12px">Roboto · Roboto Mono</span></div>
+      <div class="notes" style="color: #c4c6cf"><span><b>Best for</b> feeling familiar on any Android phone. Platform accessibility comes for free.</span><span><b>Watch</b> the generic look. Dynamic color must never touch the safety colors.</span></div>
+      <div class="cmp">
+        <button type="button" style="height: 48px; border: 0; border-radius: 24px; background: #2e8a4c; color: #f2fbf4; font: 500 15px Roboto, sans-serif">Start Autopilot</button>
+        <button type="button" style="height: 64px; border: 0; border-radius: 18px; background: #c43c36; color: #ffffff; font: 500 18px Roboto, sans-serif">Stop</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2270,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

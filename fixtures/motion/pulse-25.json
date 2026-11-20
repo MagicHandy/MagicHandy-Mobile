@@ -1,0 +1,239 @@
+{
+  "authored": [
+    {
+      "time_ms": 0,
+      "position_percent": 15
+    },
+    {
+      "time_ms": 550,
+      "position_percent": 100
+    },
+    {
+      "time_ms": 1100,
+      "position_percent": 25
+    },
+    {
+      "time_ms": 1650,
+      "position_percent": 85
+    },
+    {
+      "time_ms": 2200,
+      "position_percent": 15
+    },
+    {
+      "time_ms": 2750,
+      "position_percent": 100
+    },
+    {
+      "time_ms": 3300,
+      "position_percent": 25
+    },
+    {
+      "time_ms": 3850,
+      "position_percent": 85
+    },
+    {
+      "time_ms": 4400,
+      "position_percent": 15
+    },
+    {
+      "time_ms": 4950,
+      "position_percent": 100
+    },
+    {
+      "time_ms": 5500,
+      "position_percent": 25
+    },
+    {
+      "time_ms": 6050,
+      "position_percent": 85
+    },
+    {
+      "time_ms": 6600,
+      "position_percent": 15
+    }
+  ],
+  "cycle_ms": 6600,
+  "frames": [
+    {
+      "time_ms": 0,
+      "position_percent": 15
+    },
+    {
+      "time_ms": 30,
+      "position_percent": 17
+    },
+    {
+      "time_ms": 630,
+      "position_percent": 98
+    },
+    {
+      "time_ms": 658,
+      "position_percent": 100
+    },
+    {
+      "time_ms": 680,
+      "position_percent": 99
+    },
+    {
+      "time_ms": 1290,
+      "position_percent": 27
+    },
+    {
+      "time_ms": 1316,
+      "position_percent": 25
+    },
+    {
+      "time_ms": 1335,
+      "position_percent": 26
+    },
+    {
+      "time_ms": 1955,
+      "position_percent": 84
+    },
+    {
+      "time_ms": 1974,
+      "position_percent": 85
+    },
+    {
+      "time_ms": 1995,
+      "position_percent": 84
+    },
+    {
+      "time_ms": 2610,
+      "position_percent": 16
+    },
+    {
+      "time_ms": 2632,
+      "position_percent": 15
+    },
+    {
+      "time_ms": 2660,
+      "position_percent": 17
+    },
+    {
+      "time_ms": 3265,
+      "position_percent": 99
+    },
+    {
+      "time_ms": 3290,
+      "position_percent": 100
+    },
+    {
+      "time_ms": 3315,
+      "position_percent": 98
+    },
+    {
+      "time_ms": 3925,
+      "position_percent": 26
+    },
+    {
+      "time_ms": 3948,
+      "position_percent": 25
+    },
+    {
+      "time_ms": 3965,
+      "position_percent": 26
+    },
+    {
+      "time_ms": 4585,
+      "position_percent": 84
+    },
+    {
+      "time_ms": 4605,
+      "position_percent": 85
+    },
+    {
+      "time_ms": 4630,
+      "position_percent": 84
+    },
+    {
+      "time_ms": 5240,
+      "position_percent": 16
+    },
+    {
+      "time_ms": 5263,
+      "position_percent": 15
+    },
+    {
+      "time_ms": 5290,
+      "position_percent": 17
+    },
+    {
+      "time_ms": 5895,
+      "position_percent": 98
+    },
+    {
+      "time_ms": 5921,
+      "position_percent": 100
+    },
+    {
+      "time_ms": 5945,
+      "position_percent": 99
+    },
+    {
+      "time_ms": 6555,
+      "position_percent": 26
+    },
+    {
+      "time_ms": 6579,
+      "position_percent": 25
+    },
+    {
+      "time_ms": 6600,
+      "position_percent": 26
+    },
+    {
+      "time_ms": 7215,
+      "position_percent": 84
+    },
+    {
+      "time_ms": 7237,
+      "position_percent": 85
+    },
+    {
+      "time_ms": 7260,
+      "position_percent": 84
+    },
+    {
+      "time_ms": 7870,
+      "position_percent": 17
+    },
+    {
+      "time_ms": 7895,
+      "position_percent": 15
+    },
+    {
+      "time_ms": 7925,
+      "position_percent": 17
+    },
+    {
+      "time_ms": 8525,
+      "position_percent": 98
+    },
+    {
+      "time_ms": 8553,
+      "position_percent": 100
+    },
+    {
+      "time_ms": 8575,
+      "position_percent": 99
+    },
+    {
+      "time_ms": 9185,
+      "position_percent": 27
+    }
+  ],
+  "period_ms": 7895,
+  "settings": {
+    "speed_min_percent": 10,
+    "speed_max_percent": 43,
+    "stroke_min_percent": 0,
+    "stroke_max_percent": 100,
+    "reverse_direction": false,
+    "apply_video_speed_limit": false,
+    "style": "balanced",
+    "handy_model": "handy_original"
+  },
+  "speed_percent": 25
+}

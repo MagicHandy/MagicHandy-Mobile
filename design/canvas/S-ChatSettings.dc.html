@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.behind{height:74px;padding:16px 12px 0;color:#4b5159;font-weight:600;font-size:17px}
+.sheet{flex:1;background:#121417;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:6px 14px 8px;display:flex;flex-direction:column;overflow:hidden}
+.handle{width:36px;height:4px;border-radius:2px;background:#353b43;margin:2px auto 6px}
+.sh{display:flex;align-items:center;height:40px}
+.sh b{font-size:17px;flex:1}
+.done{height:40px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#5b9dd9;font-weight:600;font-size:14px}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;padding:12px 0 4px}
+.r{display:flex;align-items:center;gap:10px;min-height:44px;border-top:1px solid #1f2227}
+.cap + .r{border-top:0}
+.r .k{flex:1}
+.val{display:flex;align-items:center;gap:4px;height:44px;border:0;background:transparent;color:#c9c6c0;font-size:13px;padding:0}
+.val b{color:#e9e7e2;font-weight:500}
+.chev{color:#6b7178;font-size:16px;margin-left:2px}
+.seg{display:grid;grid-template-columns:repeat(3,auto);background:#0b0c0e;border:1px solid #262a30;border-radius:6px;padding:2px;gap:2px}
+.seg button{height:32px;padding:0 9px;border:0;border-radius:4px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:600}
+.seg .on{background:#1d2024;color:#e9e7e2}
+.tg{width:44px;height:26px;border-radius:13px;background:#5b9dd9;position:relative;flex:none}
+.tg::after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#0b131c}
+.tg.off{background:#353b43}
+.tg.off::after{left:3px;right:auto;background:#9aa1a9}
+.stp{display:flex;align-items:center;gap:6px}
+.stp button{width:36px;height:36px;border:1px solid #353b43;border-radius:6px;background:#1d2024;font-size:17px}
+.all{margin-top:auto;height:44px;border:1px solid #262a30;border-radius:6px;background:transparent;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+.ft{background:#121417;border-top:1px solid #262a30;padding:8px 12px 10px}
+.stop{width:100%;height:56px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="behind" aria-hidden="true">Evening</div>
+  <section class="sheet" aria-label="Chat settings">
+    <div class="handle" aria-hidden="true"></div>
+    <div class="sh"><b>Chat settings</b><button class="done" type="button">Done</button></div>
+    <div class="cap">Motion</div>
+    <div class="r"><span class="k">Motion mode</span><button class="val" type="button"><b>Layered</b><span class="chev">›</span></button></div>
+    <div class="r"><span class="k">Style</span><div class="seg" role="group" aria-label="Style"><button type="button" aria-pressed="false">Gentle</button><button class="on" type="button" aria-pressed="true">Balanced</button><button type="button" aria-pressed="false">Intense</button></div></div>
+    <div class="cap">Autopilot</div>
+    <div class="r"><span class="k">How often it changes</span><div class="stp"><button type="button" aria-label="Less often">−</button><span class="mono" style="width: 46px; text-align: center">5 of 8</span><button type="button" aria-label="More often">+</button></div></div>
+    <div class="r"><span class="k">Check-ins</span><div class="seg" role="group" aria-label="Check-ins"><button type="button" aria-pressed="false">Off</button><button type="button" aria-pressed="false">Talk</button><button class="on" type="button" aria-pressed="true">Talk + adjust</button></div></div>
+    <div class="r"><span class="k">Session buildup</span><button class="val" type="button"><b class="mono">20 min</b><span class="chev">›</span></button></div>
+    <div class="cap">Conversation</div>
+    <div class="r"><span class="k">Persona</span><button class="val" type="button"><b>Companion</b><span class="chev">›</span></button></div>
+    <div class="r"><span class="k">Chat model</span><button class="val" type="button"><b>Terra · Advanced</b><span class="chev">›</span></button></div>
+    <div class="r"><span class="k">Memory</span><span class="tg" role="img" aria-label="On"></span></div>
+    <button class="all" type="button">All settings<span class="chev">›</span></button>
+  </section>
+  <footer class="ft"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

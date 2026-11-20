@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Native chat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#111418;color:#e2e2e9;font-family:Roboto,system-ui,sans-serif;font-size:16px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'Roboto Mono',ui-monospace,monospace}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.bar{height:64px;display:flex;align-items:center;gap:12px;padding:8px 8px 0 16px}
+.av{width:40px;height:40px;border-radius:50%;background:#2e4a68;color:#d3e4ff;display:grid;place-items:center;font-weight:500}
+.ttl{flex:1;min-width:0}
+.ttl b{display:block;font-size:20px;font-weight:400}
+.ttl span{font-size:13px;color:#c4c6cf}
+.ib{width:48px;height:48px;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;position:relative}
+.badge{position:absolute;top:11px;right:11px;width:8px;height:8px;border-radius:50%;background:#4fc06d}
+.act{margin:8px 12px 0;background:#1d2024;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.a1{display:flex;align-items:center;gap:10px}
+.a1 .p{margin-left:auto;font-size:28px}
+.lin{height:4px;border-radius:2px;background:#33363c;position:relative}
+.lin i{position:absolute;left:0;top:0;bottom:0;width:48%;border-radius:2px;background:#a8c8ef}
+.a2{display:flex;gap:8px;flex-wrap:wrap}
+.chip{height:32px;padding:0 12px;border:1px solid #8e9099;border-radius:8px;background:transparent;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;color:#c4c6cf}
+.chip.on{background:#2b3a4c;border-color:transparent;color:#d3e4ff}
+.log{flex:1;overflow:hidden;padding:12px 12px 8px;display:flex;flex-direction:column;gap:10px;justify-content:flex-end}
+.b{max-width:82%;padding:10px 14px;border-radius:20px;line-height:1.45;font-size:15px}
+.b.ai{background:#272a30;border-bottom-left-radius:6px}
+.b.me{align-self:flex-end;background:#1f3b57;color:#d3e4ff;border-bottom-right-radius:6px}
+.rc{font-size:12px;color:#c4c6cf;margin:-4px 0 0 6px}
+.caret{display:inline-block;width:2px;height:16px;background:#a8c8ef;vertical-align:-3px;margin-left:2px}
+.sug{display:flex;gap:8px;padding:0 12px 8px}
+.cmp{display:flex;gap:8px;align-items:center;padding:0 12px}
+.cmp input{flex:1;min-width:0;height:52px;box-sizing:border-box;border:0;border-radius:28px;background:#272a30;color:#e2e2e9;padding:0 20px;font:16px Roboto,sans-serif;outline:none}
+.send{width:52px;height:52px;border:0;border-radius:16px;background:#a8c8ef;display:grid;place-items:center}
+.stopwrap{order:2;display:flex;justify-content:center;padding:8px 12px 12px;background:#1d2024}
+.stop{width:100%;height:64px;border:0;border-radius:18px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:10px}
+.nav{order:1;height:72px;margin-top:12px;background:#1d2024;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.nav button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:500;color:#c4c6cf}
+.ind{width:64px;height:32px;border-radius:16px;display:grid;place-items:center}
+.nav .on .ind{background:#2b3a4c}
+.nav .on{color:#e2e2e9}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</helmet>
+<div class="app">
+  <header class="bar">
+    <div class="av" aria-hidden="true">C</div>
+    <div class="ttl"><b>Evening</b><span>Companion · Terra · Advanced</span></div>
+    <button class="ib" type="button" aria-label="Devices, 2 playing"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="#c4c6cf" stroke-width="1.4" aria-hidden="true"><rect x="2" y="3" width="5" height="10" rx="1.5"></rect><rect x="9" y="5" width="5" height="8" rx="1.5"></rect></svg><i class="badge"></i></button>
+    <button class="ib" type="button" aria-label="Chat settings"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="#c4c6cf" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h12M2 11.5h12"></path><circle cx="6" cy="4.5" r="1.8" fill="#111418"></circle><circle cx="10.5" cy="11.5" r="1.8" fill="#111418"></circle></svg></button>
+  </header>
+  <section class="act" aria-label="Now playing">
+    <div class="a1"><svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#2e8a4c"></circle><path d="M5 8.2l2 2 4-4.4" fill="none" stroke="#f2fbf4" stroke-width="1.6"></path></svg><div><div style="font-weight: 500">Playing</div><div style="font-size: 13px; color: #c4c6cf">From chat · Layered · Stroke 15–85</div></div><span class="p mono">48%</span></div>
+    <div class="lin" aria-hidden="true"><i></i></div>
+    <div class="a2"><button class="chip on" type="button">Autopilot · next 0:40</button><button class="chip" type="button">Vibration 40%</button></div>
+  </section>
+  <main class="log">
+    <div class="b me">Slow it down a little and keep the strokes long.</div>
+    <div class="b ai">Easing off. Long, unhurried strokes for a while.</div>
+    <div class="rc mono">Pace 62 → 48 · Stroke 15–85</div>
+    <div class="b me">Perfect. Let Autopilot take over for a bit.</div>
+    <div class="b ai">Autopilot has it. I'll build slowly and check in now and then<span class="caret"></span></div>
+  </main>
+  <div class="sug"><button class="chip" type="button">Pause</button><button class="chip" type="button">Edge</button></div>
+  <div class="cmp"><label class="sr" for="nv-msg">Message</label><input id="nv-msg" type="text" placeholder="Message"><button class="send" type="button" aria-label="Send"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#0b2a47" stroke-width="2" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"></path></svg></button></div>
+  <div class="stopwrap"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="2" fill="#ffffff"></rect></svg>Stop</button></div>
+  <nav class="nav" aria-label="Main">
+    <button class="on" type="button" aria-current="page"><span class="ind"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="#d3e4ff" stroke-width="1.5" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"></path></svg></span>Chat</button>
+    <button type="button"><span class="ind"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="5" height="10" rx="1.5"></rect><rect x="9" y="5" width="5" height="8" rx="1.5"></rect></svg></span>Devices</button>
+    <button type="button"><span class="ind"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 5h12M2 11h12"></path><circle cx="6" cy="5" r="1.7" fill="#1d2024"></circle><circle cx="10" cy="11" r="1.7" fill="#1d2024"></circle></svg></span>Settings</button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Astra 6.2 round two</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.board{width:2270px;height:820px;box-sizing:border-box;background:#0b0c0e;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:20px;padding:28px 0 0}
+.head{display:flex;align-items:baseline;gap:18px}
+.head b{font-size:24px}
+.head span{color:#9aa1a9;font-size:14px}
+.row{display:grid;grid-template-columns:repeat(6,340px);column-gap:46px}
+.c{display:flex;flex-direction:column;gap:10px}
+.c img{width:340px;height:510px;border-radius:10px;border:1px solid #262a30;object-fit:cover}
+.t{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px}
+.tag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:2px 6px}
+.ad{background:rgba(91,157,217,.18);color:#bcd8f2}
+.pt{background:#1d2024;color:#c9c6c0;border:1px solid #353b43}
+.d{margin:0;color:#c9c6c0;font-size:13px;line-height:1.5}
+</style>
+</helmet>
+<div class="board">
+  <div class="head"><b>Astra 6.2 · round two concepts</b><span>The architecture and design review, generated with Codex CLI. Its report is in design/astra-consult-2/report.md.</span></div>
+  <div class="row">
+    <div class="c"><img src="/_blob/a02f004bfa5ccd1ba988de93b902e10c" alt="Chat during an Autopilot run"><div class="t">Chat during Autopilot<span class="tag pt">Partly</span></div><p class="d">Adopted: the labelled strip, and Settings as an action. The canvas keeps Edge and the Autopilot toggle on Chat, which Astra drops.</p></div>
+    <div class="c"><img src="/_blob/4bd32ebf299ac8afe5d41fc6889ec7a0" alt="Live controls"><div class="t">Live controls<span class="tag ad">Adopted</span></div><p class="d">The large commanded figure, a stepper per limit, Turn off Autopilot, and Recent changes folded in.</p></div>
+    <div class="c"><img src="/_blob/7a1b6c668dfaf6cb9abb8d540bef8507" alt="Devices grouped by run membership"><div class="t">Devices by run<span class="tag ad">Adopted</span></div><p class="d">"In this run" and "Not in this run", with the transport and state on each row.</p></div>
+    <div class="c"><img src="/_blob/d1911b46bc3f340cf3087f564c3fc6d4" alt="Compact session settings"><div class="t">Compact settings<span class="tag ad">Adopted</span></div><p class="d">Six rows (motion mode, style, Autopilot, persona, chat model, memory) and an App settings link.</p></div>
+    <div class="c"><img src="/_blob/303b3c6a57c1d48a70f32b5e4aa6330e" alt="Public notification and Stop motion tile"><div class="t">Lock screen and tile<span class="tag ad">Adopted</span></div><p class="d">One action, Stop. The public view says only that MagicHandy is active.</p></div>
+    <div class="c"><img src="/_blob/13ce61e11042401acfc192fbcba7bd0d" alt="Run interrupted"><div class="t">Run interrupted<span class="tag ad">Adopted</span></div><p class="d">The device that may still be running comes first, with one local action.</p></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2270,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

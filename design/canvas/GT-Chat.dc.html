@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Graphite Touch chat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.hdr{display:flex;align-items:center;gap:8px;padding:16px 12px 10px}
+.who{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.t{font-size:17px;font-weight:600}
+.s{font-size:12px;color:#9aa1a9;margin-top:2px}
+.devchip{display:flex;gap:6px;align-items:center;height:44px;padding:0 8px;border:1px solid #262a30;border-radius:6px;background:#16181b}
+.gl{position:relative;width:28px;height:28px;border-radius:6px;background:#1d2024;display:grid;place-items:center}
+.gl .dot{position:absolute;right:-3px;bottom:-3px;border:2px solid #16181b}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.acc{background:#5b9dd9}
+.ib{width:44px;height:44px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center}
+.np{margin:0 12px;background:#16181b;border:1px solid #262a30;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.np1{display:flex;align-items:center;gap:8px;font-size:14px}
+.mut{color:#9aa1a9;font-size:13px}
+.live{margin-left:auto;height:34px;padding:0 10px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px}
+.np2{display:flex;gap:16px;font-size:13px;color:#9aa1a9}
+.np2 b{color:#e9e7e2;font-weight:600}
+.np3{display:flex;align-items:center;gap:8px;font-size:13px;color:#c9c6c0}
+.log{flex:1;overflow:hidden;padding:14px 12px 8px;display:flex;flex-direction:column;gap:14px;justify-content:flex-end}
+.msg{display:flex;gap:8px;max-width:88%}
+.msg.me{align-self:flex-end;flex-direction:column;align-items:flex-end}
+.meta{font-size:12px;color:#9aa1a9;margin-bottom:4px}
+.bub{background:#1d2024;border:1px solid #353b43;border-radius:10px 10px 10px 4px;padding:9px 12px;line-height:1.45}
+.bub.me{background:#1b2634;border-color:#2c3e52;border-radius:10px 10px 4px 10px}
+.av{width:28px;height:28px;border-radius:50%;background:#3a5a7c;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none;margin-top:18px}
+.receipt{margin-top:6px;font-size:12px;color:#9aa1a9;display:flex;align-items:center;gap:6px}
+.caret{display:inline-block;width:2px;height:16px;background:#5b9dd9;vertical-align:-3px;margin-left:2px}
+.cmp{padding:8px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;gap:8px}
+.chip2{height:36px;padding:0 12px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.chip2.on{background:rgba(91,157,217,.15);border-color:transparent}
+.field{display:flex;align-items:center;gap:8px;background:#16181b;border:1px solid #353b43;border-radius:10px;padding:4px 4px 4px 12px}
+.field input{flex:1;min-width:0;height:40px;border:0;background:transparent;color:#e9e7e2;font:16px Inter,sans-serif;outline:none}
+.send{width:44px;height:44px;border:0;border-radius:6px;background:#5b9dd9;display:grid;place-items:center}
+.ft{background:#121417;border-top:1px solid #262a30;padding:6px 12px 10px;display:flex;flex-direction:column-reverse;gap:6px}
+.stop{height:56px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:10px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tab{height:52px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:500}
+.tab.on{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</helmet>
+<div class="app">
+  <header class="hdr">
+    <div class="who">
+      <svg width="32" height="32" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1d2024"></rect><polygon points="32,12.1 37.82,26.09 52.92,27.3 41.42,37.16 44.93,51.9 32,44 19.07,51.9 22.58,37.16 11.08,27.3 26.18,26.09" fill="#5b9dd9"></polygon></svg>
+      <div><div class="t">Evening</div><div class="s">Companion · Terra · Advanced</div></div>
+    </div>
+    <button class="devchip" type="button" aria-label="Devices: The Handy playing, Vibrator playing">
+      <span class="gl"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="1.5" width="6" height="13" rx="2"></rect><path d="M5 6h6"></path></svg><i class="dot ok"></i></span>
+      <span class="gl"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="6" y="2" width="4" height="12" rx="2"></rect><path d="M3 6c-1 1.3-1 2.7 0 4M13 6c1 1.3 1 2.7 0 4"></path></svg><i class="dot ok"></i></span>
+    </button>
+    <button class="ib" type="button" aria-label="Chat settings" style="border: 1px solid #262a30; background: #16181b"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#c9c6c0" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5h12M2 11.5h12"></path><circle cx="6" cy="4.5" r="1.8" fill="#16181b"></circle><circle cx="10.5" cy="11.5" r="1.8" fill="#16181b"></circle></svg></button>
+  </header>
+  <section class="np" aria-label="Now playing">
+    <div class="np1"><i class="dot ok"></i><b>Playing</b><span class="mut">From chat · Layered</span><button class="live" type="button">Live<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 10l4-4 4 4"></path></svg></button></div>
+    <div class="np2 mono"><span>Pace <b>48%</b></span><span>Stroke <b>15–85</b></span><span>Vibration <b>40%</b></span></div>
+    <div class="np3"><i class="dot acc"></i><span>Autopilot on · next change in about 40 s</span></div>
+  </section>
+  <main class="log">
+    <div class="msg me"><div class="meta">You · 21:40</div><div class="bub me">Slow it down a little and keep the strokes long.</div></div>
+    <div class="msg"><div class="av">C</div><div><div class="meta">Companion · 21:40</div><div class="bub">Easing off. Long, unhurried strokes for a while.</div><div class="receipt mono"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1.5 8c2-4 3.5-4 5 0s3 4 5 0 2.5-3 3 0"></path></svg>Pace 62 → 48 · Stroke 15–85</div></div></div>
+    <div class="msg me"><div class="meta">You · 21:41</div><div class="bub me">Perfect. Let Autopilot take over for a bit.</div></div>
+    <div class="msg"><div class="av">C</div><div><div class="meta">Companion · now</div><div class="bub">Autopilot has it. I'll build slowly and check in now and then<span class="caret"></span></div></div></div>
+  </main>
+  <div class="cmp">
+    <div class="chips">
+      <button class="chip2 on" type="button"><i class="dot acc"></i>Autopilot on</button>
+      <button class="chip2" type="button">Pause</button>
+      <button class="chip2" type="button">Edge</button>
+    </div>
+    <div class="field"><label class="sr" for="gt-msg">Message</label><input id="gt-msg" type="text" placeholder="Message"><button class="send" type="button" aria-label="Send"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0b131c" stroke-width="2" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"></path></svg></button></div>
+  </div>
+  <footer class="ft">
+    <button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button>
+    <nav class="tabs" aria-label="Main">
+      <button class="tab on" type="button" aria-current="page"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#5b9dd9" stroke-width="1.5" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"></path></svg>Chat</button>
+      <button class="tab" type="button"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="5" height="10" rx="1.5"></rect><rect x="9" y="5" width="5" height="8" rx="1.5"></rect></svg>Devices</button>
+      <button class="tab" type="button"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 5h12M2 11h12"></path><circle cx="6" cy="5" r="1.7" fill="#121417"></circle><circle cx="10" cy="11" r="1.7" fill="#121417"></circle></svg>Settings</button>
+    </nav>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

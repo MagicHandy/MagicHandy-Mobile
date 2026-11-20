@@ -1,0 +1,144 @@
+package com.magichandy.mobile.transport.handy
+
+import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.motion.MotionFrame
+import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.WriteResult
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
+
+internal class HandyCloudTest {
+    @TestFactory
+    fun `HSP method path and bodies match the desktop requests`(): List<DynamicTest> {
+        val commands =
+            mapOf(
+                "stroke_window" to HandyCommand.Stroke(10.0, 90.0),
+                "hsp_setup" to HandyCommand.Setup(1),
+                "points_add" to
+                    HandyCommand.Add(
+                        listOf(
+                            MotionFrame(0, Percent(0)),
+                            MotionFrame(125, Percent(50)),
+                            MotionFrame(250, Percent(100)),
+                        ),
+                        2,
+                        true,
+                    ),
+                "points_play" to HandyCommand.Play(0),
+                "stop" to HandyCommand.HspStop,
+            )
+        return commands.map { (name, command) ->
+            DynamicTest.dynamicTest(name) {
+                val fixture = vector("handy-cloud-" + name)
+                val expectedBody = fixture.getValue("body").jsonObject
+                val expectedPath = "/" + fixture.getValue("path").jsonPrimitive.content
+                var requests = 0
+                val peer =
+                    wire(
+                        observe = { request ->
+                            requests++
+                            assertEquals(
+                                fixture.getValue("method").jsonPrimitive.content,
+                                request.method,
+                            )
+                            assertEquals(expectedPath, request.url.encodedPath)
+                            val buffer = Buffer()
+                            requireNotNull(request.body).writeTo(buffer)
+                            assertEquals(expectedBody, Json.parseToJsonElement(buffer.readUtf8()))
+                        }
+                    ) {
+                        """{"play_state":2}"""
+                    }
+                runTest {
+                    if (command == HandyCommand.HspStop)
+                        assertEquals(StopEvidence.Acknowledged, peer.stop { true })
+                    else assertEquals(WriteResult.Accepted, peer.command(command) { true })
+                }
+                assertEquals(1, requests)
+            }
+        }
+    }
+
+    private fun wire(observe: (Request) -> Unit = {}, handler: (String) -> String): CloudWire {
+        val client =
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val request = chain.request()
+                    observe(request)
+                    assertEquals("synthetic", request.header("X-Connection-Key"))
+                    assertEquals("app-public-id", request.header("X-Api-Key"))
+                    assertEquals(null, request.url.query)
+                    val path = request.url.encodedPath
+                    assertEquals(if (path == "/hsp/state") "GET" else "PUT", request.method)
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body(handler(path).toResponseBody())
+                        .build()
+                }
+                .build()
+        return CloudWire(
+            Secret("synthetic"),
+            Secret("app-public-id"),
+            client,
+            "https://fixture.invalid/".toHttpUrl(),
+        )
+    }
+
+    @Test
+    fun `cloud owners share a Stop dispatcher independent of both motion clients`() {
+        val first = OkHttpClient()
+        val second = OkHttpClient()
+        val priority = first.forHandyStops().dispatcher
+        assertSame(priority, second.forHandyStops().dispatcher)
+        assertNotSame(first.dispatcher, priority)
+        assertNotSame(second.dispatcher, priority)
+    }
+
+    @Test
+    fun `a bare cloud acknowledgement needs stopped device state`() = runTest {
+        val paths = mutableListOf<String>()
+        val wire = wire { path ->
+            paths += path
+            if (path == "/hsp/state") """{"result":{"hsp_state":{"play_state":2}}}""" else "{}"
+        }
+        assertEquals(StopEvidence.Acknowledged, wire.stop { true })
+        assertEquals(listOf("/hsp/stop", "/hsp/state"), paths)
+        for (reply in
+            listOf(
+                "{}",
+                """{"error":true,"play_state":2}""",
+                """{"play_state":1}""",
+                """{"available":false,"play_state":2}""",
+                "malformed",
+            )) {
+            assertIs<StopEvidence.Unconfirmed>(wire { reply }.stop { true })
+        }
+    }
+
+    @Test
+    fun `stale Cloud commands never reach the HTTP client`() = runTest {
+        val wire = wire { error("Unexpected HTTP request") }
+        assertEquals(WriteResult.Stale, wire.command(HandyCommand.Play(0)) { false })
+        assertIs<StopEvidence.Unconfirmed>(wire.stop { false })
+    }
+}

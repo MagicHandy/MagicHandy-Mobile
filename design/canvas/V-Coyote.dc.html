@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Coyote safety step</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:4px 12px 10px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.nav{display:flex;align-items:center;gap:4px;color:#9aa1a9;font-size:13px}
+.back{width:48px;height:48px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center}
+.hd{display:flex;align-items:center;gap:12px}
+.tile{width:44px;height:44px;border-radius:6px;background:#1d2024;display:grid;place-items:center;flex:none}
+h1{margin:0;font-size:22px;font-weight:600}
+.sub{font-size:13px;color:#9aa1a9;margin-top:2px}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:4px 12px}
+.n{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:11px 0;border-top:1px solid #262a30;line-height:1.45;font-size:14px}
+.n:first-child{border-top:0}
+.n i{font-style:normal;color:#9aa1a9;font-weight:600;font-size:13px}
+.ack{display:flex;align-items:center;gap:12px;min-height:52px;font-size:15px;font-weight:500}
+.box{width:24px;height:24px;border-radius:4px;background:#5b9dd9;display:grid;place-items:center;flex:none}
+.pri{height:48px;border:0;border-radius:6px;background:#5b9dd9;color:#0b131c;font-weight:600;font-size:15px;margin-top:auto}
+.hint{margin:0;font-size:12px;color:#9aa1a9;line-height:1.45}
+.stopbar{background:#121417;border-top:1px solid #262a30;padding:10px 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <div class="nav"><button class="back" type="button" aria-label="Back to Devices"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button>Devices › Add</div>
+    <div class="hd"><span class="tile"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.3" aria-hidden="true"><path d="M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z"></path></svg></span><div><h1>Coyote 3.0</h1><div class="sub">Before you connect</div></div></div>
+    <div class="card">
+      <div class="n"><i>1</i><span>Do not use it with a pacemaker or other implant, a heart condition, epilepsy, or during pregnancy.</span></div>
+      <div class="n"><i>2</i><span>Place electrodes below the waist only. Never across the chest or near the heart.</span></div>
+      <div class="n"><i>3</i><span>Start at zero and raise strength slowly. MagicHandy never raises strength on its own.</span></div>
+      <div class="n"><i>4</i><span>Stop sets both channels to zero and ends the pulses.</span></div>
+    </div>
+    <label class="ack"><span class="box" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#0b131c" stroke-width="2.2"><path d="M3.5 8.5l3 3 6-7"></path></svg></span>I have read these notes</label>
+    <p class="hint">Turn the Coyote on and close its own app first. You'll pick it from a list of nearby devices; it never connects on its own.</p>
+    <button class="pri" type="button">Find nearby devices</button>
+  </div>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

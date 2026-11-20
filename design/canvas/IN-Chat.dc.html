@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Instrument chat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;family=Space+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#18191b;color:#e6e8eb;font-family:'Space Grotesk',system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;gap:10px;padding:14px 12px 10px;overflow:hidden}
+.mono{font-family:'Space Mono',ui-monospace,monospace}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.cap{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8d939b;font-weight:500}
+.disp{background:#0a1118;border:1px solid #1e2a36;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;color:#a9d4ff}
+.dtop{display:flex;justify-content:space-between;align-items:center}
+.mode{display:flex;border:1px solid #2c3a48;border-radius:6px;overflow:hidden}
+.mode button{height:30px;padding:0 9px;border:0;background:transparent;color:#6f8aa3;font:700 10px 'Space Mono',monospace;letter-spacing:.08em}
+.mode .on{background:#16222e;color:#a9d4ff}
+.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:6px 14px}
+.lbl{font-size:10px;letter-spacing:.14em;color:#6f8aa3}
+.val{font-size:30px;line-height:1.05}
+.val.sm{font-size:18px}
+.leds{display:flex;gap:14px;font-size:11px;letter-spacing:.1em;color:#6f8aa3}
+.led{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.g{background:#4fc06d}.b{background:#a9d4ff}
+.tx{flex:1;background:#111214;border:1px solid #2a2d31;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:12px;justify-content:flex-end;overflow:hidden;line-height:1.45;color:#d8dadd}
+.tx .who{display:block;margin-bottom:2px}
+.me{align-self:flex-end;text-align:right;max-width:85%}
+.caret{display:inline-block;width:8px;height:15px;background:#a9d4ff;vertical-align:-2px;margin-left:3px}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.key{height:52px;border:1px solid #3a3e44;border-radius:8px;background:#2c2f34;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);font-size:11px;font-weight:700;letter-spacing:.1em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.key .led{margin:0}
+.field{display:flex;gap:6px;align-items:center}
+.field input{flex:1;min-width:0;height:48px;box-sizing:border-box;border:1px solid #3a3e44;border-radius:8px;background:#111214;color:#e6e8eb;padding:0 12px;font:16px 'Space Grotesk',sans-serif;outline:none}
+.send{width:52px;height:48px;border:1px solid #3a3e44;border-radius:8px;background:#2c2f34;font-size:11px;font-weight:700;letter-spacing:.1em}
+.stop{height:72px;border:1px solid #e0544c;border-radius:12px;background:#c8372f;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.16em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</helmet>
+<div class="app">
+  <section class="disp" aria-label="Readout">
+    <div class="dtop"><span class="cap" style="color: #6f8aa3">Evening · Companion</span><div class="mode" role="group" aria-label="Screen"><button class="on" type="button" aria-pressed="true">CHAT</button><button type="button" aria-pressed="false">DEV</button><button type="button" aria-pressed="false">SET</button></div></div>
+    <div class="grid mono">
+      <div><div class="lbl">PACE</div><div class="val">48%</div></div>
+      <div><div class="lbl">AUTOPILOT NEXT</div><div class="val">0:40</div></div>
+      <div><div class="lbl">STROKE</div><div class="val sm">15–85</div></div>
+      <div><div class="lbl">VIBRATION</div><div class="val sm">40%</div></div>
+    </div>
+    <div class="leds mono"><span><i class="led g"></i>HANDY</span><span><i class="led g"></i>VIB</span><span><i class="led b"></i>AUTOPILOT</span><span style="margin-left: auto">SRC CHAT</span></div>
+  </section>
+  <main class="tx">
+    <div class="me"><span class="cap who">You</span>Slow it down a little and keep the strokes long.</div>
+    <div><span class="cap who">Companion</span>Easing off. Long, unhurried strokes for a while.<span class="mono" style="display: block; font-size: 11px; color: #8d939b; margin-top: 3px">PACE 62→48 · STROKE 15–85</span></div>
+    <div class="me"><span class="cap who">You</span>Perfect. Let Autopilot take over for a bit.</div>
+    <div><span class="cap who">Companion</span>Autopilot has it. I'll build slowly and check in now and then<span class="caret"></span></div>
+  </main>
+  <div class="keys">
+    <button class="key" type="button" aria-pressed="true"><i class="led b"></i>AUTO</button>
+    <button class="key" type="button">PAUSE</button>
+    <button class="key" type="button">EDGE</button>
+    <button class="key" type="button">MENU<span class="mono" style="font-size: 9px; color: #8d939b">SETTINGS</span></button>
+  </div>
+  <div class="field"><label class="sr" for="in-msg">Message</label><input id="in-msg" type="text" placeholder="Message"><button class="send" type="button">SEND</button></div>
+  <button class="stop" type="button">STOP</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

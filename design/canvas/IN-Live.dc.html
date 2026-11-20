@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Instrument live controls</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;family=Space+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#18191b;color:#e6e8eb;font-family:'Space Grotesk',system-ui,sans-serif;display:flex;flex-direction:column;gap:10px;padding:14px 12px 10px;overflow:hidden}
+.mono{font-family:'Space Mono',ui-monospace,monospace}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.disp{background:#0a1118;border:1px solid #1e2a36;border-radius:10px;padding:10px 14px;color:#a9d4ff;display:flex;flex-direction:column;gap:6px;font-size:12px;letter-spacing:.06em}
+.dr{display:flex;justify-content:space-between}
+.dl{color:#6f8aa3}
+.seg{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:2px;height:8px}
+.seg i{display:block;background:#16222e}
+.seg .l{background:#a9d4ff}
+.bank{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;background:#222428;border:1px solid #2c2f34;border-radius:12px;padding:12px 10px}
+.f{display:flex;flex-direction:column;align-items:center;gap:8px}
+.fv{font-size:22px;color:#a9d4ff;background:#0a1118;border-radius:6px;padding:2px 10px;min-width:56px;text-align:center}
+.ft{position:relative;width:64px;height:230px}
+.slot{position:absolute;left:29px;top:0;bottom:0;width:6px;border-radius:3px;background:#0e0f11;border:1px solid #2c2f34}
+.ticks{position:absolute;left:6px;right:6px;top:0;bottom:0;background:repeating-linear-gradient(to bottom,#3a3e44 0 1px,transparent 1px 23px);opacity:.6;mask:linear-gradient(90deg,#000 0 14px,transparent 14px 50px,#000 50px)}
+.capk{position:absolute;left:4px;width:56px;height:36px;border-radius:6px;background:#3a3e44;border:1px solid #4a4f56;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.capk::after{content:"";position:absolute;left:8px;right:8px;top:17px;height:2px;background:#a9d4ff}
+.fl{font-size:11px;letter-spacing:.12em;color:#8d939b;font-weight:700;text-align:center}
+.cap{font-size:11px;letter-spacing:.14em;color:#8d939b;font-weight:700}
+.rate{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.rk{height:44px;border:1px solid #3a3e44;border-radius:6px;background:#2c2f34;font-size:13px;font-weight:700}
+.rk.on{background:#16222e;border-color:#a9d4ff;color:#a9d4ff}
+.keys{display:grid;gap:6px}
+.key{height:50px;border:1px solid #3a3e44;border-radius:8px;background:#2c2f34;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);font-size:11px;font-weight:700;letter-spacing:.1em}
+.stop{height:72px;border:1px solid #e0544c;border-radius:12px;background:#c8372f;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.16em;margin-top:auto}
+</style>
+</helmet>
+<div class="app">
+  <section class="disp mono" aria-label="Readout">
+    <div class="dr"><span><span class="dl">PACE</span> 48% <span class="dl">ASKED</span> 50%</span><span><span class="dl">SRC</span> AUTOPILOT</span></div>
+    <div class="dr"><span><span class="dl">AUTOPILOT</span> ACTIVE · SEG 3</span><span><span class="dl">NEXT</span> 0:40</span></div>
+    <div class="dr"><span class="dl">BUILDUP 42% OF 20 MIN</span></div>
+    <div class="seg" aria-hidden="true"><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </section>
+  <section class="bank" aria-label="Limits">
+    <div class="f"><span class="fv mono">80</span><div class="ft"><div class="ticks"></div><div class="slot"></div><div class="capk" style="top: 28px"></div></div><span class="fl">TOP SPEED</span></div>
+    <div class="f"><span class="fv mono">15</span><div class="ft"><div class="ticks"></div><div class="slot"></div><div class="capk" style="top: 176px"></div></div><span class="fl">STROKE LOW</span></div>
+    <div class="f"><span class="fv mono">85</span><div class="ft"><div class="ticks"></div><div class="slot"></div><div class="capk" style="top: 18px"></div></div><span class="fl">STROKE HIGH</span></div>
+  </section>
+  <div class="keys" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><button class="key" type="button">AUTO PAUSE</button><button class="key" type="button">AUTO STOP</button><button class="key" type="button">MENU</button></div>
+  <div class="keys" style="grid-template-columns: repeat(2, minmax(0, 1fr))"><button class="key" type="button">PAUSE</button><button class="key" type="button">EDGE</button></div>
+  <button class="stop" type="button">STOP</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

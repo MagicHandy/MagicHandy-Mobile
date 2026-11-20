@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lowlight chat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&amp;family=DM+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#000000;color:#efe4d3;font-family:'DM Sans',system-ui,sans-serif;font-size:16px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'DM Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer;background:transparent;border:0}
+.top{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 0;font-size:13px;color:#8c8173}
+.dev{display:flex;gap:12px;align-items:center}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.ok{background:#5cc27a}.acc{background:#e0a46c}
+.read{display:flex;align-items:flex-end;gap:18px;padding:6px 20px 0}
+.big{font-size:104px;font-weight:300;line-height:.9;letter-spacing:-.04em}
+.unit{font-size:15px;color:#8c8173;margin-bottom:10px;display:block}
+.side{display:flex;flex-direction:column;gap:6px;padding-bottom:12px;font-size:14px;color:#cdbfa9}
+.auto{padding:14px 20px 0;font-size:14px;color:#e0a46c}
+.rule{height:1px;background:#1c1714;margin:16px 20px 0}
+.log{flex:1;overflow:hidden;padding:12px 20px;display:flex;flex-direction:column;gap:18px;justify-content:flex-end;line-height:1.55}
+.me{align-self:flex-end;max-width:80%;text-align:right;color:#b5a895}
+.ai{max-width:92%}
+.rc{display:block;margin-top:4px;font-size:12px;color:#8c8173}
+.caret{display:inline-block;width:2px;height:17px;background:#e0a46c;vertical-align:-3px;margin-left:2px}
+.ctl{display:flex;gap:4px;padding:0 12px}
+.ctl button{height:44px;padding:0 8px;font-size:14px;color:#cdbfa9}
+.ctl .on{color:#e0a46c}
+.field{display:flex;align-items:center;gap:8px;margin:0 20px;border-bottom:1px solid #3a312a}
+.field input{flex:1;min-width:0;height:48px;border:0;background:transparent;color:#efe4d3;font:16px 'DM Sans',sans-serif;outline:none}
+.field input::placeholder{color:#8c8173}
+.send{height:44px;padding:0 6px;color:#e0a46c;font-weight:500}
+.stop{order:2;margin:4px 12px 12px;height:64px;border-radius:4px;background:#cf3f37;color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.14em}
+.tabs{order:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:8px 12px 0}
+.tabs button{height:48px;font-size:13px;color:#8c8173}
+.tabs .cur{color:#efe4d3;font-weight:500}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</helmet>
+<div class="app">
+  <div class="top"><span>Evening · Companion</span><span class="dev"><span><i class="dot ok"></i>Handy</span><span><i class="dot ok"></i>Vibrator</span></span></div>
+  <section class="read" aria-label="Now playing">
+    <div><span class="big mono" style="font-family: 'DM Sans', sans-serif">48</span><span class="unit">% pace</span></div>
+    <div class="side"><span class="mono">stroke 15–85</span><span class="mono">vibration 40%</span><span>from chat · layered</span></div>
+  </section>
+  <div class="auto"><i class="dot acc"></i>Autopilot · next change in 0:40</div>
+  <div class="rule"></div>
+  <main class="log">
+    <div class="me">Slow it down a little and keep the strokes long.</div>
+    <div class="ai">Easing off. Long, unhurried strokes for a while.<span class="rc mono">pace 62 → 48 · stroke 15–85</span></div>
+    <div class="me">Perfect. Let Autopilot take over for a bit.</div>
+    <div class="ai">Autopilot has it. I'll build slowly and check in now and then<span class="caret"></span></div>
+  </main>
+  <div class="ctl"><button class="on" type="button">Autopilot on</button><button type="button">Pause</button><button type="button">Edge</button><button type="button" style="margin-left: auto">Settings</button></div>
+  <div class="field"><label class="sr" for="ll-msg">Message</label><input id="ll-msg" type="text" placeholder="Say something"><button class="send" type="button">Send</button></div>
+  <button class="stop" type="button">STOP</button>
+  <nav class="tabs" aria-label="Main"><button class="cur" type="button" aria-current="page">Chat</button><button type="button">Devices</button><button type="button">Settings</button></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
