@@ -33,6 +33,9 @@ public interface MagicHandyCore {
      */
     public fun emergencyStop(source: StopSource)
 
+    /** Lets Android retain a Stop delivery window after calling [emergencyStop] directly. */
+    public suspend fun awaitEmergencyStop() {}
+
     /** Opt in to one refusal retry using a specific local server, or disable it with null. */
     public fun setRefusalFallback(connection: ConnectionId?) {}
 
@@ -51,10 +54,25 @@ public interface MagicHandyCore {
     public fun trimMemory() {}
 
     /**
+     * List reachable bridge devices or explain why the explicitly named host could not be checked.
+     */
+    public suspend fun discoverIntifaceVibrators(address: String): BridgeDiscovery<IntifaceChoice> =
+        BridgeDiscovery.Found(intifaceVibrators(address))
+
+    /** List reachable linear features or explain the lookup failure. */
+    public suspend fun discoverIntifaceLinears(
+        address: String
+    ): BridgeDiscovery<IntifaceLinearChoice> =
+        BridgeDiscovery.Found(intifaceLinearActuators(address))
+
+    /**
      * List eligible vibrators at a user-supplied bridge address. An unavailable bridge yields an
      * empty list.
      */
     public suspend fun intifaceVibrators(address: String): List<IntifaceChoice> = emptyList()
+
+    /** Saved bridge endpoint for reselecting an explicitly opened Intiface device. */
+    public fun bridgeAddressForSetup(device: DeviceId): String? = null
 
     /** Read the linear features of an explicitly named bridge, without selecting or moving one. */
     public suspend fun intifaceLinearActuators(address: String): List<IntifaceLinearChoice> =
@@ -103,4 +121,7 @@ public enum class StopSource {
     ModelReply,
     /** A playing VacuGlide's one-minute check-in expired without an answer. */
     CheckInTimeout,
+
+    /** The foreground service was destroyed while it still owned device work. */
+    ServiceLost,
 }

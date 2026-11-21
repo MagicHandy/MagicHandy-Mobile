@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
     alias(libs.plugins.roborazzi)
 }
 
@@ -21,8 +22,8 @@ android {
         applicationId = "com.magichandy.mobile"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 7
+        versionName = "0.1.6"
     }
 
     val signingProperties = rootProject.layout.projectDirectory.file("keystore.properties").asFile
@@ -56,7 +57,16 @@ android {
                 "proguard-rules.pro",
             )
         }
+        create("deviceTest") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".devicetest"
+            versionNameSuffix = "-device-test"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
     }
+
+    sourceSets.getByName("deviceTest").kotlin.directories.add("src/release/kotlin")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -99,7 +109,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.browser)
     implementation(libs.kotlinx.serialization.json)
-    // In-memory stores, simulated devices and a canned model, for debug builds only
+    // In-memory stores, simulated devices and a deterministic model, for debug builds only
     // (docs/backend/wiring.md).
     debugImplementation(testFixtures(project(":core")))
     debugImplementation(testFixtures(project(":transport")))
@@ -131,6 +141,8 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
+room { schemaDirectory("$projectDir/schemas") }
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
@@ -148,9 +160,23 @@ abstract class CheckReleaseContents : DefaultTask() {
         val metadata = JsonSlurper().parse(directory.resolve("output-metadata.json")) as Map<*, *>
         val output = (metadata["elements"] as List<*>).single() as Map<*, *>
         val database = "com.magichandy.mobile.platform.storage.PlatformDatabase"
-        val serializer =
-            "com.magichandy.mobile.core.ports.SettingsDocument" + '$' + '$' + "serializer"
-        val required = setOf(database, database + "_Impl", serializer)
+        val serializerSuffix = "$" + "$" + "serializer"
+        val serializers =
+            listOf(
+                    "core.ports.SettingsDocument",
+                    "core.ports.ModelCatalog",
+                    "core.ports.SavedModel",
+                    "core.ports.RunJournal",
+                    "core.ports.SavedDevice",
+                    "core.api.ChatSummary",
+                    "core.api.ChatEntry" + '$' + "Message",
+                    "core.api.ChatEntry" + '$' + "MotionStopped",
+                    "core.api.Personality",
+                    "core.chat.PersonaPrompt" + '$' + "Vocabulary",
+                    "core.chat.PersonaPrompt" + '$' + "Voice",
+                )
+                .map { "com.magichandy.mobile." + it + serializerSuffix }
+        val required = serializers.toSet() + database + (database + "_Impl")
         val names = mutableMapOf<String, String>()
         mapping.get().asFile.forEachLine { line ->
             if (line.startsWith("com.magichandy.mobile.") && line.endsWith(':')) {
@@ -167,9 +193,11 @@ abstract class CheckReleaseContents : DefaultTask() {
         }
         ZipFile(directory.resolve(output["outputFile"] as String)).use { apk ->
             for (name in
-                listOf("chat/contracts.json", "META-INF/magichandy/go-numerics-license.txt")) check(
-                (apk.getEntry(name)?.size ?: 0) > 0
-            ) {
+                listOf(
+                    "chat/contracts.json",
+                    "chat/personas.json",
+                    "META-INF/magichandy/go-numerics-license.txt",
+                )) check((apk.getEntry(name)?.size ?: 0) > 0) {
                 "Release resource missing: " + name
             }
             val needed = names.values.map { "L" + it.replace('.', '/') + ";" }.toMutableSet()
@@ -197,6 +225,13 @@ androidComponents.onVariants(androidComponents.selector().withBuildType("release
             mapping.set(variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE))
         }
     tasks.named("check") { dependsOn(contents) }
+}
+
+androidComponents.onVariants(androidComponents.selector().withBuildType("deviceTest")) { variant ->
+    tasks.register<CheckReleaseContents>("checkDeviceTestContents") {
+        apkDirectory.set(variant.artifacts.get(SingleArtifact.APK))
+        mapping.set(variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE))
+    }
 }
 
 // Use the same SDK build-tools revision AGP selected. ApkSignerTool is the apksigner CLI.

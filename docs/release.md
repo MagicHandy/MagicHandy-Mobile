@@ -1,10 +1,20 @@
 # Building and publishing an Android release
 
+## Production package
+
+The public APK uses the package ID `com.magichandy.mobile` and appears as **MagicHandy** on the phone. Version 0.1.6 is the first production release. The SHA-256 fingerprint of the production signing certificate is `fef4b482e2826ee6b0ea4b2984910a7c36a320972d2a352acdfb2ea5ad23f036`. Use the same signing key for updates. [Public releases](https://github.com/MagicHandy/MagicHandy-Mobile/releases)
+
+## APK for testing on a phone
+
+Run `./gradlew :app:assembleDeviceTest :app:checkDeviceTestContents`. The installable APK is `app/build/outputs/apk/deviceTest/app-deviceTest.apk`. It uses the production core, is minified, and is signed with this workstation’s Android development key. Its app ID is `com.magichandy.mobile.devicetest` and its launcher name is **MagicHandy Test**. It has its own storage and can be installed alongside the public app. Use the same workstation key for subsequent test updates.
+
+Install 0.1.6 over the existing MagicHandy Test app. It preserves saved devices and the signed-in account. Manual Start now uses the desktop Full sweeps curve. Generated motion on a single Original Handy over Cloud uses the owner's previously accepted point density. The update also corrects Intiface turnaround timing and HSP refill handling. [Motion comparison and test evidence](reviews/2026-11-21-handy-motion-quality.md) · [Phone connection check](backend/device-checklist.md#verify-handy-cloud-on-a-second-phone)
+
 The release script builds the minified APK, checks its packaged contents, verifies its signature with Android SDK `apksigner verify --print-certs`, and writes the APK and its SHA-256 checksum. Publishing is a separate owner action.
 
-## Create the signing identity once
+## Signing identity
 
-Use the JDK’s `keytool` on the signing machine. Choose a directory outside the checkout for the keystore. This Windows example prompts interactively for its password.
+The first production key has already been created. To restore it on a new signing machine, use the owner's encrypted backup and verify the certificate fingerprint above. For reference, the initial key ceremony uses the JDK’s `keytool` and a directory outside the checkout. This Windows example prompts for a password.
 
 ```powershell
 & "$env:JAVA_HOME/bin/keytool" -genkeypair -storetype PKCS12 -keystore "D:/OwnerKeys/MagicHandy.p12" -alias magichandy -keyalg RSA -keysize 4096 -validity 10000
@@ -54,6 +64,20 @@ The script creates a one-day test identity under `.work`, verifies the real sign
 
 ## Publish the owner-approved artifacts
 
-Create a GitHub release for the matching mobile tag, for example `v0.1.1` for an APK with versionName `0.1.1`. Attach the verified `MagicHandy-0.1.1.apk` and `SHA256SUMS`. Check the uploaded names and bytes before publishing the stable release.
+Tag the source used to build the APK with `v` followed by its exact `versionName`. Run the notes check, attach the verified production APK and `SHA256SUMS`, and use the versioned notes file as the GitHub release body. This example prepares the 0.1.6 draft.
 
-The in-app manual update check requests the mobile repository’s unauthenticated `/repos/MagicHandy/MagicHandy-Mobile/releases/latest` endpoint. It compares the three numeric fields of `tag_name` with the installed version and displays the result. It requires a publicly readable latest published release. The repository is currently private. With private metadata, no published stable release, rate limiting, an unreadable tag or a network failure, the check reports **Failed**. It reports **Up to date** only after reading and comparing a valid release. A future private distribution would need an explicitly designed authenticated feed or a separate public release feed. The APK contains no GitHub credentials.
+```powershell
+./tools/release/check-notes.ps1 -Tag v0.1.6
+gh release create v0.1.6 build/releases/0.1.6/MagicHandy-0.1.6.apk build/releases/0.1.6/SHA256SUMS --verify-tag --draft --title "MagicHandy Mobile v0.1.6" --notes-file docs/releases/v0.1.6.md
+```
+
+Download both draft assets into a fresh directory and compare their bytes with the local release artifacts. Publish the verified draft as the latest stable release.
+
+Verify the public `/repos/MagicHandy/MagicHandy-Mobile/releases/latest` endpoint and download the assets without credentials. The in-app update check reads that endpoint when requested in App settings. It compares the three numeric fields of `tag_name` with the installed version and displays the result. A missing stable release, unreadable tag, rate limit or network failure produces **Failed**.
+
+## Changelog rules
+
+- Keep one public note per tag at `docs/releases/<tag>.md`. Publish that file verbatim with `--notes-file`. GitHub Releases provides the public index, and the README links to the latest download.
+- Start with `# MagicHandy Mobile <tag>`, followed by one `## Changelog` heading. Use 1–12 top-level bullets, up to 60 lines and 350 whitespace-delimited words. Indent a wrapped bullet by two spaces. The notes checker enforces these limits from v0.1.6 onward.
+- The first release describes what a new user can install and do. Each later entry covers changes since the preceding public release. Lead with the change a user will notice and any action they need to take.
+- Include changes to Stop behavior, device caveats, installation or data migration when relevant. Identify the hardware, provider and build actually tested when making a verification claim. Keep measurements, diagnosis and implementation details in the engineering review.

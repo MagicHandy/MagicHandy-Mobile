@@ -1,7 +1,12 @@
 package com.magichandy.mobile.core.motion
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.ports.MotionBatch
+import com.magichandy.mobile.core.ports.OutputSlice
+import com.magichandy.mobile.core.ports.TimedDevice
+import com.magichandy.mobile.core.ports.WriteResult
 import com.magichandy.mobile.core.score.VibrationEnvelope
 import kotlin.time.Duration
 import kotlinx.coroutines.delay
@@ -42,6 +47,7 @@ internal class TimedPlayback(
 
     private suspend fun send(owner: TimedDevice) {
         var next = origin
+        var consecutiveOverruns = 0
         while (engine.state.value.plays(stream)) {
             val now = d.clock.elapsed()
             val at = (now - origin).inWholeMilliseconds
@@ -53,21 +59,18 @@ internal class TimedPlayback(
             val lane = engine.state.value.vibration
             val state = engine.state.value
             val tempo =
-                if (owner.device.family != com.magichandy.mobile.core.api.DeviceFamily.VacuGlide)
-                    batch.pace
+                if (owner.device.family != DeviceFamily.VacuGlide) batch.pace
                 else {
                     val value =
                         state.tempo?.let { it.plan.level((now - it.since).inWholeMilliseconds) }
                             ?: follow.at(at)
-                    com.magichandy.mobile.core.api.Percent(
-                        kotlin.math.floor(value + 0.5).toInt().coerceIn(0, 100)
-                    )
+                    Percent(kotlin.math.floor(value + 0.5).toInt().coerceIn(0, 100))
                 }
             val slice =
                 OutputSlice(
                     at,
                     frames,
-                    batch.limits,
+                    d.settings.state.value.values.limits,
                     batch.pace,
                     lane?.envelope,
                     lane?.let { (now - it.since).inWholeMilliseconds } ?: at,
@@ -76,12 +79,30 @@ internal class TimedPlayback(
                     state.air?.steps ?: 0,
                 )
             val result = withContext(d.dispatchers.io) { engine.output(stream, owner, slice) }
-            if (result != WriteResult.Accepted) return
+            when (result) {
+                WriteResult.Accepted -> Unit
+                WriteResult.Stale -> if (!isCurrent(owner)) return
+                WriteResult.Uncertain -> return
+            }
             next += owner.interval
             val elapsed = d.clock.elapsed()
-            if (next <= elapsed) next = elapsed + owner.interval
+            if (elapsed > next) {
+                consecutiveOverruns++
+                if (owner.device.family == DeviceFamily.Coyote && consecutiveOverruns >= 3) {
+                    engine.stop(null, stream = stream)
+                    return
+                }
+                next = elapsed
+            } else consecutiveOverruns = 0
             delay(next - elapsed)
         }
+    }
+
+    private fun isCurrent(owner: TimedDevice): Boolean {
+        val active = engine.state.value
+        return active.plays(stream) &&
+            owner.device.id in active.members &&
+            active.owners[owner.device.id] === owner
     }
 }
 

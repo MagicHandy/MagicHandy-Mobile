@@ -6,20 +6,26 @@ import android.content.Intent
 import android.os.PowerManager
 import androidx.core.content.ContextCompat
 import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.ports.RunHost
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal interface CoreOwner {
     val core: MagicHandyCore
     val host: AndroidHost
+    val stopScope: CoroutineScope
 }
 
 /** Admission waits for startForeground to succeed. A visible activity owns each first start. */
 class AndroidHost internal constructor(private val context: Context) : RunHost {
     @Volatile var visible = false
-    private var promoted = false
+    @Volatile private var promoted = false
+    override val isRunning: Boolean
+        get() = promoted
+
     private var pending: CompletableDeferred<Boolean>? = null
 
     override suspend fun ensureRunning(): Boolean {
@@ -54,6 +60,13 @@ class AndroidHost internal constructor(private val context: Context) : RunHost {
         promoted = success
         pending?.complete(success)
         pending = null
+    }
+
+    @Synchronized
+    internal fun serviceDestroyed(core: MagicHandyCore) {
+        val wasRunning = promoted
+        finished(false)
+        if (wasRunning) core.emergencyStop(StopSource.ServiceLost)
     }
 
     fun access(core: MagicHandyCore) {

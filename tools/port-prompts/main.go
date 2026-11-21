@@ -58,7 +58,10 @@ func (c *composerCapture) StreamChat(ctx context.Context, req llm.ChatRequest, d
 
 func main() {
 	out := flag.String("output", "", "mobile resource destination")
+	personaOutput := flag.String("persona-output", "", "mobile persona section catalog")
+	deltas := flag.String("voice-deltas", "", "reviewed mobile wording differences")
 	flag.Parse()
+	writePersonas(*personaOutput, *deltas)
 	bank := catalog{Templates: map[string]template{}}
 	lines, schemas := map[string]int{}, map[string]int{}
 	for _, locale := range []struct{ tag, id string }{{"en", chat.DefaultPromptSetID}, {"es", chat.PromptSetIDSpanish}, {"pt-BR", chat.PromptSetIDPortugueseBrazil}, {"ja", chat.PromptSetIDJapanese}, {"zh-Hans", chat.PromptSetIDSimplifiedChinese}} {

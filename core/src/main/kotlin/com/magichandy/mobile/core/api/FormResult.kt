@@ -23,11 +23,19 @@ public enum class FormReason {
     ConsentRequired,
     Unreachable,
     ProviderRefused,
+    /** The discovered model did not finish the structured reply test required for chat. */
+    IncompleteModelReply,
     Duplicate,
     ChooseDevice,
+    /** Two features have the same durable description. They need distinct names on the server. */
+    AmbiguousDevice,
     NotFound,
     RunInProgress,
     ReconcileDevice,
     Busy,
     StorageUnavailable,
+    /** A text is longer than its limit, such as a persona description. */
+    TooLong,
+    /** There are already as many as the app keeps, such as personas. */
+    LimitReached,
 }

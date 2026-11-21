@@ -1,11 +1,36 @@
 // Ported from internal/chat/{interactive_prompt,layered_service,continuous_action}.go at 1b80d72e.
 package com.magichandy.mobile.core.chat
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.core.score.*
+import com.magichandy.mobile.core.api.AppLanguage
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.api.MotionStyle
+import com.magichandy.mobile.core.api.PersonaRef
+import com.magichandy.mobile.core.api.ReplyLength
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.ports.builtInPersona
+import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.score.GestureScore
+import com.magichandy.mobile.core.score.LayeredScore
+import com.magichandy.mobile.core.score.SemanticScore
+import com.magichandy.mobile.core.score.TempoScore
 import java.util.Locale
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addAll
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 internal data class TurnContext(
     val mode: MotionMode,
@@ -30,6 +55,7 @@ internal data class TurnContext(
     val airAllowed: Boolean = false,
     val airBalance: Int = 0,
     val tempoLevel: Int = 0,
+    val persona: PersonaRef = builtInPersona,
 ) {
     val base: SemanticScore =
         when (mode) {
@@ -50,7 +76,7 @@ internal data class TurnContext(
 
 internal fun freshSeed(): UInt = kotlin.random.Random.nextInt().toUInt().coerceAtLeast(1u)
 
-private fun AppLanguage.tag(): String =
+internal fun AppLanguage.tag(): String =
     when (this) {
         AppLanguage.English -> "en"
         AppLanguage.Spanish -> "es"
@@ -87,20 +113,26 @@ internal object ChatContract {
         val full = templates.getValue(key).jsonObject
         val id = full.getValue(if (c.local) "domain" else "schema").jsonPrimitive.int
         val spec = schemas.get(id, c.minimum, c.maximum, timingFloor)
-        val budget =
-            PromptBudget(
-                tokens,
-                if (c.level == CapabilityLevel.Advanced) 1536 else 256,
-                schemaBytes = spec.bytes,
-            )
+        val speaks = purpose != "plan" && purpose != "plan-local"
+        val output =
+            when {
+                c.level == CapabilityLevel.Advanced -> 1536
+                speaks && c.persona.personality.replyLength == ReplyLength.Detailed -> 512
+                else -> 256
+            }
+        val budget = PromptBudget(tokens, output, schemaBytes = spec.bytes)
+        fun wording(text: String): String =
+            if (speaks) PersonaPrompt.compose(text, c.language.tag(), c.persona) else text
         var template = full
-        var developer = render(full, c, c.recentRequests, 0)
+        var developer = wording(render(full, c, c.recentRequests, 0))
         val compact = if (c.local) templates["$key/compact"] as? JsonObject else null
         if (compact != null && developer.utf8Length() + 4096 + 128 > budget.limitBytes) {
             template = compact
             val recent = c.recentRequests?.let(::boundedRequests)
             developer =
-                render(compact, c, recent, (c.recentRequests?.size ?: 0) - (recent?.size ?: 0))
+                wording(
+                    render(compact, c, recent, (c.recentRequests?.size ?: 0) - (recent?.size ?: 0))
+                )
         }
         val prompt = budget.admit(messages(c, history, template, developer), dropped) ?: return null
         val admitted =
@@ -122,7 +154,7 @@ internal object ChatContract {
                     )
                     .addTo(prompt)
             else prompt.messages
-        return ModelRequest(admitted, spec.schema)
+        return ModelRequest(admitted, spec.schema, outputAllowance = output)
     }
 
     private fun boundedRequests(rows: JsonArray): JsonArray {
@@ -303,7 +335,7 @@ internal object ChatContract {
 }
 
 // Match encoding/json's escaping in the nested JSON document embedded in the developer message.
-private fun JsonElement.promptJson(): String =
+internal fun JsonElement.promptJson(): String =
     toString()
         .replace("&", "\\u0026")
         .replace("<", "\\u003c")

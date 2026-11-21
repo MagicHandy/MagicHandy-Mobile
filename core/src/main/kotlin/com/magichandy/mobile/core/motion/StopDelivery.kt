@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 
 /**
@@ -84,10 +84,10 @@ internal class StopDelivery(
                         ref.outcome(StopOutcome.Unconfirmed, cause = evidence.cause)
                     StopEvidence.Acknowledged -> ref.outcome(StopOutcome.Confirmed, elapsed)
                 }
-        current.update { s ->
+        val previous = current.getAndUpdate { s ->
             val evidence = s.evidence
-            if (s.pending[ref.id] !== attempt || evidence == null) return@update s
-            if (ref.id in s.reconciled) return@update s.copy(pending = s.pending - ref.id)
+            if (s.pending[ref.id] !== attempt || evidence == null) return@getAndUpdate s
+            if (ref.id in s.reconciled) return@getAndUpdate s.copy(pending = s.pending - ref.id)
             val updated = evidence.withOutcome(outcome)
             val publish = s.publishesEvidence || outcome.outcome == StopOutcome.Unconfirmed
             val failedPause = s.pausedPosition != null && outcome.outcome == StopOutcome.Unconfirmed
@@ -114,6 +114,14 @@ internal class StopDelivery(
                             else visible
                         },
             )
+        }
+        if (
+            outcome.outcome == StopOutcome.Confirmed &&
+                previous.pending[ref.id] === attempt &&
+                previous.evidence != null &&
+                ref.id !in previous.reconciled
+        ) {
+            attempt.target.onConfirmed?.invoke()
         }
     }
 }

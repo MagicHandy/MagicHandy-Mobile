@@ -1,13 +1,21 @@
 // Ported from internal/ble/{link,profiles}.go at 9a4c36cf.
 package com.magichandy.mobile.transport.ble
 
+import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.ScanResultId
+import com.magichandy.mobile.core.ports.SliderReading
 import kotlin.time.Duration
 import kotlinx.coroutines.flow.Flow
 
 /** A write was submitted while establishing this generation. Retrying setup could repeat it. */
 public class BluetoothSetupWriteFailure(cause: java.io.IOException) :
     java.io.IOException("Notification setup was not confirmed", cause)
+
+/**
+ * Write admission expired before any bytes were submitted to the radio. The GATT generation remains
+ * usable.
+ */
+public class BluetoothWriteFenced : java.io.IOException("Bluetooth write fenced before submission")
 
 /** Allowlisted GATT service and characteristic identifiers, with the profile's payload ceiling. */
 public enum class GattProfile(
@@ -59,16 +67,20 @@ public fun interface BluetoothConnector {
  * retires the generation. Never deliver its callbacks to the successor.
  */
 public interface BluetoothLink {
-    /** Request high connection priority during playback and balanced priority while idle. */
+    /**
+     * Best-effort hint for high connection priority during playback and balanced priority while
+     * idle. Never fail playback or an acknowledged Stop if Bluetooth permission changes.
+     */
     public fun setActive(active: Boolean) {}
 
     /**
      * Optional physical slider geometry from a verified profile. HSP playback state alone has no
      * position evidence.
      */
-    public suspend fun readSliderPosition(
-        admitted: () -> Boolean
-    ): com.magichandy.mobile.core.ports.SliderReading? = null
+    public suspend fun readSliderPosition(admitted: () -> Boolean): SliderReading? = null
+
+    /** Read an advertised battery characteristic on this generation, when available. */
+    public suspend fun readBattery(): Percent? = null
 
     /** Negotiate a real ATT MTU and return the granted value including the three-byte header. */
     public suspend fun requestMtu(bytes: Int): Int

@@ -1,12 +1,38 @@
 // Ported from internal/chat/{autopilot_service,autopilot_motion_facts,autopilot_timing}.go.
 package com.magichandy.mobile.core.autopilot
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.chat.*
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.core.score.*
+import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.chat.ChatContract
+import com.magichandy.mobile.core.chat.ConversationWindow
+import com.magichandy.mobile.core.chat.TurnContext
+import com.magichandy.mobile.core.chat.accepts
+import com.magichandy.mobile.core.chat.context
+import com.magichandy.mobile.core.chat.editGroups
+import com.magichandy.mobile.core.chat.edited
+import com.magichandy.mobile.core.chat.modelObject
+import com.magichandy.mobile.core.chat.tempoProposal
+import com.magichandy.mobile.core.chat.vibration
+import com.magichandy.mobile.core.chat.withoutNullFields
+import com.magichandy.mobile.core.chat.word
+import com.magichandy.mobile.core.ports.PlanningProvider
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextResult
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.score.GestureScore
+import com.magichandy.mobile.core.score.LayeredScore
+import com.magichandy.mobile.core.score.SemanticScore
+import com.magichandy.mobile.core.score.TempoScore
+import com.magichandy.mobile.core.score.VibrationEnvelope
 import kotlin.time.Duration
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 internal data class Decision(
     val score: SemanticScore?,

@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -42,10 +43,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.Author
 import com.magichandy.mobile.core.api.AutopilotStatus
+import com.magichandy.mobile.core.api.ChatEntry
 import com.magichandy.mobile.core.api.RunPhase
 import com.magichandy.mobile.core.api.SendBlock
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.api.canSendMessage
+import com.magichandy.mobile.core.api.isChatStopMessage
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.ButtonKind
@@ -57,7 +62,8 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /**
  * The deck (board V-Chat): the Now playing strip, the play actions while something plays, and the
- * composer. While typing it keeps only the strip and the composer (board V-Keyboard).
+ * composer. While typing it keeps only the strip and the composer (board V-Keyboard). With no chat
+ * model, Choose an AI sits above the composer; the draft is kept while it's open.
  */
 @Composable
 fun ChatDeck(
@@ -66,6 +72,7 @@ fun ChatDeck(
     onIntent: (UserIntent) -> Unit,
     onOpenLive: () -> Unit,
     modifier: Modifier = Modifier,
+    onChooseAi: () -> Unit = {},
 ) {
     val colors = MagicHandyTheme.colors
     val shape = MagicHandyTheme.shapes.sheet
@@ -81,6 +88,18 @@ fun ChatDeck(
     ) {
         NowPlayingStrip(state, onOpenLive)
         if (isLive && !isTyping) DeckActions(state, onIntent)
+        if (state.chat.sendBlockedBy == SendBlock.NoChatModel && !isTyping) {
+            AppButton(
+                stringResource(
+                    if (state.models.chatNeedsSignIn) R.string.connection_needs_sign_in
+                    else R.string.ready_choose_ai
+                ),
+                onChooseAi,
+                modifier = Modifier.fillMaxWidth(),
+                height = MagicHandyTheme.dimens.compactControl,
+                hasChevron = true,
+            )
+        }
         Composer(state, onIntent)
     }
 }
@@ -271,18 +290,41 @@ private fun Composer(state: AppState, onIntent: (UserIntent) -> Unit) {
     val shape = MagicHandyTheme.shapes.card
     var draft by rememberSaveable { mutableStateOf("") }
     val blocked = state.chat.sendBlockedBy
-    val canSend = blocked == null && draft.isNotBlank()
+    var submitted by rememberSaveable { mutableStateOf<String?>(null) }
+    var previousEntry by rememberSaveable { mutableStateOf<String?>(null) }
+    val latestUser =
+        state.chat.entries.filterIsInstance<ChatEntry.Message>().lastOrNull {
+            it.author == Author.You
+        }
+    LaunchedEffect(latestUser?.id, submitted) {
+        if (
+            submitted != null &&
+                latestUser?.id?.value != previousEntry &&
+                latestUser?.text == submitted
+        ) {
+            if (draft.trim() == submitted) draft = ""
+            submitted = null
+        }
+    }
+    val canSend = state.chat.canSendMessage(draft.trim())
     val send = {
         if (canSend) {
-            onIntent(UserIntent.SendMessage(draft.trim()))
-            draft = ""
+            val text = draft.trim()
+            if (isChatStopMessage(text)) draft = ""
+            else {
+                previousEntry = latestUser?.id?.value
+                submitted = text
+            }
+            onIntent(UserIntent.SendMessage(text))
         }
     }
     val placeholder =
         stringResource(
             when (blocked) {
                 null -> R.string.composer_hint
-                SendBlock.NoChatModel -> R.string.composer_no_model
+                SendBlock.NoChatModel ->
+                    if (state.models.chatNeedsSignIn) R.string.connection_needs_sign_in
+                    else R.string.composer_no_model
                 SendBlock.ModelUnreachable -> R.string.composer_unreachable
             }
         )
@@ -298,7 +340,6 @@ private fun Composer(state: AppState, onIntent: (UserIntent) -> Unit) {
         BasicTextField(
             value = draft,
             onValueChange = { draft = it },
-            enabled = blocked == null,
             textStyle = MagicHandyTheme.type.composer.copy(color = colors.text),
             cursorBrush = SolidColor(colors.accent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),

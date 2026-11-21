@@ -1,18 +1,44 @@
 package com.magichandy.mobile.transport.autoblow
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.LimitKind
+import com.magichandy.mobile.core.api.StepDirection
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.ports.DeviceDirectory
+import com.magichandy.mobile.core.ports.DeviceTransport
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.StructuredProvider
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextResult
 import com.magichandy.mobile.transport.simulated.DebugFixture
-import kotlin.test.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
-import kotlinx.serialization.json.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class VacuGlideSessionTest {
     @Test
     fun `native tempo starts from chat and Stop during a valve pulse shuts the motor and both valves`() =
         runTest {
+            var wireCeiling = 100
+            var refusedBeforeSend = false
             var motor = 0
             var plus = false
             var minus = false
@@ -29,7 +55,13 @@ internal class VacuGlideSessionTest {
                         put("strokeMinusValve", minus)
                     }
 
-                    override suspend fun events(receive: (String) -> Unit) = awaitCancellation()
+                    override suspend fun events(
+                        opened: () -> Unit,
+                        receive: (String) -> Unit,
+                    ): Unit {
+                        opened()
+                        awaitCancellation()
+                    }
 
                     override suspend fun put(
                         path: String,
@@ -37,7 +69,14 @@ internal class VacuGlideSessionTest {
                         stop: Boolean,
                         allowed: () -> Boolean,
                     ): JsonObject {
-                        if (!allowed()) throw java.io.IOException("Fenced")
+                        if (path == "target-speed" && !refusedBeforeSend) {
+                            wireCeiling = 0
+                            assertFalse(allowed())
+                            wireCeiling = 100
+                            refusedBeforeSend = true
+                            throw FencedAutoblowRequest()
+                        }
+                        if (!allowed()) throw FencedAutoblowRequest()
                         calls += path
                         when (path) {
                             "target-speed" ->
@@ -97,6 +136,7 @@ internal class VacuGlideSessionTest {
                                             { saved.single { it.ref.id == device }.settings },
                                             {},
                                             {},
+                                            topSpeed = { wireCeiling },
                                         )
                                         .also { it.initialize() }
                                 }
@@ -109,7 +149,12 @@ internal class VacuGlideSessionTest {
             assertNotNull(f.d.journal.read())
             advanceTimeBy(1500)
             runCurrent()
-            assertEquals(100, motor)
+            assertTrue(refusedBeforeSend)
+            assertEquals(80, motor)
+            repeat(12) { f.send(UserIntent.StepLimit(LimitKind.TopSpeed, StepDirection.Down)) }
+            advanceTimeBy(110)
+            runCurrent()
+            assertEquals(20, motor)
             f.send(UserIntent.SetValveSteps(id, true))
             response = """{"reply":"Adjusting.","tempo":null,"air_steps":1,"stop":false}"""
             f.send(UserIntent.SendMessage("One permitted step."))

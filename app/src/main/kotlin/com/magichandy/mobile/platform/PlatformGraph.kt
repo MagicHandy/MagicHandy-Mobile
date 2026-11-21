@@ -2,16 +2,42 @@ package com.magichandy.mobile.platform
 
 import android.os.Process
 import com.magichandy.mobile.MagicHandyApp
-import com.magichandy.mobile.core.*
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.platform.storage.*
-import com.magichandy.mobile.transport.providers.*
+import com.magichandy.mobile.R
+import com.magichandy.mobile.core.CoreDependencies
+import com.magichandy.mobile.core.CoreDispatchers
+import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.api.SignInFailure
+import com.magichandy.mobile.core.api.SignInState
+import com.magichandy.mobile.core.createMagicHandyCore
+import com.magichandy.mobile.core.ports.ModelProvider
+import com.magichandy.mobile.core.ports.ModelSignIn
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.SecretHandle
+import com.magichandy.mobile.platform.storage.AndroidVault
+import com.magichandy.mobile.platform.storage.AtomicBytes
+import com.magichandy.mobile.platform.storage.FileJournal
+import com.magichandy.mobile.platform.storage.PlatformDatabase
+import com.magichandy.mobile.platform.storage.RoomStores
+import com.magichandy.mobile.platform.storage.RotatingDiagnostics
+import com.magichandy.mobile.platform.storage.chatGptHostId
+import com.magichandy.mobile.transport.http.HttpsOnly
+import com.magichandy.mobile.transport.http.MobileReleases
+import com.magichandy.mobile.transport.providers.AccessTokenSource
+import com.magichandy.mobile.transport.providers.ChatGptAccount
+import com.magichandy.mobile.transport.providers.CompatibleProvider
+import com.magichandy.mobile.transport.providers.LanServers
+import com.magichandy.mobile.transport.providers.ResponsesProvider
 import java.io.File
-import java.util.UUID
+import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
 internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
@@ -21,6 +47,7 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
     val vault = AndroidVault(File(root, "credentials"))
     val http =
         OkHttpClient.Builder()
+            .addInterceptor(HttpsOnly)
             .connectTimeout(5, TimeUnit.SECONDS)
             .readTimeout(45, TimeUnit.SECONDS)
             .callTimeout(90, TimeUnit.SECONDS)
@@ -33,28 +60,49 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
     app.refreshRadio = devices::refresh
     val handle = SecretHandle("chatgpt-account")
     val account by lazy {
-        val idFile = AtomicBytes(File(root, "agent-host"))
-        val hostId =
-            idFile.read(128)?.decodeToString()
-                ?: UUID.randomUUID().toString().also { idFile.replace(it.encodeToByteArray()) }
-        ChatGptAccount(http, LoopbackBrowser(app, scope), vault, handle, AndroidClock, hostId)
+        val hostId = chatGptHostId(AtomicBytes(File(root, "agent-host")))
+        ChatGptAccount(
+            http,
+            LoopbackBrowser(
+                scope,
+                app.signInTabs::awaitForeground,
+                { app.getString(R.string.chatgpt_browser_return) },
+                app.signInTabs::open,
+            ),
+            vault,
+            handle,
+            AndroidClock,
+            hostId,
+            stores::requireChatGptSignIn,
+        )
     }
-    val signIn = ModelSignIn { withContext(Dispatchers.IO) { account.signIn() } }
-    val stop =
+    val signIn = ModelSignIn {
+        withContext(Dispatchers.IO) {
+            try {
+                account.signIn()
+            } catch (_: IOException) {
+                SignInState.Failed(SignInFailure.StorageUnavailable)
+            }
+        }
+    }
+    fun motionDispatcher(name: String) =
         Executors.newSingleThreadExecutor { task ->
                 Thread(
                     {
                         Process.setThreadPriority(Process.THREAD_PRIORITY_DISPLAY)
                         task.run()
                     },
-                    "Motion Stop",
+                    name,
                 )
             }
             .asCoroutineDispatcher()
+    val stop = motionDispatcher("Motion Stop")
+    val output = motionDispatcher("Motion output")
     val stopIo =
         Executors.newCachedThreadPool { r -> Thread(r, "Device Stop") }.asCoroutineDispatcher()
     scope.coroutineContext[Job]?.invokeOnCompletion {
         stop.close()
+        output.close()
         stopIo.close()
     }
     val providers = java.util.concurrent.ConcurrentHashMap<SavedModel, ModelProvider>()
@@ -73,7 +121,11 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
                 ProviderKind.ChatGpt ->
                     ResponsesProvider(
                         http,
-                        AccessTokenSource { account.token() },
+                        object : AccessTokenSource {
+                            override suspend fun token() = account.token()
+
+                            override suspend fun rejected(token: Secret) = account.rejected(token)
+                        },
                         m.info.model,
                         m.contextTokens,
                     )
@@ -96,7 +148,7 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
             scope,
             CoreDispatchers(
                 Dispatchers.Default.limitedParallelism(1),
-                Dispatchers.Default.limitedParallelism(1),
+                output,
                 stop,
                 Dispatchers.IO,
                 stopIo,
@@ -116,8 +168,9 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
             handle,
             app.packageManager.getPackageInfo(app.packageName, 0).versionName.orEmpty(),
             servers,
-            com.magichandy.mobile.transport.http.MobileReleases(http),
+            MobileReleases(http),
             androidApi = android.os.Build.VERSION.SDK_INT,
+            awaitStorage = stores::awaitReady,
         )
     )
 }

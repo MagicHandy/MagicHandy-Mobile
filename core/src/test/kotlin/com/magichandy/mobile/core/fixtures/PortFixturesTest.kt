@@ -45,6 +45,7 @@ internal class PortFixturesTest {
                 "cloud-wire" to 5,
                 "chat" to 3,
                 "local-history" to 4,
+                "persona-request" to 70,
                 "translations" to 5,
                 "content" to 3,
                 "brand" to 2,

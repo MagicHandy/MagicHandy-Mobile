@@ -1753,6 +1753,706 @@
       "settings_revision": 1
     },
     {
+      "case_id": "persona-en-hosted-utility-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-utility-neutral.json",
+      "sha256": "1e7ef008551a16a363f55be2da92a04f4d82263ee9696e1010878b07e370facb",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-warm-neutral.json",
+      "sha256": "150fdfcd2f7a540a20510c27a68168318efd45f63a081bf2fb467a9f7713aac2",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-intimate-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-intimate-neutral.json",
+      "sha256": "b944251d4a4ad6ae6f6f7e23cb11552556023fd4e9e2311187ab631d26c6fab7",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-explicit-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-explicit-neutral.json",
+      "sha256": "d5a48aee21cf5c204995a8a6e124a6be85f7e4c2e54f56d776e33cec0baec81f",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-warm-playful.json",
+      "sha256": "191a308f4f737e474b7443473e47f5ce17617195bc7e87040cb8039c02e80320",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-warm-tender",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-warm-tender.json",
+      "sha256": "76b5d7123f4295145ee247c071b1f108f772b2604584c8828359b0e90f9d9761",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-warm-teasing",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-warm-teasing.json",
+      "sha256": "f4efa27ebada5b1428a7fb6a8fe416c8bc8fb0bb5695979fe1f766622e15ddf0",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-warm-dominant",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-warm-dominant.json",
+      "sha256": "5dba6f7678e5b057a077d9928364b4bbf592ea5a8d2159607e1f537c1e322dbc",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-warm-submissive",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-warm-submissive.json",
+      "sha256": "46db9ec78c7cc538cdbd273e404332438f0b0086c1e6769b0381a5eb0e3197d8",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-hosted-intimate-tender-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-hosted-intimate-tender-detailed.json",
+      "sha256": "e91ec41f31c7594543f73f35308bbcf6a05a8efb101aeb78e15618ab590fdb8f",
+      "locale": "en",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-simple-explicit-dominant-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-simple-explicit-dominant-detailed.json",
+      "sha256": "56a8d7d546f69104d30f6179d0a4f1c3a58f032129cedbdafd7219fd631061ff",
+      "locale": "en",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-intermediate-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-intermediate-warm-playful.json",
+      "sha256": "a1227238682e689167f016da3f1966a92e90669daa48cb006fb4c3ece3960d17",
+      "locale": "en",
+      "capability": "intermediate",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-talk-intimate-neutral-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-talk-intimate-neutral-detailed.json",
+      "sha256": "580a9c9d7ccd38c8ac5eb14790cd3c9a3e8af7b8b3a07c732d817610498a0765",
+      "locale": "en",
+      "capability": "talk",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-en-speech-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-en-speech-warm-neutral.json",
+      "sha256": "cad8c484a7c37d9f147a232cb585c5a8f3bae91c22f265daa6197148e2212e06",
+      "locale": "en",
+      "capability": "speech",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-utility-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-utility-neutral.json",
+      "sha256": "b7d3ca9870008048b8dfe0e33939e85c8246a915576c58d05c62b1a205d2288c",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-warm-neutral.json",
+      "sha256": "bbc4265cd2cb6e4ffc23d772c0252fb600221f77d230cd09545335f5cd45954b",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-intimate-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-intimate-neutral.json",
+      "sha256": "de6738e4a0d4c0fe63dd4b06d02106f8133ca28c6984992596e1b85cfedc7eec",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-explicit-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-explicit-neutral.json",
+      "sha256": "6611ec0475a0bbbc262983425d7cfe24cc77f12829e96798549936a94b1a6799",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-warm-playful.json",
+      "sha256": "0f40f4a9527b0487e8d149aa89a43f74abad1888bf150354781d01908008db2e",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-warm-tender",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-warm-tender.json",
+      "sha256": "23338a7e0f9cc5f31e724dc11ff4f79570ce5c18f8b2214f4355f22317e38180",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-warm-teasing",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-warm-teasing.json",
+      "sha256": "f3e644c8ca1ce583b2f3330bb664d4260e10ea76d9d0614802531656fd16ff6a",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-warm-dominant",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-warm-dominant.json",
+      "sha256": "d9d1779d86d8868ada778ba363d27955d067a528702fcc527b109538ce13af41",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-warm-submissive",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-warm-submissive.json",
+      "sha256": "25a1f3d04e02478957e566e2e5b02ea3d8e365263b82ce0ce21d5cc2a9818bfe",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-hosted-intimate-tender-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-hosted-intimate-tender-detailed.json",
+      "sha256": "c47844005144a6ddfee345b2bb0d8cfbf418bc78bcccb2c0923f56c3015b71e0",
+      "locale": "es",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-simple-explicit-dominant-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-simple-explicit-dominant-detailed.json",
+      "sha256": "d260359791f54437a4bc0f3cf3869a18ab27f72716fa4281b8b23e51b3763c2b",
+      "locale": "es",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-intermediate-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-intermediate-warm-playful.json",
+      "sha256": "99a782dd02bfbde6900996ebae4b7b3b8170ca26cb5e18a7fa33213dabb18f4a",
+      "locale": "es",
+      "capability": "intermediate",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-talk-intimate-neutral-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-talk-intimate-neutral-detailed.json",
+      "sha256": "d4fbb5c9061749e0040afe9454ae4ba39a5e8b0961bf619afaba95b0485be5ca",
+      "locale": "es",
+      "capability": "talk",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-es-speech-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-es-speech-warm-neutral.json",
+      "sha256": "79b0d939617b5b15d3127f70aaee582a9683c3c8d88abdd88b56194a143d57e4",
+      "locale": "es",
+      "capability": "speech",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-utility-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-utility-neutral.json",
+      "sha256": "cbc76ee96df757416a17d411a64248606c86e3530bf1d680ed6897f1db5eeb86",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-warm-neutral.json",
+      "sha256": "5ef605cc92faef7a4fdbe8c419a366a1ddd4da21be8b2b3f12e7dd1ae01bcf77",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-intimate-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-intimate-neutral.json",
+      "sha256": "460219a0a4dc9b28cd72792f42ee9e03d892c32a37c4a1de17c9be046b9cd374",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-explicit-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-explicit-neutral.json",
+      "sha256": "3e75a41afc0c26889c93bf5b92a3ab44d7f049770671e37fd1a7942b8a2c1509",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-warm-playful.json",
+      "sha256": "56eb55ea02b7254066f3c00a642cde5c23286660388baf6969dfed4c3c3c5075",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-warm-tender",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-warm-tender.json",
+      "sha256": "381d220ec779de274037169024cfab439afabd23136fb339b59837eeada81b01",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-warm-teasing",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-warm-teasing.json",
+      "sha256": "9764b3b92bb0ddfff0afcc639ea54fd3937027b9e0ebf2f669c0038fb1a30cd8",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-warm-dominant",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-warm-dominant.json",
+      "sha256": "620182cc3e931b23151a935646ac6431bd0ced846ca7dcb9725a659b6aec7fff",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-warm-submissive",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-warm-submissive.json",
+      "sha256": "b64819ed7a081a7eaaea40b0093e201f7aff0e55ed4a2c3a6399a98d1a99a0a7",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-hosted-intimate-tender-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-hosted-intimate-tender-detailed.json",
+      "sha256": "b6fcc91c7b0fc7c65f2363e7a07aefb2c213fcf3edab847fd97d70cc3601978a",
+      "locale": "pt-BR",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-simple-explicit-dominant-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-simple-explicit-dominant-detailed.json",
+      "sha256": "62c142ec6fd2f3e9aa7b16289956675b0ff6b11285164040b8eedfa4776960b7",
+      "locale": "pt-BR",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-intermediate-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-intermediate-warm-playful.json",
+      "sha256": "1da4d3712d75f34698e11ef066912bb6af92651a8c21923bbb37abecad6dc84f",
+      "locale": "pt-BR",
+      "capability": "intermediate",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-talk-intimate-neutral-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-talk-intimate-neutral-detailed.json",
+      "sha256": "8b523db6877038dcb16fd5d6655436f497a7839ab4364efe7bd8d0d291443727",
+      "locale": "pt-BR",
+      "capability": "talk",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-pt-BR-speech-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-pt-BR-speech-warm-neutral.json",
+      "sha256": "6f4a37d166d82294a230ed25cd534d3551051ef79cfc0e23f9ffed7af31996bb",
+      "locale": "pt-BR",
+      "capability": "speech",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-utility-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-utility-neutral.json",
+      "sha256": "bf60706fb2592445c3b1e0cde41b8129205a4925347158dbc3a583dcc8b33eb7",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-warm-neutral.json",
+      "sha256": "f445b81d0ee430bca8ce6adfaa029b5e3221f500924f6dbed4c5780c261e428c",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-intimate-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-intimate-neutral.json",
+      "sha256": "95f352d5c4b7211b2161b7106df0a38015a16038871adf32a2b91bb6280223eb",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-explicit-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-explicit-neutral.json",
+      "sha256": "83a1486833bddeef3bf79c0352e25a6152170273072c0435695f0c747eb13f2c",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-warm-playful.json",
+      "sha256": "0702dbcda172c211b55ff40d715e05138e3e79cb5bb70bb07a6222c46968b191",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-warm-tender",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-warm-tender.json",
+      "sha256": "56fdb8d025dc627599b7eb474c16331942a2e8308dce9e8aaa8014cfad1e21ef",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-warm-teasing",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-warm-teasing.json",
+      "sha256": "80dd3d17fc14f79f596669a25bc17a5d27e7c0706bda8d267f9b3204c019a88e",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-warm-dominant",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-warm-dominant.json",
+      "sha256": "d0b4f90820bdf6c0323c0d377e23a8019cdb9ee2f866e7d523d63889a7058a29",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-warm-submissive",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-warm-submissive.json",
+      "sha256": "9de7cf5fafa1a1a63e42cf07170faed03ab5e6e531704e693b9e33de89f451eb",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-hosted-intimate-tender-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-hosted-intimate-tender-detailed.json",
+      "sha256": "a6cfd973b9a1d0c7c30488c6f014de7668bdf130b4b5b11ab471781390288556",
+      "locale": "ja",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-simple-explicit-dominant-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-simple-explicit-dominant-detailed.json",
+      "sha256": "6ed436d762bb12f01e6469ab70a2beb79d715e1cc9f2023e6bcb87eaa0e8b053",
+      "locale": "ja",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-intermediate-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-intermediate-warm-playful.json",
+      "sha256": "3636f21500c47d1172e13402a1912e04224de25f9c724c5f97e819bc5e54c1b4",
+      "locale": "ja",
+      "capability": "intermediate",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-talk-intimate-neutral-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-talk-intimate-neutral-detailed.json",
+      "sha256": "aea21509b2a7db6f735ce6811d301c14b21ed9f2598355911b00c9f063772fd1",
+      "locale": "ja",
+      "capability": "talk",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-ja-speech-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-ja-speech-warm-neutral.json",
+      "sha256": "65191a641f3d0371d4221757f21f036e3e15d3990734cab5231e509dc527a65f",
+      "locale": "ja",
+      "capability": "speech",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-utility-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-utility-neutral.json",
+      "sha256": "754e737997e857eb2ccd3073905a94f2f7b695b1e2a067980a8056f4f0ec59c1",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-warm-neutral.json",
+      "sha256": "0fb87980e737c9d81f22c8af472ad43ddbd0081d2fdc5d1b5f03a766c87e1550",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-intimate-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-intimate-neutral.json",
+      "sha256": "e1090d8fbfce1641f621e7222de2009c9d3e767f38e5c9d4e56da1ef41b2b9dc",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-explicit-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-explicit-neutral.json",
+      "sha256": "78fc6ce0383f5f58c2e6b4c53b20c8995c37fdce3d202aef89ce99799513ebe1",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-warm-playful.json",
+      "sha256": "e1eedd138ca4f903806629b41761f5c1ca157520134899b47e5acfa9453e72fe",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-warm-tender",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-warm-tender.json",
+      "sha256": "ca72a073fabf403d568d59386bca9167a88786fae2532c00316dbec9475d1ed1",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-warm-teasing",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-warm-teasing.json",
+      "sha256": "467f9a497d2d1d5c7b3bb94d97dfedb161cb2729fab662438207c553506d60b4",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-warm-dominant",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-warm-dominant.json",
+      "sha256": "239f60bda209b3949408459290604864f3c920d19ff5557ffbdb97e44954a509",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-warm-submissive",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-warm-submissive.json",
+      "sha256": "18403f432e8ace2a385950d4e06c0450b9ee90bd9b16701511dade78e287e9be",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-hosted-intimate-tender-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-hosted-intimate-tender-detailed.json",
+      "sha256": "9898f0b6fe41e549a0db5ec00d0e307d53eb2515636ad77da1ba1cfc5fbc902c",
+      "locale": "zh-Hans",
+      "capability": "hosted",
+      "mode": "off",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-simple-explicit-dominant-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-simple-explicit-dominant-detailed.json",
+      "sha256": "2c2441dddd730b78c0ecb0807b58080a08f52517fdf5b5937f118855851bd227",
+      "locale": "zh-Hans",
+      "capability": "simple",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-intermediate-warm-playful",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-intermediate-warm-playful.json",
+      "sha256": "3536220707c9635198173512185a2299a14dac389e33b815bc5c8abd8025d397",
+      "locale": "zh-Hans",
+      "capability": "intermediate",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-talk-intimate-neutral-detailed",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-talk-intimate-neutral-detailed.json",
+      "sha256": "abe6992009d5c49c85913b2b17d8c92234677a12a22aaee9e1afac8dd1ce50b6",
+      "locale": "zh-Hans",
+      "capability": "talk",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
+      "case_id": "persona-zh-Hans-speech-warm-neutral",
+      "role": "persona-request",
+      "path": "chat/personas/persona-zh-Hans-speech-warm-neutral.json",
+      "sha256": "ae622ab9d1abc211a8314e7fcc4c4e98ebb0bd79ada1fe89a70cf24a75f0548e",
+      "locale": "zh-Hans",
+      "capability": "speech",
+      "mode": "layered",
+      "settings_revision": 1
+    },
+    {
       "case_id": "layered-history-named-32k",
       "role": "local-history",
       "path": "chat/history/layered-history-named-32k.json",

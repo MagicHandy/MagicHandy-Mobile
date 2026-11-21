@@ -8,6 +8,8 @@ public data class ModelRequest(
     public val schema: JsonObject,
     public val name: String = "motion_proposal",
     public val preserveTail: Int = 1,
+    /** Output tokens reserved by the composer. A provider may already require a higher floor. */
+    public val outputAllowance: Int = 0,
 )
 
 /** Providers negotiating a response contract. Raw model JSON is private to the validator. */

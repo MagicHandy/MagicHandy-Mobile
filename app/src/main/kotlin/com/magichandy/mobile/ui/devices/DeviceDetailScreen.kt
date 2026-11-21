@@ -23,12 +23,14 @@ import androidx.compose.ui.semantics.semantics
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceLimit
 import com.magichandy.mobile.core.api.DeviceSettings
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.DeviceSummary
 import com.magichandy.mobile.core.api.FormIntent
 import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.CoreCalls
 import com.magichandy.mobile.ui.FormRefusal
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
@@ -72,6 +74,7 @@ fun DeviceDetailScreen(
     onBack: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     modifier: Modifier = Modifier,
+    calls: CoreCalls = CoreCalls.None,
 ) {
     val dimens = MagicHandyTheme.dimens
     Column(
@@ -82,8 +85,16 @@ fun DeviceDetailScreen(
         verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.cozy),
     ) {
         DeviceHeader(device, onBack)
+        device.connectionFailure?.let { Hint(connectionFailureText(it)) }
         val settings = device.settings
-        if (settings is DeviceSettings.VacuGlide) {
+        if (
+            device.status == DeviceStatus.NeedsSetup &&
+                calls.bridgeAddressForSetup(device.id) != null
+        ) {
+            Hint(stringResource(R.string.bridge_reselect_note))
+            if (device.family == DeviceFamily.Vibrator) AddVibrator(calls, {}, device.id)
+            else AddStroker(calls, {}, device.id)
+        } else if (settings is DeviceSettings.VacuGlide) {
             VacuGlideSections(
                 device,
                 settings,
@@ -181,12 +192,7 @@ private fun DeviceSection(
         )
         when (settings) {
             is DeviceSettings.Handy -> {
-                FixedRow(
-                    label = stringResource(R.string.handy_model),
-                    value = settings.model,
-                    description = stringResource(R.string.handy_model_desc),
-                    isFirst = false,
-                )
+                HandyModelRow(device, settings, onIntent)
                 ToggleRow(
                     label = stringResource(R.string.handy_reverse),
                     description = stringResource(R.string.handy_reverse_desc),
@@ -196,10 +202,13 @@ private fun DeviceSection(
                 )
             }
             is DeviceSettings.Vibrator ->
-                FixedRow(
-                    label = stringResource(R.string.vibrator_max_level),
-                    value = Words.percent(settings.maxLevel),
-                    isFirst = false,
+                DeviceLimitRow(
+                    device.id,
+                    DeviceLimit.VibrationMaximum,
+                    settings.maxLevel.value,
+                    0..100,
+                    false,
+                    onIntent,
                 )
             // A stroker other than The Handy has no model to set, only its mounting.
             is DeviceSettings.LinearActuator ->
@@ -323,16 +332,21 @@ private fun VacuGlideSections(
         )
     }
     Card(caption = stringResource(R.string.vacuglide_output)) {
-        FixedRow(
-            label = stringResource(R.string.vacuglide_tempo_range),
-            value =
-                withMonoReadouts(
-                    Words.range(settings.tempoRange),
-                    Words.range(settings.tempoRange),
-                ),
-            description = stringResource(R.string.vacuglide_tempo_range_desc),
-            valueColor = colors.text,
-            isFirst = true,
+        DeviceLimitRow(
+            device.id,
+            DeviceLimit.TempoMinimum,
+            settings.tempoRange.first,
+            5..settings.tempoRange.last,
+            true,
+            onIntent,
+        )
+        DeviceLimitRow(
+            device.id,
+            DeviceLimit.TempoMaximum,
+            settings.tempoRange.last,
+            settings.tempoRange.first..100,
+            false,
+            onIntent,
         )
         ToggleRow(
             label = stringResource(R.string.vacuglide_valve),
@@ -354,12 +368,20 @@ private fun MotionTest(device: DeviceSummary, onIntent: (UserIntent) -> Unit) {
     if (!isLinked) {
         AppButton(
             stringResource(
-                if (device.status == DeviceStatus.Lost) R.string.action_reconnect
-                else R.string.action_connect
+                when {
+                    device.canRetryWhileConnecting -> R.string.device_retry_connection
+                    device.status == DeviceStatus.Lost -> R.string.action_reconnect
+                    else -> R.string.action_connect
+                }
             ),
-            { onIntent(UserIntent.Connect(device.id)) },
+            {
+                onIntent(
+                    if (device.canRetryWhileConnecting) UserIntent.RetryConnection(device.id)
+                    else UserIntent.Connect(device.id)
+                )
+            },
             kind = ButtonKind.Primary,
-            isEnabled = device.status != DeviceStatus.Connecting,
+            isEnabled = device.status != DeviceStatus.Connecting || device.canRetryWhileConnecting,
             modifier = Modifier.fillMaxWidth(),
         )
         return

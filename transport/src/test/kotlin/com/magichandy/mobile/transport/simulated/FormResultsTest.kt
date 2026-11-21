@@ -1,12 +1,37 @@
 package com.magichandy.mobile.transport.simulated
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormReason
+import com.magichandy.mobile.core.api.FormResult
+import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.api.ServerCheck
+import com.magichandy.mobile.core.api.ServerCheckFailure
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.ports.ModelServers
+import com.magichandy.mobile.core.ports.ModelSignIn
+import com.magichandy.mobile.core.ports.ModelStore
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.SecretHandle
+import com.magichandy.mobile.core.ports.ServerAssessment
 import java.io.IOException
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Duration
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class FormResultsTest {
@@ -109,6 +134,8 @@ internal class FormResultsTest {
             c.refuses(save, FormReason.InvalidAddress)
             result = ServerAssessment(ServerCheck.Failed(addr, ServerCheckFailure.NoModels))
             c.refuses(save, FormReason.InvalidModel)
+            result = ServerAssessment(ServerCheck.Failed(addr, ServerCheckFailure.IncompleteReply))
+            c.refuses(save, FormReason.IncompleteModelReply)
             result =
                 ServerAssessment(
                     ServerCheck.Found(
@@ -181,6 +208,123 @@ internal class FormResultsTest {
             finish.complete(Unit)
             assertEquals(FormResult.Rejected(FormReason.Unreachable), work.await())
             assertEquals(FormResult.Rejected(FormReason.NotFound), other.await())
+            f.scope.cancel()
+        }
+
+    @Test
+    fun `selecting newly saved ChatGPT OpenRouter or LAN models for chat replaces an older default while Models saves preserve it`() =
+        runTest {
+            val f =
+                DebugFixture(this) { d ->
+                    d.copy(
+                        signIn = ModelSignIn { null },
+                        signInCredential = SecretHandle("synthetic-chatgpt"),
+                        servers =
+                            ModelServers { address, selected, capability ->
+                                val model = selected ?: "fixture-lan"
+                                val level = capability ?: CapabilityLevel.Simple
+                                ServerCheck.Found(
+                                    address,
+                                    ProviderKind.Ollama,
+                                    false,
+                                    listOf(model),
+                                    model,
+                                    level,
+                                    null,
+                                    16384,
+                                    null,
+                                    Duration.ZERO,
+                                )
+                            },
+                    )
+                }
+            f.onboard()
+            val c = f.core
+            val initialDefault = requireNotNull(c.state.value.models.chatConnection)
+            assertEquals(ConnectionId("simulated-model"), initialDefault)
+
+            assertEquals(
+                FormResult.Accepted,
+                c.submit(
+                    UserIntent.SaveOpenRouter(
+                        Secret("synthetic-key-models"),
+                        "fixture/models-router",
+                        CapabilityLevel.Advanced,
+                        false,
+                    )
+                ),
+            )
+            assertEquals(initialDefault, c.state.value.models.chatConnection)
+
+            assertEquals(
+                FormResult.Accepted,
+                c.submit(
+                    UserIntent.SaveOpenRouter(
+                        Secret("synthetic-key-setup"),
+                        "fixture/setup-router",
+                        CapabilityLevel.Advanced,
+                        false,
+                        selectForChat = true,
+                    )
+                ),
+            )
+            val setupRouter =
+                c.state.value.models.connections.single { it.model == "fixture/setup-router" }.id
+            assertEquals(setupRouter, c.state.value.models.chatConnection)
+
+            assertEquals(
+                FormResult.Accepted,
+                c.submit(
+                    UserIntent.SaveServer(
+                        "Models LAN",
+                        "http://127.0.0.1:11434",
+                        "fixture-lan-models",
+                        CapabilityLevel.Simple,
+                    )
+                ),
+            )
+            assertEquals(setupRouter, c.state.value.models.chatConnection)
+
+            assertEquals(
+                FormResult.Accepted,
+                c.submit(
+                    UserIntent.SaveServer(
+                        "Setup LAN",
+                        "http://127.0.0.1:11435",
+                        "fixture-lan-setup",
+                        CapabilityLevel.Simple,
+                        selectForChat = true,
+                    )
+                ),
+            )
+            val setupLan =
+                c.state.value.models.connections.single { it.model == "fixture-lan-setup" }.id
+            assertEquals(setupLan, c.state.value.models.chatConnection)
+
+            f.send(UserIntent.StartChatGptSignIn)
+            assertTrue(c.state.value.models.connections.any { it.id == ConnectionId("chatgpt") })
+            assertEquals(setupLan, c.state.value.models.chatConnection)
+
+            f.send(UserIntent.StartChatGptSignInForChat)
+            assertEquals(ConnectionId("chatgpt"), c.state.value.models.chatConnection)
+
+            assertEquals(
+                FormResult.Accepted,
+                c.submit(
+                    UserIntent.SaveOpenRouter(
+                        Secret("synthetic-key-choose-ai"),
+                        "fixture/choose-ai-router",
+                        CapabilityLevel.Advanced,
+                        false,
+                        selectForChat = true,
+                    )
+                ),
+            )
+            val chooseAiRouter =
+                c.state.value.models.connections
+                    .single { it.model == "fixture/choose-ai-router" }
+                    .id
+            assertEquals(chooseAiRouter, c.state.value.models.chatConnection)
             f.scope.cancel()
         }
 }

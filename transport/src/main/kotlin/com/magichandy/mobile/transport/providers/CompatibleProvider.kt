@@ -2,17 +2,36 @@
 package com.magichandy.mobile.transport.providers
 
 import com.magichandy.mobile.core.chat.PromptBudget
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.StructuredProvider
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextResult
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.transport.http.asOneShot
 import com.magichandy.mobile.transport.http.boundedText
 import com.magichandy.mobile.transport.http.exchange
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.json.*
-import okhttp3.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import okhttp3.Call
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.BufferedSource
 
@@ -53,16 +72,20 @@ internal constructor(
                         .getValue("data")
                         .jsonArray
                 val row =
-                    rows.firstOrNull { it.jsonObject["id"] == JsonPrimitive(model) }?.jsonObject
-                        ?: throw IOException("Model unavailable")
+                    rows.filterIsInstance<JsonObject>().firstOrNull {
+                        it["id"] == JsonPrimitive(model)
+                    } ?: throw IOException("Model unavailable")
                 val options = row["reasoning"] as? JsonObject
-                Capabilities(
-                    row["supported_parameters"]
-                        ?.jsonArray
+                val parameters =
+                    (row["supported_parameters"] as? JsonArray)
                         .orEmpty()
-                        .map { it.jsonPrimitive.content }
-                        .toSet(),
-                    options != null,
+                        .mapNotNull {
+                            (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.contentOrNull
+                        }
+                        .toSet()
+                Capabilities(
+                    parameters,
+                    options != null || "reasoning" in parameters,
                     options?.get("mandatory") == JsonPrimitive(true),
                 )
             }
@@ -96,11 +119,14 @@ internal constructor(
             val caps = capabilities(auth)
             if (caps.mandatory && !reasoning || auth != null && reasoning && !caps.reasoning)
                 return TextResult.Interrupted
-            val output = 1536 + if (auth != null && reasoning) minOf(8192, context / 4) else 0
+            val baseOutput = structuredOutputAllowance(contract, if (auth == null) 256 else 1536)
+            val reasoningTokens = if (auth != null && reasoning) minOf(8192, context / 4) else 0
+            val output = baseOutput + reasoningTokens
             val budget =
                 PromptBudget(
                     context,
-                    output,
+                    baseOutput,
+                    reasoningTokens = reasoningTokens,
                     schemaBytes = contract?.schema?.toString()?.encodeToByteArray()?.size ?: 0,
                 )
             val admitted =
@@ -163,7 +189,9 @@ internal constructor(
             val call =
                 request("chat/completions", auth)
                     .header("Accept", "text/event-stream")
-                    .post(body.toString().toRequestBody("application/json".toMediaType()))
+                    .post(
+                        body.toString().toRequestBody("application/json".toMediaType()).asOneShot()
+                    )
                     .build()
             http.exchange(call) { res ->
                 if (res.isSuccessful) compatibleStream(res.body.source(), preview)
@@ -204,27 +232,42 @@ internal constructor(
     }
 }
 
+internal fun structuredOutputAllowance(contract: ModelRequest?, floor: Int): Int =
+    contract?.outputAllowance?.takeIf { it > 0 }?.let { maxOf(floor, it) } ?: 1536
+
 internal fun compatibleStream(source: BufferedSource, preview: (String) -> Unit): TextResult {
     val body = StringBuilder()
     var read = 0L
     var finished = false
+    val fields = mutableListOf<String>()
     while (!source.exhausted()) {
-        val line = source.readUtf8LineStrict(1L shl 20)
+        val raw = source.readUtf8LineStrict(1L shl 20)
+        val line = if (read == 0L) raw.removePrefix("\uFEFF") else raw
         read += line.encodeToByteArray().size + 1
         if (read > 4L shl 20) return TextResult.Interrupted
-        if (!line.startsWith("data:")) continue
-        val data = line.removePrefix("data:").trim()
+        if (line.startsWith("data:")) fields += line.removePrefix("data:").removePrefix(" ")
+        if (line.isNotEmpty() || fields.isEmpty()) continue
+        val data = fields.joinToString("\n").trim()
+        fields.clear()
+        if (data.isEmpty()) continue
         if (data == "[DONE]")
             return if (finished && body.isNotEmpty()) TextResult.Completed(body.toString())
             else TextResult.Interrupted
         val chunk = Json.parseToJsonElement(data).jsonObject
         if (chunk["error"]?.let { it != JsonNull } == true) return TextResult.Interrupted
-        for (item in chunk["choices"]?.jsonArray.orEmpty()) {
+        val choices = chunk["choices"]?.takeUnless { it == JsonNull }?.jsonArray.orEmpty()
+        for (item in choices) {
             val choice = item.jsonObject
             if (choice["index"]?.jsonPrimitive?.intOrNull != 0) return TextResult.Interrupted
             val delta = choice["delta"] as? JsonObject
-            val reason = (choice["finish_reason"] as? JsonPrimitive)?.contentOrNull
-            val text = (delta?.get("content") as? JsonPrimitive)?.contentOrNull.orEmpty()
+            val reason =
+                choice["finish_reason"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            val content = delta?.get("content")?.takeUnless { it == JsonNull }
+            val text =
+                if (content == null) ""
+                else
+                    (content as? JsonPrimitive)?.takeIf { it.isString }?.content
+                        ?: return TextResult.Interrupted
             if (
                 reason == "content_filter" ||
                     !(delta?.get("refusal") as? JsonPrimitive)?.contentOrNull.isNullOrEmpty()

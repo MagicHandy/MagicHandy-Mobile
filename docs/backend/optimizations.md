@@ -2,6 +2,9 @@
 
 ## Implemented
 
+- The persona prompt catalog stores five locales' wording, profile formats and length instructions in 29,599 uncompressed bytes. All 1,648 existing contract templates and 199 schemas remain shared. Utility with Short returns the existing developer message immediately, even for a custom persona with a saved description. Two complete exports reproduce both resource hashes. `PersonaPromptTest` checks the fast path and admission after expanding a longer voice.
+- Persona-only settings changes update the speaker without restarting an in-flight Autopilot planner or its independent check-in timer. Custom edits write one roster row. Selecting the current speaker or saving identical fields avoids a settings revision and row write. Turns that propose no memory perform no persona-existence query. `AutopilotTest` and `PersonaStorageTest` exercise the relevant paths.
+
 The gesture compiler computes each leg's neutral envelope once and reuses it across cruise candidates. The field warmup computes spatial width and trigger strength once per cycle. Compiled curves cache their exact derivative peaks. All 108 semantic gesture cases retain their original periods and frames. The retired comparison generator builds each seeded permutation block once and reuses its levels. All 27 comparison cases match.
 
 | Path | Work saved | Evidence |
@@ -20,6 +23,8 @@ The gesture compiler computes each leg's neutral envelope once and reuses it acr
 | Diagnostic sharing | Construct the report on demand. Read at most the tail of the two files, parse only allowed entries and cap the attachment at 256 KiB. Stop evidence is projected once per changed receipt. | `DiagnosticsExportTest` supplies 5,000 synthetic events. `StorageTest` injects malformed records and checks that unrelated cache files cannot be shared. |
 
 ## Tradeoffs for the owner
+
+- Custom wording expands the developer message inside the same bounded history budget. Caching composed prompts per persona could reduce formatting work, but would retain private descriptions in memory and require invalidation by locale, capability, live context and edit. The default fast path and shared immutable vocabulary keep that cache unnecessary at current scale.
 
 - **Cross-run motion caching.** Retaining prepared geometry by calibration, pace and limits could speed repeated starts. It would keep more curves resident and complicate invalidation. Measure reuse and memory on the target phone first.
 - **Prompt resource footprint.** The interned catalog preserves the exact five-language contracts from Go and compresses well in the APK. A more compact binary format could reduce first-use allocation at the cost of another versioned decoder. Measure first-turn latency and resident memory on the phone.

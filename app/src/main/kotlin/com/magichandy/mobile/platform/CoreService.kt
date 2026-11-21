@@ -2,14 +2,30 @@ package com.magichandy.mobile.platform
 
 import android.annotation.SuppressLint
 import android.app.Service
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.ServiceCompat
-import com.magichandy.mobile.core.api.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.AutopilotStatus
+import com.magichandy.mobile.core.api.DeviceStatus
+import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.StopSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 internal val AppState.needsHost
     get() =
@@ -32,10 +48,12 @@ class CoreService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var observer: Job? = null
     private var wake: Job? = null
+    private var shutdown: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        shutdown?.cancel()
         val core = owner.core
         val notices = CoreNotice(this)
         try {
@@ -46,11 +64,11 @@ class CoreService : Service() {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
             )
         } catch (_: SecurityException) {
-            owner.host.finished(false)
+            owner.host.serviceDestroyed(core)
             stopSelf(startId)
             return START_NOT_STICKY
         } catch (_: IllegalStateException) {
-            owner.host.finished(false)
+            owner.host.serviceDestroyed(core)
             stopSelf(startId)
             return START_NOT_STICKY
         }
@@ -95,12 +113,18 @@ class CoreService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        owner.host.finished(false)
         owner.core.emergencyStop(StopSource.TaskRemoved)
-        stopSelf()
+        observer?.cancel()
+        shutdown?.cancel()
+        shutdown = scope.launch {
+            owner.core.finishStopWindow()
+            stopSelf()
+        }
     }
 
     override fun onDestroy() {
-        owner.host.finished(false)
+        owner.host.serviceDestroyed(owner.core)
         scope.cancel()
         setWake(false)
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -110,8 +134,17 @@ class CoreService : Service() {
 
 class StopActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == CoreNotice.stopAction)
-            (context.applicationContext as CoreOwner).core.emergencyStop(StopSource.Notification)
+        if (intent.action != CoreNotice.stopAction) return
+        val owner = context.applicationContext as CoreOwner
+        owner.core.emergencyStop(StopSource.Notification)
+        val delivery = goAsync() ?: return
+        owner.stopScope.launch {
+            try {
+                owner.core.finishStopWindow()
+            } finally {
+                delivery.finish()
+            }
+        }
     }
 }
 

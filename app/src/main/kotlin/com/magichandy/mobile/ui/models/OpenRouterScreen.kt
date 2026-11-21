@@ -21,7 +21,6 @@ import com.magichandy.mobile.ui.FormRefusal
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.Card
-import com.magichandy.mobile.ui.components.PageHeader
 import com.magichandy.mobile.ui.components.Segment
 import com.magichandy.mobile.ui.components.Segmented
 import com.magichandy.mobile.ui.components.TextInput
@@ -39,6 +38,8 @@ fun OpenRouterScreen(
     submit: suspend (form: FormIntent) -> FormResult,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    origin: ProviderOrigin = ProviderOrigin.Models,
+    onSaved: () -> Unit = onBack,
 ) {
     // The key is held only while this screen is open, never in saved instance state.
     var key by remember { mutableStateOf("") }
@@ -47,12 +48,7 @@ fun OpenRouterScreen(
     var isReasoningOn by rememberSaveable { mutableStateOf(false) }
     val submission = rememberFormSubmission(submit)
     Page(modifier) {
-        PageHeader(
-            title = stringResource(R.string.provider_openrouter),
-            backDescription = stringResource(R.string.back_to_models),
-            onBack = onBack,
-            breadcrumb = stringResource(R.string.models_title),
-        )
+        ProviderHeader(stringResource(R.string.provider_openrouter), origin, onBack)
         Text(
             stringResource(R.string.openrouter_lead),
             style = MagicHandyTheme.type.small,
@@ -98,13 +94,8 @@ fun OpenRouterScreen(
             ),
             {
                 submission.send(
-                    UserIntent.SaveOpenRouter(
-                        Secret(key.trim()),
-                        model.trim(),
-                        capability,
-                        isReasoningOn,
-                    ),
-                    onBack,
+                    openRouterSaveIntent(key, model, capability, isReasoningOn, origin),
+                    onSaved,
                 )
             },
             kind = ButtonKind.Primary,
@@ -113,3 +104,18 @@ fun OpenRouterScreen(
         )
     }
 }
+
+internal fun openRouterSaveIntent(
+    key: String,
+    model: String,
+    capability: CapabilityLevel,
+    isReasoningOn: Boolean,
+    origin: ProviderOrigin,
+): UserIntent.SaveOpenRouter =
+    UserIntent.SaveOpenRouter(
+        Secret(key.trim()),
+        model.trim(),
+        capability,
+        isReasoningOn,
+        selectForChat = origin.selectsForChat,
+    )

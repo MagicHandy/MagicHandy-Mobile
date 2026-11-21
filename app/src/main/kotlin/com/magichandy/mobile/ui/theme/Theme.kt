@@ -234,6 +234,14 @@ data class MagicHandyDimens(
     /** The streaming caret after a reply's last word. */
     val caretWidth: Dp = 2.dp,
     val caretHeight: Dp = 16.dp,
+    /** The narrowest a More options menu is. */
+    val menuWidth: Dp = 180.dp,
+    /** One segment of setup's progress bar. */
+    val progressBar: Dp = 4.dp,
+    /** The done or to-do mark beside each line of You're set. */
+    val readyMark: Dp = 24.dp,
+    /** A personality description's field before anything is typed: about three lines. */
+    val descriptionField: Dp = 84.dp,
     val bubbleMaxFraction: Float = 0.86f,
 )
 

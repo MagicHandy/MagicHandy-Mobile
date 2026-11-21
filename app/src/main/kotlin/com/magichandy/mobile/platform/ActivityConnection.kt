@@ -5,10 +5,17 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.magichandy.mobile.MagicHandyApp
-import com.magichandy.mobile.core.api.*
-import kotlinx.coroutines.flow.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceStatus
+import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.core.api.UserIntent
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**

@@ -1,17 +1,21 @@
 package com.magichandy.mobile.transport.providers
 
+import com.magichandy.mobile.transport.http.HttpsOnly
 import java.io.IOException
 import java.net.InetAddress
 import java.net.Proxy
 import java.net.UnknownHostException
-import okhttp3.*
+import okhttp3.Dns
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
 
 /**
  * Constrain the socket's actual destination as well as DNS answers. Every credential-free LAN
  * client is origin-bound.
  */
-internal class PrivateAddressRequired : UnknownHostException("Cleartext requires a private address")
+internal class PrivateAddressRequired :
+    UnknownHostException("This connection requires a private address")
 
 internal fun privateAddress(address: InetAddress): Boolean {
     val bytes = address.address
@@ -45,6 +49,7 @@ internal fun originClient(client: OkHttpClient, origin: HttpUrl): OkHttpClient {
     }
     return client
         .newBuilder()
+        .apply { interceptors().remove(HttpsOnly) }
         .proxy(Proxy.NO_PROXY)
         .followRedirects(false)
         .followSslRedirects(false)
@@ -53,7 +58,7 @@ internal fun originClient(client: OkHttpClient, origin: HttpUrl): OkHttpClient {
             object : Dns {
                 override fun lookup(hostname: String): List<InetAddress> {
                     if (hostname != origin.host) throw UnknownHostException("Origin changed")
-                    return dns.lookup(hostname).let { if (origin.isHttps) it else check(it) }
+                    return check(dns.lookup(hostname))
                 }
             }
         )
@@ -62,16 +67,12 @@ internal fun originClient(client: OkHttpClient, origin: HttpUrl): OkHttpClient {
             if (url.host != origin.host || url.port != origin.port || url.scheme != origin.scheme)
                 throw IOException("Origin changed")
             // OkHttp can bypass Dns for numeric literals. Reject those before connect as well.
-            if (
-                !url.isHttps &&
-                    (url.host.contains(':') || url.host.all { it.isDigit() || it == '.' })
-            )
+            if (url.host.contains(':') || url.host.all { it.isDigit() || it == '.' })
                 check(listOf(InetAddress.getByName(url.host)))
             chain.proceed(chain.request())
         }
         .addNetworkInterceptor { chain ->
-            if (!chain.request().url.isHttps)
-                check(listOf(requireNotNull(chain.connection()?.route()?.socketAddress?.address)))
+            check(listOf(requireNotNull(chain.connection()?.route()?.socketAddress?.address)))
             chain.proceed(chain.request())
         }
         .build()

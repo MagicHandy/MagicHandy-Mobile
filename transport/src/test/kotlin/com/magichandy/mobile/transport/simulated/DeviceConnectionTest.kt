@@ -35,9 +35,10 @@ internal class DeviceConnectionTest {
         f.connect(leaving)
         f.send(UserIntent.SendMessage("Hello"))
         val before = f.devices.output.value.getValue(other)
+        val previousStops = f.devices.output.value.getValue(leaving).stops
         f.send(UserIntent.Disconnect(leaving))
         assertEquals(before, f.devices.output.value.getValue(other))
-        assertEquals(1, f.devices.output.value.getValue(leaving).stops)
+        assertEquals(previousStops + 1, f.devices.output.value.getValue(leaving).stops)
         assertTrue(f.core.state.value.chat.reply is ReplyState.Streaming)
         advanceTimeBy(150)
         runCurrent()
@@ -58,11 +59,12 @@ internal class DeviceConnectionTest {
         f.connect(leaving)
         f.send(UserIntent.StartMotion)
         assertEquals(RunPhase.Playing, f.core.state.value.run.phase)
+        val initial = f.devices.output.value
         f.send(UserIntent.Disconnect(leaving))
         for (id in listOf(leaving, other)) {
             val output = f.devices.output.value.getValue(id)
             assertEquals(0, output.speed.value)
-            assertEquals(1, output.stops)
+            assertEquals(initial.getValue(id).stops + 1, output.stops)
         }
         assertEquals(
             DeviceStatus.Connected,

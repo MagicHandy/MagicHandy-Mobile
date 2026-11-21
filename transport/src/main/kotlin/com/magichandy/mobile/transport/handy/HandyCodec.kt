@@ -130,18 +130,57 @@ internal data class RpcReply(
     val method: Int?,
     val rejected: Boolean,
     val deviceTimeMillis: Long? = null,
+    val playback: HandyPlaybackReport? = null,
 )
 
-internal fun decodeReply(bytes: ByteArray): RpcReply? {
+internal data class HandyPlaybackReport(val stream: Long, val state: HandyPlayback)
+
+private fun playbackReport(method: ProtoField?): HandyPlaybackReport? {
+    if (method == null || method.number !in 860..874) return null
+    val encoded = method.data ?: return null
+    val state = fields(encoded).singleOrNull { it.number == 1 }?.data ?: return null
+    val items = fields(state)
+    val stream =
+        items.singleOrNull { it.number == 10 }?.value?.takeIf { it in 1..0xffff_ffffL }
+            ?: return null
+    val code = items.singleOrNull { it.number == 1 }?.value ?: 0L
+    val playback =
+        when (code) {
+            0L -> HandyPlayback.Uninitialized
+            1L -> HandyPlayback.Playing
+            2L -> HandyPlayback.Stopped
+            3L -> HandyPlayback.Paused
+            4L -> HandyPlayback.Starving
+            else -> return null
+        }
+    return HandyPlaybackReport(stream, playback)
+}
+
+internal fun decodeReply(
+    bytes: ByteArray,
+    notification: (HandyPlaybackReport) -> Unit = {},
+): RpcReply? {
     val outer = fields(bytes)
     val kind = outer.lastOrNull { it.number == 1 }?.value
-    if (kind == 4L) return null // Unsolicited notifications never acknowledge a command.
+    if (kind == 4L) {
+        val data = outer.singleOrNull { it.number == 5 }?.data ?: return null
+        try {
+            playbackReport(fields(data).singleOrNull { it.number >= 300 && it.data != null })
+                ?.let(notification)
+        } catch (_: IOException) {
+            // An unrelated notification cannot acknowledge a pending request or prove playback
+            // failed.
+        }
+        return null
+    }
+    if (kind != 3L) return null
     val body = outer.lastOrNull { it.number == 4 }?.data
-    if (kind != 3L || body == null) throw IOException("Missing Handy response")
+    if (body == null) throw IOException("Missing Handy response")
     val reply = fields(body)
     val id = reply.lastOrNull { it.number == 1 }?.value ?: 0
     if (id !in 0..0xffff_ffffL) throw IOException("Invalid Handy response ID")
-    val method = reply.singleOrNull { it.number > 10 && it.data != null }
+    // The public Response oneof starts at 300. Metadata outside it cannot acknowledge a method.
+    val method = reply.singleOrNull { it.number >= 300 && it.data != null }
     val deviceTime =
         if (method?.number == HandyCommand.ClockGet.method)
             fields(requireNotNull(method.data))
@@ -154,5 +193,6 @@ internal fun decodeReply(bytes: ByteArray): RpcReply? {
         method?.number,
         reply.any { it.number == 2 && it.data != null },
         deviceTime,
+        playbackReport(method),
     )
 }

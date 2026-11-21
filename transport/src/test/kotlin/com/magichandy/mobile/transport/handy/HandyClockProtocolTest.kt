@@ -27,11 +27,12 @@ internal class HandyClockProtocolTest {
     @Test
     fun `a correlated clock exchange timestamps Play and firmware without clock replies plays unstamped`() =
         runTest {
-            for (supported in listOf(true, false)) {
+            for ((canRead, canSet) in listOf(true to true, false to false, true to false)) {
                 val link =
                     HandyPeerLink().apply {
                         clockMillis = 230
-                        omitClockReply = !supported
+                        omitClockReply = !canRead
+                        omitClockSetReply = !canSet
                     }
                 val id = DeviceId("handy")
                 val f =
@@ -62,12 +63,12 @@ internal class HandyClockProtocolTest {
                     f.core.state.value.devices.devices.single { it.id == id }.status,
                 )
                 assertEquals(
-                    listOf(715, 712, 712, 712) + (if (supported) listOf(709) else emptyList()),
+                    listOf(715, 712, 712, 712) + (if (canRead) listOf(709) else emptyList()),
                     link.methods,
                 )
                 f.send(UserIntent.StartMotion)
                 assertEquals(
-                    listOf(if (supported) f.clock.now().toEpochMilliseconds() else null),
+                    listOf(if (canSet) f.clock.now().toEpochMilliseconds() else null),
                     link.playTimestamps,
                 )
                 f.scope.cancel()

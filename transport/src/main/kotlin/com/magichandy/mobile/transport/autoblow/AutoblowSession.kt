@@ -1,17 +1,51 @@
 // Ported from internal/transport/autoblow{,_control,_session,_ultra}.go at 1b80d72e.
 package com.magichandy.mobile.transport.autoblow
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceOutput
+import com.magichandy.mobile.core.api.DeviceSettings
+import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.Clock
+import com.magichandy.mobile.core.ports.DeviceRef
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticReporter
+import com.magichandy.mobile.core.ports.Epoch
+import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.OutputSlice
+import com.magichandy.mobile.core.ports.SavedDevice
+import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.TimedDevice
+import com.magichandy.mobile.core.ports.WriteResult
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.put
 import okhttp3.OkHttpClient
 
 public enum class AutoblowButton {
@@ -29,10 +63,11 @@ internal constructor(
     private val config: () -> DeviceSettings,
     private val lost: () -> Unit,
     private val button: (AutoblowButton) -> Unit,
+    private val topSpeed: () -> Int = { 100 },
 ) : TimedDevice {
     private val ultra = device.family == DeviceFamily.AutoblowUltra
-    private val readout = kotlinx.coroutines.flow.MutableStateFlow<DeviceOutput?>(null)
-    override val feedback: kotlinx.coroutines.flow.StateFlow<DeviceOutput?>
+    private val readout = MutableStateFlow<DeviceOutput?>(null)
+    override val feedback: StateFlow<DeviceOutput?>
         get() = readout
 
     private val valves =
@@ -42,17 +77,24 @@ internal constructor(
     private var stream: Pair<Epoch, Long>? = null
     private var sentUntil = -1L
     private var previous = -1
+    @Volatile
+    override var measuredLatency: Duration? = null
+        private set
+
     private var halfRoundTrip = 0L
     private val uncertain = AtomicBoolean()
     private val flight = AtomicReference<Job?>()
     private val closed = AtomicBoolean()
+    private val buttonFeedLost = AtomicBoolean()
     private val health = mutableListOf<Job>()
 
     internal suspend fun initialize() {
         val start = clock.elapsed()
         if (!recognizes(wire.state())) throw IOException("Device mode unavailable")
-        halfRoundTrip = ((clock.elapsed() - start).inWholeMilliseconds / 2).coerceIn(0, 300)
-        if (!halt { true }) throw IOException("Device idle unconfirmed")
+        val roundTrip = clock.elapsed() - start
+        measuredLatency = roundTrip
+        halfRoundTrip = (roundTrip.inWholeMilliseconds / 2).coerceIn(0, 300)
+        if (halt { true } != HaltResult.Confirmed) throw IOException("Device idle unconfirmed")
         health += scope.launch {
             try {
                 while (isActive) {
@@ -64,33 +106,44 @@ internal constructor(
                 if (!closed.get()) lost()
             }
         }
+        val opened = CompletableDeferred<Boolean>()
         health += scope.launch {
-            var backoff = 1
-            while (isActive) {
-                try {
-                    wire.events {
-                        if (!closed.get()) {
-                            when (it) {
-                                "pause-button-pressed" -> if (ultra) button(AutoblowButton.Stop)
-                                "mode-button-pressed" -> if (!ultra) button(AutoblowButton.Stop)
-                                "speed-up-button-pressed",
-                                "speed-plus-button-pressed" -> button(AutoblowButton.Faster)
-                                "speed-down-button-pressed",
-                                "speed-minus-button-pressed" -> button(AutoblowButton.Slower)
-                            }
+            try {
+                wire.events({ opened.complete(true) }) {
+                    if (!closed.get()) {
+                        when (it) {
+                            "pause-button-pressed" -> if (ultra) button(AutoblowButton.Stop)
+                            "mode-button-pressed" -> if (!ultra) button(AutoblowButton.Stop)
+                            "speed-up-button-pressed",
+                            "speed-plus-button-pressed" -> button(AutoblowButton.Faster)
+                            "speed-down-button-pressed",
+                            "speed-minus-button-pressed" -> button(AutoblowButton.Slower)
                         }
                     }
-                } catch (_: IOException) {
-                    DiagnosticReporter.record(DiagnosticKind.DeviceConnectionFailed)
                 }
-                delay(backoff.seconds)
-                backoff = (backoff * 2).coerceAtMost(30)
+            } catch (_: IOException) {
+                DiagnosticReporter.record(DiagnosticKind.DeviceConnectionFailed)
+            }
+            opened.complete(false)
+            if (isActive && !closed.get()) {
+                buttonFeedLost.set(true)
+                lost()
             }
         }
+        if (withTimeoutOrNull(5.seconds) { opened.await() } != true || buttonFeedLost.get())
+            throw IOException("Device button connection unavailable")
+    }
+
+    private enum class TempoOutcome {
+        NoOp,
+        Mutated,
+        FencedBeforeWrite,
     }
 
     override suspend fun output(slice: OutputSlice, fence: OutputFence): WriteResult {
-        if (!fence.isCurrent() || closed.get()) return WriteResult.Stale
+        if (!fence.isCurrent()) return WriteResult.Stale
+        if (closed.get() || buttonFeedLost.get())
+            return if (fence.isCurrent()) WriteResult.Uncertain else WriteResult.Stale
         val g = fence.epoch to fence.streamGeneration
         if (stream != g) {
             stream = g
@@ -103,10 +156,27 @@ internal constructor(
             if (!fence.isCurrent()) return WriteResult.Stale
             if (ultra) position(slice, fence)
             else {
-                tempo(slice, fence)
-                valves.apply(slice, fence)
+                val motor = tempo(slice, fence)
+                if (motor == TempoOutcome.FencedBeforeWrite) return WriteResult.Stale
+                when (valves.apply(slice, fence)) {
+                    ValveOutcome.FencedAfterWrite -> {
+                        uncertain.set(true)
+                        WriteResult.Uncertain
+                    }
+                    ValveOutcome.FencedBeforeWrite ->
+                        if (motor == TempoOutcome.Mutated) {
+                            if (fence.isCurrent()) WriteResult.Accepted
+                            else {
+                                uncertain.set(true)
+                                WriteResult.Uncertain
+                            }
+                        } else WriteResult.Stale
+                    ValveOutcome.NoOp ->
+                        if (motor == TempoOutcome.Mutated || fence.isCurrent()) WriteResult.Accepted
+                        else WriteResult.Stale
+                    ValveOutcome.Applied -> WriteResult.Accepted
+                }
             }
-            WriteResult.Accepted
         } catch (cancelled: CancellationException) {
             uncertain.set(true)
             throw cancelled
@@ -118,8 +188,9 @@ internal constructor(
         }
     }
 
-    private suspend fun position(slice: OutputSlice, fence: OutputFence) {
-        if (slice.atMillis + halfRoundTrip < sentUntil) return
+    private suspend fun position(slice: OutputSlice, fence: OutputFence): WriteResult {
+        if (slice.atMillis + halfRoundTrip < sentUntil)
+            return if (fence.isCurrent()) WriteResult.Accepted else WriteResult.Stale
         val initial = previous < 0
         val end = if (initial) slice.atMillis else slice.legEnd(600)
         val min = slice.limits.strokeLow.value
@@ -129,53 +200,101 @@ internal constructor(
         val speed =
             if (initial) 30
             else (abs(position - previous) * 250.0 / duration).roundToInt().coerceIn(1, 100)
-        sentUntil = if (initial) 100 else maxOf(end, slice.atMillis + 100)
+        val nextSentUntil = if (initial) 100 else maxOf(end, slice.atMillis + 100)
         if (position != previous) {
-            wire.put(
-                "goto",
-                buildJsonObject {
-                    put("position", position)
-                    put("speed", minOf(speed, slice.limits.topSpeed.value))
-                },
-                false,
-                fence::isCurrent,
-            )
+            val requestedSpeed = minOf(speed, slice.limits.topSpeed.value, topSpeed())
+            if (requestedSpeed < 1) return WriteResult.Stale
+            val denied = AtomicBoolean()
+            val submitted =
+                try {
+                    wire.put(
+                        "goto",
+                        buildJsonObject {
+                            put("position", position)
+                            put("speed", requestedSpeed)
+                        },
+                        false,
+                        {
+                            (fence.isCurrent() && requestedSpeed <= topSpeed()).also {
+                                if (!it) denied.set(true)
+                            }
+                        },
+                    )
+                    !denied.get()
+                } catch (failure: IOException) {
+                    if (failure.isFencedAutoblow() || denied.get()) false else throw failure
+                }
+            if (!submitted) {
+                DiagnosticReporter.record(DiagnosticKind.WriteFenced)
+                return WriteResult.Stale
+            }
             previous = position
+            sentUntil = nextSentUntil
+            return WriteResult.Accepted
         }
+        sentUntil = nextSentUntil
+        return if (fence.isCurrent()) WriteResult.Accepted else WriteResult.Stale
     }
 
-    private suspend fun tempo(slice: OutputSlice, fence: OutputFence) {
+    private suspend fun tempo(slice: OutputSlice, fence: OutputFence): TempoOutcome {
         val settings = config() as DeviceSettings.VacuGlide
         val range = settings.tempoRange
+        val ceiling = minOf(range.last, slice.limits.topSpeed.value, topSpeed())
         val value =
-            if (slice.tempo.value == 0) 0
+            if (slice.tempo.value == 0 || ceiling < range.first) 0
             else
                 (range.first + (slice.tempo.value - 1) * (range.last - range.first) / 99.0)
                     .roundToInt()
-                    .coerceIn(5, 100)
+                    .coerceIn(range.first, ceiling)
         if (
             value == previous ||
                 value != 0 &&
-                    previous >= 0 &&
-                    (abs(value - previous) < 2 || slice.atMillis < sentUntil)
+                    previous in range.first..ceiling &&
+                    ((abs(value - previous) < 2 && value != range.first && value != ceiling) ||
+                        slice.atMillis < sentUntil)
         )
-            return
+            return TempoOutcome.NoOp
         if (value == 0) {
-            if (!halt(fence::isCurrent)) throw IOException("Tempo Stop unconfirmed")
-        } else
-            wire.put(
-                "target-speed",
-                buildJsonObject { put("targetSpeed", value) },
-                false,
-                fence::isCurrent,
-            )
+            when (halt(fence::isCurrent)) {
+                HaltResult.Confirmed -> Unit
+                HaltResult.FencedBeforeWrite -> {
+                    DiagnosticReporter.record(DiagnosticKind.WriteFenced)
+                    return TempoOutcome.FencedBeforeWrite
+                }
+                HaltResult.Unconfirmed -> throw IOException("Tempo Stop unconfirmed")
+            }
+        } else {
+            val denied = AtomicBoolean()
+            val submitted =
+                try {
+                    wire.put(
+                        "target-speed",
+                        buildJsonObject { put("targetSpeed", value) },
+                        false,
+                        {
+                            val current = (config() as DeviceSettings.VacuGlide).tempoRange
+                            (fence.isCurrent() && value in current && value <= topSpeed()).also {
+                                if (!it) denied.set(true)
+                            }
+                        },
+                    )
+                    !denied.get()
+                } catch (failure: IOException) {
+                    if (failure.isFencedAutoblow() || denied.get()) false else throw failure
+                }
+            if (!submitted) {
+                DiagnosticReporter.record(DiagnosticKind.WriteFenced)
+                return TempoOutcome.FencedBeforeWrite
+            }
+        }
         previous = value
         readout.value = DeviceOutput.Tempo(Percent(value))
         sentUntil = slice.atMillis + 250
+        return TempoOutcome.Mutated
     }
 
     override val checkConnection: suspend () -> Boolean = {
-        !closed.get() && recognizes(wire.state())
+        !closed.get() && !buttonFeedLost.get() && recognizes(wire.state())
     }
 
     private fun recognizes(state: JsonObject): Boolean =
@@ -187,22 +306,33 @@ internal constructor(
             if (ultra) mode == "OSCILLATOR_PAUSED" else mode == "TARGET_SPEED_PAUSED"
     }
 
-    private suspend fun halt(allowed: () -> Boolean): Boolean = coroutineScope {
+    private suspend fun halt(allowed: () -> Boolean): HaltResult = coroutineScope {
         val closure = if (ultra) null else async { valves.settle(allowed) }
         val motor = stopMotor(allowed)
-        val closed = closure?.await() ?: true
-        if (motor && !ultra) readout.value = DeviceOutput.Tempo(Percent(0))
-        motor && closed
+        val closed = closure?.await() ?: HaltResult.Confirmed
+        if (motor == HaltResult.Confirmed && !ultra) readout.value = DeviceOutput.Tempo(Percent(0))
+        if (ultra) motor else combineHalt(motor, closed)
     }
 
-    private suspend fun stopMotor(allowed: () -> Boolean): Boolean =
-        try {
+    private suspend fun stopMotor(allowed: () -> Boolean): HaltResult {
+        val denied = AtomicBoolean()
+        return try {
             val state =
-                wire.put(if (ultra) "oscillate/stop" else "target-speed/stop", null, true, allowed)
-            stopped(state) || allowed() && stopped(wire.state(priorityRead = true))
-        } catch (_: IOException) {
-            false
+                wire.put(
+                    if (ultra) "oscillate/stop" else "target-speed/stop",
+                    null,
+                    true,
+                    { allowed().also { if (!it) denied.set(true) } },
+                )
+            if (denied.get()) HaltResult.FencedBeforeWrite
+            else if (stopped(state) || allowed() && stopped(wire.state(priorityRead = true)))
+                HaltResult.Confirmed
+            else HaltResult.Unconfirmed
+        } catch (failure: IOException) {
+            if (failure.isFencedAutoblow() || denied.get()) HaltResult.FencedBeforeWrite
+            else HaltResult.Unconfirmed
         }
+    }
 
     override suspend fun stop(fence: OutputFence): StopEvidence = coroutineScope {
         val previousFlight = flight.get()
@@ -223,8 +353,16 @@ internal constructor(
         val first = halt(fence::isCurrent)
         val evidence = resend?.await() ?: first
         cancel?.cancel()
-        if (evidence && fence.isCurrent()) StopEvidence.Acknowledged
-        else StopEvidence.Unconfirmed(UnconfirmedCause.NoReply)
+        if (evidence == HaltResult.Confirmed && fence.isCurrent()) StopEvidence.Acknowledged
+        else
+            StopEvidence.Unconfirmed(
+                if (
+                    evidence == HaltResult.FencedBeforeWrite &&
+                        (!retry || first == HaltResult.FencedBeforeWrite)
+                )
+                    UnconfirmedCause.WriteFailed
+                else UnconfirmedCause.NoReply
+            )
     }
 
     public fun close() {
@@ -272,12 +410,13 @@ internal constructor(
             scope: CoroutineScope,
             config: () -> DeviceSettings,
             lost: () -> Unit,
+            topSpeed: () -> Int = { 100 },
             button: (AutoblowButton) -> Unit,
         ): AutoblowSession {
             val (normal, priority) = AutoblowCloud.clients(http)
             val wire = AutoblowCloud(row.ref.family, key, normal, priority)
             wire.discover()
-            val owner = AutoblowSession(row.ref, wire, clock, scope, config, lost, button)
+            val owner = AutoblowSession(row.ref, wire, clock, scope, config, lost, button, topSpeed)
             try {
                 owner.initialize()
                 return owner

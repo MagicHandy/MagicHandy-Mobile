@@ -14,7 +14,7 @@ package com.magichandy.mobile.core.api
 @JvmInline
 public value class ConnectionId(public val value: String)
 
-/** Identifies a built-in persona preset. */
+/** Identifies a saved persona. The empty ID belongs to the built-in MagicHandy. */
 @kotlinx.serialization.Serializable
 @JvmInline
 public value class PersonaId(public val value: String)

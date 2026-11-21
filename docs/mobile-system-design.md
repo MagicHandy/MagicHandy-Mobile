@@ -5,7 +5,7 @@
   - the [architecture plan](../android-architecture-plan.md);
   - the [design canvas](https://claude.ai/artifact/YH74sVUDiQCDpJ9p8dJdZU), whose "v1 direction" page shows these behaviours.
 - **Rules:** code, formatting and documentation follow plan §5.5 (maintainability and clarity).
-- **Status:** the M0 backend and the Compose UI run together in debug builds, with simulated devices ([frontend](frontend/status.md), [backend](backend/status.md)). The Android platform layer (service, GATT, storage, notification) isn't built yet.
+- **Status.** The release and device-test builds use Android storage, Bluetooth, network adapters and a foreground service. The debug build runs simulated peers. Firmware and provider acceptance are tracked in the [phone checklist](backend/device-checklist.md).
 
 These designs answer one question: what keeps the phone app safe and predictable when Android, the radio or the network misbehaves?
 
@@ -36,6 +36,8 @@ When none apply, the service stops and the core holds no timers, sockets or wake
 
 **Swipe-away** (`onTaskRemoved`): trigger Emergency Stop for every device, then stop the service. Force-stop and process death can skip all app code, which is why the run journal exists.
 
+**Service loss.** Destruction of a promoted service fences output and sends Emergency Stop. Admission and each subsequent motion write require a live host.
+
 **Memory pressure** (`onTrimMemory`): drop caches such as older chat pages, but never drop run state.
 
 ### 1.1 Run journal
@@ -51,6 +53,8 @@ The run journal is a small versioned file, separate from the database and replac
 Secrets stay in the vault (§6).
 
 **No journal, no start.** The app arms the journal durably before the first motion-capable write of a run, whether triggered by chat, Autopilot, a manual start or Test motor. If arming fails, the app refuses the start with a notice. Updates happen at state boundaries, never at frame rate, and Stop never waits for storage.
+
+An explicit Stop on an idle connection also retains outstanding targets asynchronously. Device removal preserves recovery credentials until the return-time Stop or an explicit local check.
 
 **Clearing.** The journal clears only after every device in it has confirmed Stop or been reconciled. A clean activity exit never clears a device whose Stop is unresolved.
 
@@ -145,6 +149,8 @@ NotSetUp ─────► Disconnected ─────────► Connecti
 
 ### 3.2 Android Bluetooth (The Handy, Coyote)
 
+A connected device shows the battery percentage only after a supported characteristic reports one. Cloud latency uses a measured request round trip.
+
 **Operation queue.** `GattOperationQueue` runs one operation at a time, as Android requires, each with its own timeout:
 
 - connect;
@@ -184,12 +190,12 @@ A Stop can jump ahead of queued operations and retire a stalled generation.
 - **Autoblow (Ultra, VacuGlide):**
   - device token;
   - a health read every 5 s;
-  - an event stream with heartbeats;
+  - an event stream with heartbeats for the physical Stop buttons. A dropped stream retires the device and stops its run even if health reads still succeed;
   - commands fenced by generation and sent one at a time, as on desktop.
 - **VacuGlide safeguards:**
   - runs and Test motor start only while the service is up and the journal is armed;
   - Stop is sent on connection loss and sent again when the connection returns;
-  - a check-in runs every 15 minutes by default (plan §12), with one minute to answer before the whole run stops;
+  - a check-in runs every 15 minutes by default. Chat, Live and the private notification show its one-minute deadline. The whole run stops if it expires;
   - its page asks for unrestricted battery use.
 - **Intiface Central:**
   - WebSocket to `ws://127.0.0.1:12345` on the phone, or to a server on the LAN;
@@ -206,7 +212,9 @@ A Stop can jump ahead of queued operations and retire a stalled generation.
 - **A device in the run** (Handy Cloud, Autoblow, or an Intiface server on the LAN): mark it Lost and stop the whole run. The Handy also pauses by itself when its buffer runs out.
 - **VacuGlide:** send Stop immediately (it may fail), alert, and send Stop again when the network returns and on the next cold start.
 - **Chat turn:** abort the turn and show "Reply interrupted". Keep the message you sent with Send again; never resend automatically.
-- **Autopilot:** hold planning. The strip shows "Planning held" alongside what is actually happening, such as "Current segment still playing" on Bluetooth devices. Planning resumes only within the same run.
+- A transient planner failure holds the current segment and retries after 2 seconds with backoff up to 30 seconds within the same run.
+
+**Autopilot:** hold planning. The strip shows "Planning held" alongside what is actually happening, such as "Current segment still playing" on Bluetooth devices. Planning resumes only within the same run.
 
 **Wi-Fi to cellular.** Open streams reset and are treated as interruptions. LAN servers show "Not reachable · same Wi-Fi?". A LAN server can still remain reachable on a Wi-Fi network that has no internet access.
 
@@ -217,7 +225,7 @@ A Stop can jump ahead of queued operations and retire a stalled generation.
 - Every other host must use HTTPS.
 - Cleartext connections are labelled "Not encrypted".
 
-**LAN servers are added by address.** There is no nearby-server scan in v1: a /24 sweep misses other subnets and adds scan, timeout and permission states. Instead, you enter a host name or address and a port, and the app probes only that host:
+**LAN servers are added by address.** HTTP, HTTPS and Intiface connections all require a private, loopback or link-local peer. Internet validation changes on the same working LAN preserve local sessions.  There is no nearby-server scan in v1: a /24 sweep misses other subnets and adds scan, timeout and permission states. Instead, you enter a host name or address and a port, and the app probes only that host:
 
 - `GET /api/tags` identifies Ollama, `GET /props` llama.cpp, and `GET /v1/models` any other OpenAI-compatible server;
 - it fetches the models, suggests a capability level from the model name, shows the context that level needs and runs a test before saving.
@@ -234,7 +242,11 @@ A Stop can jump ahead of queued operations and retire a stalled generation.
 4. Dispatch any motion to the engine. The first motion-capable command of a run arms the journal first (§1.1).
 5. Commit the reply and any memory changes to storage in one transaction.
 
+A hosted refusal can send the current message once to the explicitly selected LAN provider. Prior dialogue and stored memory stay out of this request. Clearing the selection cancels the provider call.
+
 **Interruption.** Stop cancels the turn and discards any uncommitted reply with a plain notice, as on desktop. Discarded text can never execute later.
+
+A transient planner failure holds the current segment and retries after 2 seconds with backoff up to 30 seconds within the same run.
 
 **Autopilot:**
 
@@ -294,7 +306,7 @@ A Stop can jump ahead of queued operations and retire a stalled generation.
 
 ## 9. Testing on the phone
 
-- **Simulated devices debug toggle:**
+- **Simulated devices in debug builds:**
   - in-process simulators for the Handy Bluetooth session, Coyote, Autoblow cloud (including a VacuGlide that keeps its last speed) and Intiface, behind the real transport boundary;
   - agents can review the app without hardware;
   - debug builds only, and no local servers are needed.

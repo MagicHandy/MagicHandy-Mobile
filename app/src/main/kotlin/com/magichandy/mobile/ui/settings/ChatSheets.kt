@@ -29,20 +29,50 @@ import com.magichandy.mobile.ui.components.CardRow
 import com.magichandy.mobile.ui.components.Hint
 import com.magichandy.mobile.ui.components.SettingRow
 import com.magichandy.mobile.ui.components.ToggleRow
+import com.magichandy.mobile.ui.format.PersonaWords
 import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.navigation.AppNavigator
 import com.magichandy.mobile.ui.navigation.SheetPage
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
+/**
+ * Who replies (board V-Settings): choosing one returns to Settings, and Manage personas opens the
+ * page where they're edited.
+ */
 @Composable
-internal fun PersonaPage(state: AppState, onIntent: (UserIntent) -> Unit) {
+internal fun PersonaPage(
+    state: AppState,
+    nav: AppNavigator,
+    onIntent: (UserIntent) -> Unit,
+    exits: SheetExits,
+) {
     val settings = state.settings
     ChoiceList(
         options = settings.personas,
-        selected = settings.persona,
+        selected = settings.personas.firstOrNull { it.id == settings.persona.id },
         label = { it.name },
-        description = { it.summary },
-        onSelect = { onIntent(UserIntent.SetPersona(it.id)) },
+        description = { persona ->
+            if (persona.isBuiltIn) {
+                stringResource(
+                    R.string.persona_line_built_in,
+                    PersonaWords.level(persona.personality.explicitness),
+                    PersonaWords.style(persona.personality.style),
+                )
+            } else {
+                PersonaWords.line(persona.personality)
+            }
+        },
+        onSelect = {
+            onIntent(UserIntent.SetPersona(it.id))
+            nav.sheetBack()
+        },
+    )
+    SettingRow(
+        label = stringResource(R.string.personas_manage),
+        value = null,
+        onClick = exits.openPersonas,
+        isFirst = false,
+        labelColor = MagicHandyTheme.colors.accent,
     )
     Hint(stringResource(R.string.persona_hint), Modifier.padding(top = MagicHandyTheme.dimens.xs))
 }
@@ -97,8 +127,14 @@ internal fun RefusalFallbackPage(state: AppState, onSet: (ConnectionId?) -> Unit
         selected = local.firstOrNull { it.id == models.refusalFallback },
         label = { it?.name ?: stringResource(R.string.off) },
         description = { connection ->
-            if (connection == null) stringResource(R.string.refusal_off_desc)
-            else connectionLine(connection)
+            when {
+                connection == null -> stringResource(R.string.refusal_off_desc)
+                connection.isEncrypted -> connectionLine(connection)
+                else ->
+                    connectionLine(connection) +
+                        stringResource(R.string.separator) +
+                        stringResource(R.string.connection_not_encrypted)
+            }
         },
         onSelect = { onSet(it?.id) },
     )

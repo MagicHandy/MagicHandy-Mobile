@@ -16,7 +16,17 @@ public data class ModelsState(
     public val signIn: SignInState,
     /** Local connection explicitly authorized for a hosted refusal retry, or null for Off. */
     public val refusalFallback: ConnectionId? = null,
-)
+    /** Advances after a new or returning ChatGPT sign-in is saved by this process. */
+    public val completedSignIns: Long = 0,
+) {
+    /** The active ChatGPT connection needs a fresh browser sign-in before it can serve chat. */
+    public val chatNeedsSignIn: Boolean
+        get() = connections.any {
+            it.id == chatConnection &&
+                it.provider == ProviderKind.ChatGpt &&
+                it.status == ConnectionStatus.NeedsSignIn
+        }
+}
 
 /**
  * A saved model connection.
@@ -74,7 +84,10 @@ public sealed interface ServerCheck {
      * @property testedAt the level this model is tested at, when it is a known model.
      * @property contextNeeded the context, in tokens, that [suggested] needs.
      * @property contextAllowed the context, in tokens, the server allows, when it says.
-     * @property repliedIn the test request's round trip, once a test has run.
+     * @property repliedIn the round trip for a completed test that met the requested reply
+     *   contract.
+     * @property testFailure why the selected model failed its test on an otherwise discovered
+     *   server.
      */
     public data class Found(
         public val address: String,
@@ -87,6 +100,7 @@ public sealed interface ServerCheck {
         public val contextNeeded: Int,
         public val contextAllowed: Int?,
         public val repliedIn: Duration?,
+        public val testFailure: ServerCheckFailure? = null,
     ) : ServerCheck
 
     public data class Failed(public val address: String, public val cause: ServerCheckFailure) :
@@ -101,6 +115,12 @@ public enum class ServerCheckFailure {
     NoModels,
     /** Plain HTTP is allowed only to private, link-local and loopback addresses. */
     NotPrivateAddress,
+    /** A previously selected model is no longer in the server's catalog. */
+    ModelUnavailable,
+    /** The selected model explicitly refused the inert readiness request. */
+    ProviderRefused,
+    /** A discovered model did not complete a reply matching the requested structured format. */
+    IncompleteReply,
 }
 
 /** ChatGPT sign-in through the system browser. */
@@ -109,11 +129,43 @@ public sealed interface SignInState {
 
     public data object WaitingForBrowser : SignInState
 
-    public data class Failed(public val cause: SignInFailure) : SignInState
+    /**
+     * [stage], [httpStatus] and [networkIssue] identify the failed operation using only public
+     * categories. HTTP status is available when the server replied.
+     */
+    public data class Failed(
+        public val cause: SignInFailure,
+        public val stage: SignInStage? = null,
+        public val httpStatus: Int? = null,
+        public val networkIssue: SignInNetworkIssue? = null,
+    ) : SignInState {
+        init {
+            require(httpStatus == null || httpStatus in 100..599)
+        }
+    }
+}
+
+/** Which connection step failed before a complete response arrived. */
+public enum class SignInNetworkIssue {
+    NameResolution,
+    SecureConnection,
+    Timeout,
+    ConnectionLost,
+}
+
+/** The part of the browser sign-in for which the app has a result. */
+public enum class SignInStage {
+    Discovery,
+    BrowserCallback,
+    CodeExchange,
+    IdentityVerification,
+    SavingConnection,
 }
 
 /** Why ChatGPT sign-in failed. */
 public enum class SignInFailure {
+    /** The device could not open or persist the local credential. */
+    StorageUnavailable,
     Cancelled,
     Rejected,
     NetworkError,

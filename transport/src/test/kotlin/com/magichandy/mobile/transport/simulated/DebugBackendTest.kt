@@ -12,9 +12,10 @@ import com.magichandy.mobile.core.createMagicHandyCore
 import com.magichandy.mobile.core.ports.DeviceDirectory
 import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.DiagnosticKind
-import com.magichandy.mobile.core.ports.MotionBatch
 import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.OutputSlice
 import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.TimedDevice
 import com.magichandy.mobile.core.ports.WriteResult
 import com.magichandy.mobile.core.testing.InMemoryDiagnostics
 import com.magichandy.mobile.transport.handy.HandyCommand
@@ -100,6 +101,8 @@ internal class DebugBackendTest {
             assertTrue(f.devices.output.value.values.all { it.batches == 0 })
             f.send(UserIntent.StartMotion)
             assertEquals(RunPhase.Playing, f.core.state.value.run.phase)
+            advanceTimeBy(1200)
+            runCurrent()
             assertTrue(f.devices.output.value.values.all { it.batches > 0 })
             assertEquals(0, f.devices.output.value.getValue(coyote).strengthA)
             f.core.emergencyStop(StopSource.Notification)
@@ -163,6 +166,7 @@ internal class DebugBackendTest {
     @Test
     fun `a motor test deadline stops a persistent device while its first write is still awaiting a reply`() =
         runTest {
+            val levels = mutableListOf<Int>()
             val f =
                 DebugFixture(this) { d ->
                     val directory =
@@ -172,13 +176,16 @@ internal class DebugBackendTest {
                                 ownerScope: CoroutineScope,
                             ): DeviceTransport? {
                                 val delegate = d.devices.connect(device, ownerScope) ?: return null
-                                return object : DeviceTransport by delegate {
-                                    override suspend fun write(
-                                        batch: MotionBatch,
+                                val timed = delegate as TimedDevice
+                                return object : TimedDevice by timed {
+                                    override suspend fun output(
+                                        slice: OutputSlice,
                                         fence: OutputFence,
                                     ): WriteResult {
-                                        delegate.write(batch, fence)
-                                        awaitCancellation()
+                                        levels += slice.tempo.value
+                                        val result = timed.output(slice, fence)
+                                        if (slice.tempo.value > 0) awaitCancellation()
+                                        return result
                                     }
                                 }
                             }
@@ -189,8 +196,13 @@ internal class DebugBackendTest {
             f.onboard()
             f.connect(id)
             f.send(UserIntent.TestMotion(id))
-            assertTrue(f.devices.output.value.getValue(id).speed.value > 0)
-            advanceTimeBy(1501)
+            advanceTimeBy(400)
+            runCurrent()
+            assertTrue(
+                f.devices.output.value.getValue(id).speed.value > 0,
+                "Timed levels $levels, run ${f.core.state.value.run.phase}, journal ${f.d.journal.read()?.intended}, output ${f.devices.output.value.getValue(id)}",
+            )
+            advanceTimeBy(1101)
             runCurrent()
             assertEquals(0, f.devices.output.value.getValue(id).speed.value)
             assertNull(f.d.journal.read())
@@ -237,7 +249,6 @@ internal class DebugBackendTest {
                                     HandyTransport(
                                         saved.first { it.ref.id == device }.ref,
                                         wire,
-                                        initiallyStopped = true,
                                     )
                             }
                     )
@@ -246,13 +257,14 @@ internal class DebugBackendTest {
             f.connect(id)
             f.send(UserIntent.StartMotion)
             assertEquals(1, setups)
+            assertEquals(1, stops) // Startup reconciles against fresh device evidence.
             stopNow = {
                 stopNow = null
                 f.core.emergencyStop(StopSource.AppFooter)
             }
             advanceTimeBy(10000)
             runCurrent()
-            assertEquals(1, stops)
+            assertEquals(2, stops)
             assertTrue(requireNotNull(f.core.state.value.stopReceipt).isAllConfirmed)
             f.send(UserIntent.StartMotion)
             assertEquals(2, setups)
@@ -290,4 +302,23 @@ internal class DebugBackendTest {
         assertTrue(f.devices.output.value.values.all { it.batches == 0 })
         f.scope.cancel()
     }
+
+    @Test
+    fun `a simulated structured chat starts the selected driver and typed Stop ends it`() =
+        runTest {
+            for (id in listOf(DeviceId("handy"), DeviceId("vacuglide"))) {
+                val fixture = DebugFixture(this)
+                fixture.onboard()
+                fixture.connect(id)
+                fixture.send(UserIntent.SendMessage("Start motion"))
+                advanceTimeBy(800)
+                runCurrent()
+                assertEquals(RunPhase.Playing, fixture.core.state.value.run.phase, id.toString())
+                assertTrue(fixture.devices.output.value.getValue(id).batches > 0)
+                fixture.send(UserIntent.SendMessage("stop"))
+                assertEquals(RunPhase.Idle, fixture.core.state.value.run.phase)
+                assertEquals(0, fixture.devices.output.value.getValue(id).speed.value)
+                fixture.scope.cancel()
+            }
+        }
 }

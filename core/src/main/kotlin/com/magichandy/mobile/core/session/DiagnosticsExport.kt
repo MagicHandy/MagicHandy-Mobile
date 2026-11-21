@@ -2,8 +2,11 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DiagnosticsReport
+import com.magichandy.mobile.core.api.StopReceipt
+import com.magichandy.mobile.core.ports.Epoch
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -54,11 +57,22 @@ internal class DiagnosticsExport(private val d: CoreDependencies) {
             line("MagicHandy diagnostics v1")
             val version =
                 d.versionName.takeIf {
-                    it == "development" || it.matches(Regex("""[0-9]{1,8}(\.[0-9]{1,8}){1,3}"""))
+                    it == "development" ||
+                        it.matches(Regex("""[0-9]{1,8}(\.[0-9]{1,8}){1,3}(-device-test)?"""))
                 } ?: "unknown"
             line("App version " + version)
             d.androidApi?.let { line("Android API " + it) }
             line("Run " + state.run.phase.name + "  Autopilot " + state.autopilot.status.name)
+            val personality = state.settings.persona.personality
+            line("Personas " + state.settings.personas.size)
+            line(
+                "Active wording " +
+                    personality.explicitness.name +
+                    " " +
+                    personality.style.name +
+                    " " +
+                    personality.replyLength.name
+            )
             line("Saved devices " + state.devices.devices.size)
             state.devices.devices.take(128).forEach {
                 line("  " + it.family.name + " " + it.connection.name + " " + it.status.name)

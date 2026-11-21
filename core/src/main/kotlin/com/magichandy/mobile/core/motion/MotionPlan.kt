@@ -3,6 +3,7 @@ package com.magichandy.mobile.core.motion
 
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.roundToLong
 import kotlin.math.sign
 
@@ -107,7 +108,8 @@ internal class MotionPlan(
         for (point in points) {
             val phase = point.timeMillis.toDouble() / cycleMillis
             var cycle =
-                ceil((start - handoffMillis).toDouble() / periodMillis - phase + phaseOffset)
+                // A fractional turn just before start can round onto the first wire millisecond.
+                floor((start - handoffMillis).toDouble() / periodMillis - phase + phaseOffset)
                     .toLong()
             while (true) {
                 val at =

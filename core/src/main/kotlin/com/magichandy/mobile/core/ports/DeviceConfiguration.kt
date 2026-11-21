@@ -1,6 +1,13 @@
 package com.magichandy.mobile.core.ports
 
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceSettings
+import com.magichandy.mobile.core.api.IntifaceChoice
+import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.ScanResult
+import com.magichandy.mobile.core.api.ScanResultId
+import kotlin.time.Duration
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -22,6 +29,11 @@ public interface DeviceRecords {
     public val rows: StateFlow<List<SavedDevice>>
 
     public suspend fun save(row: SavedDevice)
+
+    /** Apply one field edit to the latest row. An edit never recreates a removed row. */
+    public suspend fun update(id: DeviceId, transform: (SavedDevice) -> SavedDevice) {
+        rows.value.firstOrNull { it.ref.id == id }?.let { save(transform(it)) }
+    }
 
     public suspend fun remove(id: DeviceId)
 }
@@ -49,8 +61,7 @@ public fun defaultDeviceSettings(family: DeviceFamily): DeviceSettings =
         DeviceFamily.LinearActuator -> DeviceSettings.LinearActuator()
         DeviceFamily.Handy -> DeviceSettings.Handy("handy_original", false)
         DeviceFamily.Coyote -> DeviceSettings.Coyote(0, 0)
-        DeviceFamily.Vibrator -> DeviceSettings.Vibrator(Percent(70))
+        DeviceFamily.Vibrator -> DeviceSettings.Vibrator(Percent(40))
         DeviceFamily.AutoblowUltra -> DeviceSettings.AutoblowUltra
-        DeviceFamily.VacuGlide ->
-            DeviceSettings.VacuGlide(5..100, false, kotlin.time.Duration.parse("15m"))
+        DeviceFamily.VacuGlide -> DeviceSettings.VacuGlide(5..100, false, Duration.parse("15m"))
     }

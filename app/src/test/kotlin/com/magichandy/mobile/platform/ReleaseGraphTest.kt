@@ -1,10 +1,15 @@
 package com.magichandy.mobile.platform
 
 import com.magichandy.mobile.MagicHandyApp
-import com.magichandy.mobile.core.api.*
-import kotlin.test.*
-import kotlinx.coroutines.*
+import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.UserIntent
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment

@@ -1,19 +1,56 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.ConnectionKind
+import com.magichandy.mobile.core.api.CoyoteChannel
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceLimit
+import com.magichandy.mobile.core.api.DeviceSettings
+import com.magichandy.mobile.core.api.DeviceStatus
+import com.magichandy.mobile.core.api.DeviceSummary
+import com.magichandy.mobile.core.api.FormReason
+import com.magichandy.mobile.core.api.FormResult
+import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.RunMembership
+import com.magichandy.mobile.core.api.ScanFailure
+import com.magichandy.mobile.core.api.ScanResultStatus
+import com.magichandy.mobile.core.api.ScanState
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.api.StepDirection
+import com.magichandy.mobile.core.api.StopOutcome
+import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.core.motion.MotionEngine
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.ports.CoyoteControls
+import com.magichandy.mobile.core.ports.DeviceRef
+import com.magichandy.mobile.core.ports.SavedDevice
+import com.magichandy.mobile.core.ports.SecretHandle
+import com.magichandy.mobile.core.ports.defaultDeviceSettings
+import com.magichandy.mobile.core.ports.matches
 import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal class DeviceSetup(
     private val d: CoreDependencies,
     private val ui: MutableStateFlow<AppState>,
     private val devices: Devices,
     private val engine: MotionEngine,
+    private val safety: RunSafety,
 ) {
     private val config
         get() = d.devices.configuration
@@ -31,7 +68,12 @@ internal class DeviceSetup(
                         devices =
                             rows.map { row ->
                                 val r = row.ref
-                                previous[r.id]?.copy(name = r.name, settings = row.settings)
+                                previous[r.id]?.copy(
+                                    name = r.name,
+                                    connection = r.connection,
+                                    afterLoss = r.afterLoss,
+                                    settings = row.settings,
+                                )
                                     ?: DeviceSummary(
                                         r.id,
                                         r.name,
@@ -95,17 +137,38 @@ internal class DeviceSetup(
             )
     }
 
-    fun stepTempoRange(device: DeviceId, direction: StepDirection) {
-        d.scope.launch(d.dispatchers.session) {
-            edit(device) { row ->
-                val cfg = row.settings as? DeviceSettings.VacuGlide ?: return@edit row
-                val high =
-                    (cfg.tempoRange.last + if (direction == StepDirection.Up) 10 else -10).coerceIn(
-                        cfg.tempoRange.first,
-                        100,
-                    )
-                row.copy(settings = cfg.copy(tempoRange = cfg.tempoRange.first..high))
-            }
+    suspend fun setModel(intent: UserIntent.SetHandyModel) {
+        if (intent.device in engine.state.value.members) return
+        edit(intent.device) { row ->
+            val handy = row.settings as? DeviceSettings.Handy ?: return@edit row
+            row.copy(settings = handy.copy(model = intent.model.storedName))
+        }
+    }
+
+    suspend fun stepLimit(intent: UserIntent.StepDeviceLimit) {
+        val step = intent.steps * if (intent.direction == StepDirection.Up) 5 else -5
+        edit(intent.device) { row ->
+            val settings =
+                when (val saved = row.settings) {
+                    is DeviceSettings.Vibrator ->
+                        if (intent.limit == DeviceLimit.VibrationMaximum)
+                            saved.copy(
+                                maxLevel = Percent((saved.maxLevel.value + step).coerceIn(0, 100))
+                            )
+                        else saved
+                    is DeviceSettings.VacuGlide -> {
+                        val (low, high) = saved.tempoRange.let { it.first to it.last }
+                        when (intent.limit) {
+                            DeviceLimit.TempoMinimum ->
+                                saved.copy(tempoRange = (low + step).coerceIn(5, high)..high)
+                            DeviceLimit.TempoMaximum ->
+                                saved.copy(tempoRange = low..(high + step).coerceIn(low, 100))
+                            DeviceLimit.VibrationMaximum -> saved
+                        }
+                    }
+                    else -> saved
+                }
+            row.copy(settings = settings)
         }
     }
 
@@ -216,7 +279,12 @@ internal class DeviceSetup(
             }
     }
 
-    suspend fun cloud(family: DeviceFamily, name: String, key: Secret): FormResult {
+    suspend fun cloud(
+        family: DeviceFamily,
+        name: String,
+        key: Secret,
+        connectAfterSave: Boolean,
+    ): FormResult {
         val cfg = config ?: return reject(FormReason.Unsupported)
         if (!ui.value.firstRun.hasAcknowledgedAdultsOnly) return reject(FormReason.ConsentRequired)
         if (name.trim().length > 64 || name.any(Char::isISOControl))
@@ -238,7 +306,7 @@ internal class DeviceSetup(
             if (
                 saved.credential != null &&
                     (family == DeviceFamily.Handy) == (saved.ref.family == DeviceFamily.Handy) &&
-                    d.vault.get(saved.credential) == key
+                    d.vault.matches(saved.credential, key)
             )
                 return reject(FormReason.Duplicate)
         }
@@ -254,19 +322,16 @@ internal class DeviceSetup(
             if (cfg.rows.value.none { it.credential == handle }) d.vault.remove(handle)
         }
         refresh(cfg.rows.value)
+        if (connectAfterSave) devices.connect(row.ref.id)
         return FormResult.Accepted
     }
 
-    val bridges = BridgeSetup(d, ui, ::refresh)
+    val bridges = BridgeSetup(d, ui, ::refresh, safety::canForget)
 
     suspend fun edit(id: DeviceId, transform: (SavedDevice) -> SavedDevice) {
         val cfg = config ?: return
-        cfg.rows.value
-            .firstOrNull { it.ref.id == id }
-            ?.let {
-                cfg.save(transform(it))
-                refresh(cfg.rows.value)
-            }
+        cfg.update(id, transform)
+        refresh(cfg.rows.value)
     }
 
     suspend fun rename(intent: UserIntent.Rename): FormResult {
@@ -279,7 +344,7 @@ internal class DeviceSetup(
                 ?: return reject(FormReason.NotFound)
         if (cfg.rows.value.any { it.ref.id != intent.device && it.ref.name.equals(name, true) })
             return reject(FormReason.Duplicate)
-        cfg.save(row.copy(ref = row.ref.copy(name = name)))
+        cfg.update(row.ref.id) { it.copy(ref = it.ref.copy(name = name)) }
         refresh(cfg.rows.value)
         return FormResult.Accepted
     }
@@ -295,7 +360,8 @@ internal class DeviceSetup(
         }
         val state = engine.state.value
         if (
-            state.pending.containsKey(id) ||
+            !safety.canForget(id) ||
+                state.pending.containsKey(id) ||
                 state.journal?.devices.orEmpty().any { it.id == id && id !in state.resolved } ||
                 state.receipt?.outcomes.orEmpty().any {
                     it.device == id && it.outcome != StopOutcome.Confirmed

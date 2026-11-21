@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.Banner
 import com.magichandy.mobile.core.api.CoyoteChannel
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceOutput
@@ -35,6 +36,7 @@ import com.magichandy.mobile.core.api.RunMembership
 import com.magichandy.mobile.core.api.RunPhase
 import com.magichandy.mobile.core.api.StepDirection
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.ui.chat.CheckInBanner
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.Card
@@ -73,6 +75,9 @@ fun LiveScreen(
             backDescription = stringResource(R.string.back_to_chat),
             onBack = onBack,
         )
+        state.banners.filterIsInstance<Banner.CheckInDue>().forEach {
+            CheckInBanner(it, onIntent)
+        }
         Figure(state, onIntent)
         val inRun = state.devices.devices.filter { it.membership is RunMembership.InRun }
         if (inRun.isNotEmpty()) DeviceOutputs(inRun)

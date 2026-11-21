@@ -70,6 +70,26 @@ internal class HandyCodecTest {
         }
 
     @Test
+    fun `only a response with a single method can acknowledge a request`() {
+        fun packet(kind: Long, secondMethod: Boolean = false) =
+            ProtoWriter()
+                .apply {
+                    uint(1, kind)
+                    message(4) {
+                        uint(1, 16)
+                        message(12) {}
+                        message(715) {}
+                        if (secondMethod) message(864) {}
+                    }
+                }
+                .bytes()
+        assertEquals(null, decodeReply(packet(4)))
+        assertEquals(null, decodeReply(packet(5)))
+        assertEquals(715, decodeReply(packet(3))?.method)
+        assertEquals(null, decodeReply(packet(3, secondMethod = true))?.method)
+    }
+
+    @Test
     fun `malformed oversize truncated or overflowing replies cannot acknowledge Stop`() {
         for (bytes in
             listOf(

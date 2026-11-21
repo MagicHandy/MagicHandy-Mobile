@@ -2,15 +2,25 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.MotionSource
 import com.magichandy.mobile.core.autopilot.edgePlan
 import com.magichandy.mobile.core.motion.MotionEngine
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.core.score.*
+import com.magichandy.mobile.core.ports.Epoch
+import com.magichandy.mobile.core.ports.PlanningProvider
+import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.score.LayeredScore
+import com.magichandy.mobile.core.score.TempoScore
+import com.magichandy.mobile.core.score.atSpeed
+import com.magichandy.mobile.core.score.holding
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal class EdgeControl(
     private val d: CoreDependencies,

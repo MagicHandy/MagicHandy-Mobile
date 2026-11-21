@@ -4,6 +4,22 @@ package com.magichandy.mobile.transport.handy
 import com.magichandy.mobile.core.motion.MotionFrame
 import com.magichandy.mobile.core.motion.hasIncreasingTimes
 
+/** Reported by firmware. Setup and initial Add legitimately report idle before the first Play. */
+internal enum class HandyPlayback {
+    Uninitialized,
+    Playing,
+    Stopped,
+    Paused,
+    Starving;
+
+    fun rejects(command: HandyCommand): Boolean =
+        when (command) {
+            is HandyCommand.Add -> command.refilling && this != Playing
+            is HandyCommand.Play -> this == Paused || this == Starving
+            else -> false
+        }
+}
+
 /** Only the finite, starvation-pausing firmware commands used by the engine. */
 internal sealed class HandyCommand(val method: Int) {
     data object StopCurrentMode : HandyCommand(715)
@@ -28,8 +44,12 @@ internal sealed class HandyCommand(val method: Int) {
         }
     }
 
-    data class Add(val frames: List<MotionFrame>, val tail: Long, val flush: Boolean) :
-        HandyCommand(861) {
+    data class Add(
+        val frames: List<MotionFrame>,
+        val tail: Long,
+        val flush: Boolean,
+        val refilling: Boolean = false,
+    ) : HandyCommand(861) {
         init {
             require(frames.isNotEmpty() && tail in (frames.size - 1).toLong()..0xffff_ffffL)
             require(frames.last().timeMillis <= 0xffff_ffffL && frames.hasIncreasingTimes())

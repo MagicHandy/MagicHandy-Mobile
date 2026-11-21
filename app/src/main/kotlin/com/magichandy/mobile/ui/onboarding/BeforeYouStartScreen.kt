@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import com.magichandy.mobile.R
 import com.magichandy.mobile.ui.components.AppButton
@@ -30,29 +31,43 @@ import com.magichandy.mobile.ui.components.BrandMark
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.Card
 import com.magichandy.mobile.ui.devices.CheckBox
+import com.magichandy.mobile.ui.setup.SETUP_STEPS
+import com.magichandy.mobile.ui.setup.SetupHeader
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /**
- * Before you start (board V-Onboarding): one page with the adults-only acknowledgement and a real
- * Stop rehearsal with nothing connected. "Start chatting" sits just above Stop, so the rehearsal's
- * receipt appears between them. Permissions are asked for later, where they're needed.
+ * Before you start (board V-Onboarding), the first step of setup: the adults-only acknowledgement
+ * and a real Stop rehearsal with nothing connected. Continue sits just above Stop, so the
+ * rehearsal's receipt appears between them. Permissions are asked for later, where they're needed.
+ *
+ * @param hasAcknowledged true when Back returns here from Choose your AI. The acknowledgement is
+ *   already recorded, so the box stays ticked and Continue simply goes forward again.
  */
 @Composable
-fun BeforeYouStartScreen(onAcknowledge: () -> Unit, modifier: Modifier = Modifier) {
-    var isAdult by rememberSaveable { mutableStateOf(false) }
+fun BeforeYouStartScreen(
+    onContinue: () -> Unit,
+    modifier: Modifier = Modifier,
+    hasAcknowledged: Boolean = false,
+) {
+    var isAdult by rememberSaveable { mutableStateOf(hasAcknowledged) }
     val colors = MagicHandyTheme.colors
+    val title = stringResource(R.string.onboarding_title)
+    val pageTitle = stringResource(R.string.setup_page, title, 1, SETUP_STEPS)
     Column(
         modifier
             .fillMaxSize()
+            .semantics { paneTitle = pageTitle }
             .padding(
-                start = MagicHandyTheme.dimens.l,
-                end = MagicHandyTheme.dimens.l,
-                top = MagicHandyTheme.dimens.xxl,
-                bottom = MagicHandyTheme.dimens.m,
+                start = MagicHandyTheme.dimens.m,
+                end = MagicHandyTheme.dimens.m,
+                bottom = MagicHandyTheme.dimens.cozy,
             )
     ) {
+        SetupHeader(step = 1, onBack = null, backTo = null)
         Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            Modifier.weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(top = MagicHandyTheme.dimens.m),
             verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.roomy),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -61,7 +76,7 @@ fun BeforeYouStartScreen(onAcknowledge: () -> Unit, modifier: Modifier = Modifie
                     modifier = Modifier.size(MagicHandyTheme.dimens.brandMark),
                 )
                 Text(
-                    stringResource(R.string.onboarding_title),
+                    title,
                     style = MagicHandyTheme.type.gateTitle,
                     modifier =
                         Modifier.padding(start = MagicHandyTheme.dimens.m).semantics { heading() },
@@ -85,7 +100,13 @@ fun BeforeYouStartScreen(onAcknowledge: () -> Unit, modifier: Modifier = Modifie
                     Modifier.fillMaxWidth()
                         .heightIn(min = MagicHandyTheme.dimens.touch)
                         .padding(top = MagicHandyTheme.dimens.xs)
-                        .toggleable(value = isAdult, role = Role.Checkbox) { isAdult = it },
+                        .toggleable(
+                            value = isAdult,
+                            enabled = !hasAcknowledged,
+                            role = Role.Checkbox,
+                        ) {
+                            isAdult = it
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CheckBox(isAdult)
@@ -113,8 +134,8 @@ fun BeforeYouStartScreen(onAcknowledge: () -> Unit, modifier: Modifier = Modifie
             }
         }
         AppButton(
-            stringResource(R.string.onboarding_start),
-            onAcknowledge,
+            stringResource(R.string.setup_continue),
+            onContinue,
             kind = ButtonKind.Primary,
             isEnabled = isAdult,
             modifier = Modifier.fillMaxWidth().padding(top = MagicHandyTheme.dimens.m),

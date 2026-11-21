@@ -100,6 +100,7 @@ public fun simulatedDependencies(
         )
     val provider = SimulatedModelProvider()
     val network = MutableStateFlow(NetworkState(true, 0))
+    val chats = InMemoryChats()
     return CoreDependencies(
         scope,
         dispatchers,
@@ -107,8 +108,8 @@ public fun simulatedDependencies(
         RunHost { true },
         NetworkMonitor { network },
         devices,
-        InMemoryChats(),
-        InMemorySettings(),
+        chats,
+        InMemorySettings(chats = chats),
         InMemoryModels(ModelCatalog(mapOf(id to SavedModel(model)), id)),
         InMemoryRunJournal(),
         InMemoryVault(),

@@ -1,6 +1,7 @@
 package com.magichandy.mobile.core.ports
 
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.CoyoteChannel
+import com.magichandy.mobile.core.api.DeviceOutput
 import kotlinx.coroutines.flow.StateFlow
 
 /** A user-owned channel strength handshake. A planner cannot reach this port. */

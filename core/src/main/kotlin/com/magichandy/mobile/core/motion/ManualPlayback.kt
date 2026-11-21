@@ -5,8 +5,12 @@ import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.Limits
 import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.ports.DeviceTransport
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticReporter
+import com.magichandy.mobile.core.ports.LinearSampling
 import com.magichandy.mobile.core.ports.MotionBatch
 import com.magichandy.mobile.core.ports.WriteResult
+import kotlin.math.roundToInt
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.async
@@ -15,7 +19,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/** Manual output uses the verified bounded-ramp sampler for both ordinary runs and motor tests. */
+/** Renders a shared score for the selected owners, with a finite horizon for each motor test. */
 internal class ManualPlayback(private val d: CoreDependencies, private val engine: MotionEngine) {
     private data class Playing(
         val stream: PlaybackStream,
@@ -83,7 +87,7 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
         commanded: (MotionBatch, ManualTarget) -> Unit,
     ) {
         val stream = initialPosition.stream
-        val sampler = BufferedSampler(timeline)
+        val sampler = timeline.bufferedSampler(owners.map { it.device })
         val timed =
             TimedPlayback(
                 d,
@@ -100,8 +104,17 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                 .associateWith { LinearSampler(timeline, it) }
         var previous: Limits? = null
         var previousTarget: ManualTarget? = null
+        var acceptedTail = Duration.ZERO
         var origin = d.clock.elapsed()
         while (engine.state.value.plays(stream)) {
+            // The OS can resume this coroutine after the previously accepted buffer ran dry.
+            // Do not append to an expired HSP timeline or replay Play to hide an underrun.
+            if (
+                previous != null &&
+                    buffered.any { it.bufferedTiming != null } &&
+                    d.clock.elapsed() - origin >= acceptedTail
+            )
+                return engine.stop(null, stream = stream)
             val limits = d.settings.state.value.values.limits
             val target =
                 timeline.update(
@@ -114,23 +127,34 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                     ),
                     (d.clock.elapsed() - origin).inWholeMilliseconds,
                 ) ?: return engine.stop(null, stream = stream)
-            val batch =
-                try {
-                    nextBatch(sampler, previous == null, limits, target.pace, test)
-                } catch (_: IllegalArgumentException) {
-                    com.magichandy.mobile.core.ports.DiagnosticReporter.record(
-                        com.magichandy.mobile.core.ports.DiagnosticKind.TransportWriteFailed
+            val batch: MotionBatch
+            val linearBatches: Map<LinearSampling, MotionBatch>
+            try {
+                batch =
+                    nextBatch(
+                        sampler,
+                        timeline,
+                        previous == null,
+                        limits,
+                        target.pace,
+                        test,
+                        refillLead(buffered),
                     )
-                    return engine.stop(null, stream = stream)
+                linearBatches = linear.mapValues { (_, fit) ->
+                    batch.copy(
+                        linearPoints =
+                            fit.through(batch.frames.last().timeMillis, limits, finite = test)
+                    )
                 }
+            } catch (_: IllegalArgumentException) {
+                DiagnosticReporter.record(DiagnosticKind.TransportWriteFailed)
+                return engine.stop(null, stream = stream)
+            }
             if (
                 batch.isFirst &&
                     !sendToOwners(stream, owners.filter { it.startupPosition != null }, batch, true)
             )
                 return engine.stop(null, stream = stream)
-            val linearBatches = linear.mapValues { (_, fit) ->
-                batch.copy(linearPoints = fit.through(batch.frames.last().timeMillis, limits))
-            }
             val linked = batch.isFirst && owners.size > 1 && buffered.any { it.linkedStart != null }
             if (
                 linked &&
@@ -156,7 +180,8 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                 return
             }
             if (previous == null) {
-                if (!linked) origin = d.clock.elapsed()
+                if (!linked)
+                    origin = buffered.singleOrNull()?.bufferedTiming?.startedAt ?: d.clock.elapsed()
                 playing.compareAndSet(
                     initialPosition,
                     initialPosition.copy(timeline = timeline, origin = origin),
@@ -167,28 +192,49 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
             previousTarget = target
             previous = limits
             if (test) return
-            val lead = batch.frames.last().timeMillis.milliseconds - (d.clock.elapsed() - origin)
+            acceptedTail = batch.frames.last().timeMillis.milliseconds
+            val lead = acceptedTail - (d.clock.elapsed() - origin)
             if (lead <= 0.milliseconds) {
                 engine.stop(null, stream = stream)
                 return
             }
-            delay((lead - 1500.milliseconds).coerceAtLeast(0.milliseconds))
+            delay((lead - refillLead(buffered)).coerceAtLeast(Duration.ZERO))
         }
+    }
+
+    private fun refillLead(owners: List<DeviceTransport>): Duration {
+        val trip =
+            owners.mapNotNull { it.bufferedTiming?.recentCommandLatency }.maxOrNull()
+                ?: Duration.ZERO
+        // Desktop's 250 ms delivery margin plus its 200 ms dispatch interval, with the HSP floor.
+        return (trip + 450.milliseconds).coerceIn(1500.milliseconds, 2000.milliseconds)
     }
 
     private fun nextBatch(
         sampler: BufferedSampler,
+        timeline: ScoreTimeline,
         first: Boolean,
         limits: Limits,
         pace: Percent,
         test: Boolean,
+        lead: Duration,
     ): MotionBatch {
         val frames = buildList {
             addAll(sampler.nextChunk())
-            if (first && last().timeMillis < 1500 && !test) addAll(sampler.nextChunk())
+            if (first && last().timeMillis < lead.inWholeMilliseconds) addAll(sampler.nextChunk())
         }
+        // Slow strokes can have no fitted knot between zero and the test deadline.
+        // Timed owners still need valid coverage right up to that deadline.
+        val points =
+            if (test) {
+                frames.takeWhile { it.timeMillis < 1500 } +
+                    MotionFrame(
+                        1500,
+                        Percent(timeline.sampleAt(1500).position.roundToInt().coerceIn(0, 100)),
+                    )
+            } else frames
         return MotionBatch(
-            if (test) frames.takeWhile { it.timeMillis <= 1500 } else frames,
+            points,
             pace,
             limits,
             first,
@@ -201,8 +247,7 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
         batch: MotionBatch,
         prepare: Boolean = false,
         origin: Duration? = null,
-        linearBatches: Map<com.magichandy.mobile.core.ports.LinearSampling, MotionBatch> =
-            emptyMap(),
+        linearBatches: Map<LinearSampling, MotionBatch> = emptyMap(),
     ): Boolean = coroutineScope {
         owners
             .map { owner ->

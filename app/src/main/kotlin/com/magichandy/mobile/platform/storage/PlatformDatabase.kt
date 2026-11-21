@@ -1,7 +1,17 @@
 package com.magichandy.mobile.platform.storage
 
 import android.content.Context
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.Update
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -24,6 +34,13 @@ internal data class Entry(
 
 @Entity(tableName = "memories", primaryKeys = ["persona", "text"])
 internal data class Memory(val persona: String, val text: String)
+
+@Entity(tableName = "personas")
+internal data class PersonaRow(
+    @PrimaryKey val id: String,
+    val name: String,
+    val personality: String,
+)
 
 @Dao
 internal interface RecordsDao {
@@ -60,12 +77,21 @@ internal interface RecordsDao {
     @Query("DELETE FROM chats") fun clearHeaders()
 
     @Query("DELETE FROM memories") fun clearMemories()
+
+    @Query("SELECT * FROM personas") fun personas(): List<PersonaRow>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM personas WHERE id = :id)")
+    fun hasPersona(id: String): Boolean
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) fun savePersona(row: PersonaRow)
+
+    @Query("DELETE FROM personas WHERE id = :id") fun deletePersona(id: String)
 }
 
 @Database(
-    entities = [Document::class, Header::class, Entry::class, Memory::class],
-    version = 2,
-    exportSchema = false,
+    entities = [Document::class, Header::class, Entry::class, Memory::class, PersonaRow::class],
+    version = 3,
+    exportSchema = true,
 )
 internal abstract class PlatformDatabase : RoomDatabase() {
     abstract fun records(): RecordsDao
@@ -80,13 +106,22 @@ internal abstract class PlatformDatabase : RoomDatabase() {
                 }
             }
 
-        fun open(context: Context): PlatformDatabase =
+        val fromTwo =
+            object : Migration(2, 3) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS personas (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, personality TEXT NOT NULL)"
+                    )
+                }
+            }
+
+        fun open(context: Context, name: String = "magichandy.db"): PlatformDatabase =
             Room.databaseBuilder(
                     context,
                     PlatformDatabase::class.java,
-                    java.io.File(context.noBackupFilesDir, "magichandy.db").absolutePath,
+                    java.io.File(context.noBackupFilesDir, name).absolutePath,
                 )
-                .addMigrations(fromOne)
+                .addMigrations(fromOne, fromTwo)
                 .build()
     }
 }

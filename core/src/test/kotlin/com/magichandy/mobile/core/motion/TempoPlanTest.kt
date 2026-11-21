@@ -1,8 +1,15 @@
 package com.magichandy.mobile.core.motion
 
-import com.magichandy.mobile.core.score.*
-import kotlin.test.*
-import kotlinx.serialization.json.*
+import com.magichandy.mobile.core.score.TempoPlan
+import com.magichandy.mobile.core.score.TempoScore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 

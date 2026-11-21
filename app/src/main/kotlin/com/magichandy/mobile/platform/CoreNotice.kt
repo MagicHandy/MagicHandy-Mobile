@@ -1,13 +1,19 @@
 package com.magichandy.mobile.platform
 
 import android.Manifest
-import android.app.*
-import android.content.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import com.magichandy.mobile.MainActivity
 import com.magichandy.mobile.R
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.Banner
+import com.magichandy.mobile.core.api.DeviceStatus
 
 internal class CoreNotice(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
@@ -27,6 +33,15 @@ internal class CoreNotice(private val context: Context) {
     }
 
     fun privateText(state: AppState): String = buildList {
+        state.banners.filterIsInstance<Banner.CheckInDue>().forEach {
+            add(
+                context.getString(
+                    R.string.platform_check_in_due,
+                    it.name,
+                    it.answerWithin.inWholeSeconds,
+                )
+            )
+        }
         val names =
             state.devices.devices
                 .filter {

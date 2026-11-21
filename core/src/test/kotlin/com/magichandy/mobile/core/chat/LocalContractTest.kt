@@ -1,9 +1,14 @@
 package com.magichandy.mobile.core.chat
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.core.score.*
-import kotlin.test.*
+import com.magichandy.mobile.core.api.AppLanguage
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.score.LayeredScore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 internal class LocalContractTest {
     @Test

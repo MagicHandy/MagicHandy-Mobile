@@ -102,6 +102,22 @@ fun DevicesScreen(
                 RadioState(devices.isOnline, R.string.devices_online, R.string.devices_offline)
             }
         }
+        for (device in
+            devices.devices.filter {
+                it.id in devices.awaitingReturn &&
+                    state.stopReceipt?.outcomes.orEmpty().none { stop ->
+                        stop.device == it.id && stop.outcome == StopOutcome.Unconfirmed
+                    }
+            }) {
+            Banner(
+                tone = BannerTone.Warn,
+                title = stringResource(R.string.recovery_waiting_return, device.name),
+                body = Words.afterLoss(device.afterLoss, device.name),
+                actionLabel = stringResource(R.string.devices_checked_it),
+                onAction = { onIntent(UserIntent.ReconcileDevice(device.id)) },
+                hasIcon = true,
+            )
+        }
         UnresolvedStops(state.stopReceipt, onIntent)
         if (system.areNotificationsRefused) NotificationsRefusedBanner(onOpenNotificationSettings)
         if (devices.devices.isEmpty()) {
@@ -219,6 +235,13 @@ private fun DeviceRow(
                     style = MagicHandyTheme.type.bodyStrong,
                 )
                 StatusLine(device)
+                device.connectionFailure?.let {
+                    Text(
+                        connectionFailureText(it),
+                        style = MagicHandyTheme.type.caption,
+                        color = colors.muted,
+                    )
+                }
             }
         }
         Trailing(device, onIntent, onOpenDevice)
@@ -263,6 +286,13 @@ private fun Trailing(
 ) {
     val compact = MagicHandyTheme.dimens.compactControl
     when {
+        device.canRetryWhileConnecting ->
+            AppButton(
+                stringResource(R.string.device_retry_connection),
+                { onIntent(UserIntent.RetryConnection(device.id)) },
+                kind = ButtonKind.Outline,
+                height = compact,
+            )
         device.status == DeviceStatus.NeedsSetup ->
             AppButton(
                 stringResource(R.string.devices_set_up),

@@ -1,6 +1,7 @@
 package com.magichandy.mobile.core.ports
 
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.ServerCheck
 
 /**
  * Probes only a user-entered address. Detection and a bounded, inert readiness request use the same

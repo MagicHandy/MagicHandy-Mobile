@@ -1,8 +1,18 @@
 package com.magichandy.mobile.core.chat
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.score.*
-import kotlinx.serialization.json.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceSettings
+import com.magichandy.mobile.core.api.DeviceStatus
+import com.magichandy.mobile.core.api.RunMembership
+import com.magichandy.mobile.core.score.VibrationEnvelope
+import com.magichandy.mobile.core.score.VibrationMode
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 internal fun AppState.vibratorContext(): String {
     val rows =

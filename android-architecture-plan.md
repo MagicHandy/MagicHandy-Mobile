@@ -433,7 +433,12 @@ Decided on 2026-11-18:
 **The eight questions from the canvas's "Needs your decision" card**, all now settled:
 
 1. **Intiface: full support, decided 2026-11-20.** The Handy, and any other linear actuator, connect through Intiface Central as on the desktop, alongside vibrators. A persistent caveat says Stop through the bridge can't be confirmed, and an acknowledgement from the bridge alone reports Stop as unconfirmed.
-2. **Personas:** only the built-in presets in v1. Importing persona archives comes later, because it parses untrusted archives (desktop risk R27).
+2. **Personas: editable in v1, decided 2026-11-20.** This replaces "only the built-in presets".
+   - The built-in MagicHandy keeps its name and can't be deleted, but its personality is fully customizable, with Reset to default.
+   - People can create, duplicate, delete and use their own personas, up to 200. Each has its own memory, and deleting one deletes its memory while chats keep their messages.
+   - A persona is only a name, how explicit replies may be (Utility, Warm, Intimate or Explicit), a reaction style (Neutral, Playful, Tender, Teasing, Dominant or Submissive), a description of at most 500 characters and a reply length (Short or Detailed). The defaults compose byte-identical requests to the desktop's.
+   - None of it changes limits, what the model may control, Autopilot or Stop.
+   - Out of v1: portraits, lore, anatomy wording, and importing or exporting persona archives (desktop risk R27).
 3. **Palettes: a minimal dark set tailored to phones, decided 2026-11-20.** Steel Azure (the default), OLED black (true black, which OLED screens draw with their pixels off) and High contrast. Lowlight is retired and loads as OLED black. The eight desktop palettes stay on the desktop.
 4. **Settings in the bottom row: confirmed on 2026-11-20, at least for now.** It's an action that opens the compact sheet over the current screen, with App settings as its last row.
 5. **Edge:** Astra suggests deferring it, since it adds a fourth motion state to test on every device. The canvas keeps it on Chat and Live, because you asked for Edge on the phone remote.
@@ -523,7 +528,7 @@ From top to bottom: content, the deck, the tabs and Stop.
   1. Motion mode, in its own menu: Layered, Simple and Off, with the desktop's one-line descriptions; Tempo and Off when a VacuGlide leads;
   2. Style: Gentle, Balanced or Intense, which shapes the motion, not the wording;
   3. Autopilot: how often it changes, check-ins (Off, Talk, or Talk and adjust), an optional finish target, and the planner model ("Same as chat" by default);
-  4. Persona;
+  4. Persona: choose who replies, or Manage personas, which opens Personas and each persona's editor (decision 2 in §12);
   5. Chat model;
   6. Memory.
 - **App settings:** Models, palette, language, Stop on the lock screen, battery, the Quick Settings tile, sharing diagnostics, deleting chats, and the version with a release check.
@@ -532,7 +537,13 @@ From top to bottom: content, the deck, the tabs and Stop.
   - The Handy connects over Bluetooth or Cloud, and its page holds the name, connection, model, Reverse direction, Check, Test and Remove;
   - the Coyote's safety notes come before its first connection;
   - VacuGlide's safeguards come before Test motor.
-- **Before you start:** one page with the adults-only acknowledgement and a Stop rehearsal with nothing connected. Permissions are asked for when a feature first needs them.
+- **First-run setup, decided 2026-11-20:** four steps replace the one-page first run.
+  1. Before you start: the adults-only acknowledgement and a Stop rehearsal with nothing connected.
+  2. Choose your AI: ChatGPT, OpenRouter or a server on the network, or Skip for now.
+  3. Your companion: how explicit MagicHandy may be, its reaction style and description, or Skip for now.
+  4. You're set: what's chosen, Add a device, and Start chatting, or Finish setup without a model.
+
+  Permissions are asked for when a feature first needs them. Chat offers Choose an AI while there's no model, and keeps the draft meanwhile.
 - **Failures:** a banner and receipt when a connection is lost. Run interrupted appears on a cold start with an unresolved journal, and leads with the device that may still be running.
 - **System:** the notification has one action, Stop, and tapping it opens Live. The public lock-screen version shows only "MagicHandy · Active" and Stop. The Quick Settings tile reads "Stop motion".
 
@@ -546,7 +557,7 @@ From top to bottom: content, the deck, the tabs and Stop.
 | No original Creative mode | The desktop retired it (ADR 0062); mobile gets no restore toggle | <ul><li>Drops its chat contract.</li><li>The shared "dynamic" motion definitions stay, because chat and Autopilot use them.</li></ul> |
 | Three capability levels in the UI | Advanced (no reasoning) is chosen automatically when a connection's reasoning is off | The same contracts underneath, with one fewer choice |
 | LAN server type detected | <ul><li>The type is found by probing `/api/tags` (Ollama), `/props` (llama.cpp) or `/v1/models` (other servers).</li><li>The capability level is suggested from the model name.</li></ul> | One add-server flow, with no type picker |
-| Two model roles | <ul><li>Chat, and Autopilot ("Same as chat" by default).</li><li>No second opinion, local retry or context-sharing switch.</li><li>A rejected reply is always repaired once.</li></ul> | Less settings UI and orchestration |
+| Two model roles | <ul><li>Chat, and Autopilot ("Same as chat" by default).</li><li>No second opinion or context-sharing switch. The optional refusal fallback sends the current message once to a selected LAN server.</li><li>The primary provider gets one repair attempt for eligible malformed proposals. The consented LAN fallback gets a single request.</li></ul> | Less settings UI and orchestration |
 | One check-in control | Off, Talk, or Talk and adjust replaces a frequency choice plus a switch; the model picks when to check in | One control instead of two |
 | Reverse direction on The Handy's page | It is a mounting setting, not a chat setting | — |
 | Any device failure stops every device | Safer and simpler on a phone than a "keep going" option | Drops the On device failure setting and the partial-run notices |
@@ -655,3 +666,35 @@ Codex CLI ran `gpt-6.2-astra` at high reasoning effort, with image generation. I
 - **Roboto in the sketches.** The app bundles the canvas's Inter, with JetBrains Mono for readouts (§14.1).
 
 **Corrected in the system design:** the option to keep going on healthy devices is gone, the service no longer runs for chat-only replies, the journal moved out of the database, the curated-pattern storage is gone, and LAN servers are added by address.
+
+## 18. Astra 6.2 consult on setup and personas (2026-11-20)
+
+Codex CLI ran `gpt-6.2-astra` at high reasoning effort, with image generation. Its brief held the six setup and persona boards, this plan, the system design and the two earlier consults, and asked what would make the flows clearer on a phone.
+
+- **Outputs:** the report in [design/astra-consult-3/report.md](design/astra-consult-3/report.md), with a verdict and cost for each change, and five concept images in [design/astra-consult-3/images](design/astra-consult-3/images).
+- **Canvas:** the setup and persona boards were redrawn with the adopted changes (V-SetupModel to V-PersonaStyle).
+
+**Adopted:**
+
+- **Setup:**
+  - Skip works all the way to Chat: Skip for now on steps 2 and 3, and a You're set variant without a model that says "No model chosen" and offers Finish setup;
+  - Choose your AI says what each provider needs and where it runs, with no claim that messages go only to that model;
+  - a provider saved during setup moves on to Your companion, and one saved from Chat's Choose an AI returns to Chat with the draft kept;
+  - one Stop: the footer, with no informational Stop row on You're set.
+- **Personas:**
+  - Personas rows only edit, and choosing who replies stays in the Settings sheet, with Manage personas below the choices;
+  - the level and style pickers give every option its definition;
+  - at Utility the description reads "Saved for Warm, Intimate and Explicit", since it isn't sent there;
+  - the description counts characters as people see them, keeps an over-limit paste and says how much to remove;
+  - editors track changes, and leaving with unsaved changes asks "Discard changes?", also before duplicating;
+  - MagicHandy's Reset to default loads the defaults into the draft, to be saved;
+  - a persona the person made is renamed in its title, offers Use persona while saved and Save and use while changed, and a blank name puts focus back on the title;
+  - deleting names the persona, its memory, the messages that stay and, if it was in use, who replies next, with Cancel focused first;
+  - replies keep the name of the persona that wrote them.
+- **Access:** each step announces itself once, such as "Choose your AI, step 2 of 4", and rows say what a tap does.
+
+**Not adopted:**
+
+- **A required Stop press on Before you start.** The rehearsal stays optional, as approved for the one-page first run.
+- **A style example in the editors, and a live audition.** A fixed line can't reflect the description or the model, and an audition would need a model, could cost money and touches memory and motion.
+- **A persona shortcut in Chat's header.** It would compete with the chat's title; switching stays three taps away in Settings.

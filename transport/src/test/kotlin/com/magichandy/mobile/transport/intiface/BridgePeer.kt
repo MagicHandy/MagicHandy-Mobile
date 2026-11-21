@@ -1,18 +1,49 @@
 package com.magichandy.mobile.transport.intiface
 
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.ConnectionKind
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.Limits
+import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.motion.MotionFrame
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.ports.BridgeTarget
+import com.magichandy.mobile.core.ports.Clock
+import com.magichandy.mobile.core.ports.DeviceRef
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticReporter
+import com.magichandy.mobile.core.ports.LinearPoint
+import com.magichandy.mobile.core.ports.MotionBatch
+import com.magichandy.mobile.core.ports.SavedDevice
+import com.magichandy.mobile.core.ports.defaultDeviceSettings
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 import kotlin.time.TimeSource
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.serialization.json.*
-import mockwebserver3.*
-import okhttp3.*
+import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import okhttp3.OkHttpClient
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 
 internal class BridgePeer : AutoCloseable {
     val diagnostics = CopyOnWriteArrayList<DiagnosticKind>()
@@ -29,6 +60,7 @@ internal class BridgePeer : AutoCloseable {
             override fun now() = Instant.fromEpochMilliseconds(elapsed().inWholeMilliseconds)
         }
     val names = CopyOnWriteArrayList<String>()
+    val scalars = CopyOnWriteArrayList<Double>()
 
     data class Move(val at: Long, val position: Double, val millis: Long, val index: Int)
 
@@ -41,7 +73,8 @@ internal class BridgePeer : AutoCloseable {
     @Volatile var copies = 1
     @Volatile var stepCount = 1000L
     @Volatile var deviceName = "The Handy (FW4+)"
-    @Volatile var axisType = "Position"
+    @Volatile var axisType: String? = "Position"
+    @Volatile var descriptor = "Slider"
     @Volatile var gap = 0
     @Volatile var reverse = false
     @Volatile var bounds = Limits(Percent(80), Percent(0), Percent(100))
@@ -86,7 +119,7 @@ internal class BridgePeer : AutoCloseable {
                                                 putJsonArray("LinearCmd") {
                                                     addJsonObject {
                                                         put("ActuatorType", axisType)
-                                                        put("FeatureDescriptor", "Slider")
+                                                        put("FeatureDescriptor", descriptor)
                                                         put("StepCount", stepCount)
                                                     }
                                                 }
@@ -106,6 +139,14 @@ internal class BridgePeer : AutoCloseable {
                                         }
                                     }
                                 }
+                            }
+                            "ScalarCmd" -> {
+                                val motors = body.getValue("Scalars").jsonArray
+                                scalars.addAll(
+                                    motors.map {
+                                        it.jsonObject.getValue("Scalar").jsonPrimitive.double
+                                    }
+                                )
                             }
                             "LinearCmd" -> {
                                 val v = body.getValue("Vectors").jsonArray.single().jsonObject
@@ -150,13 +191,16 @@ internal class BridgePeer : AutoCloseable {
     suspend fun linear(
         c: BridgeTarget? = null,
         onLoss: () -> Unit = { lost.complete(Unit) },
+        outputScope: CoroutineScope = scope,
+        playbackClock: Clock = clock,
+        liveLimits: () -> Limits = { bounds },
     ): IntifaceLinear =
         IntifaceLinear.connect(
             hub,
             row(c ?: find().first()),
-            scope,
-            clock,
-            { bounds },
+            outputScope,
+            playbackClock,
+            liveLimits,
             { reverse },
             onLoss,
         )

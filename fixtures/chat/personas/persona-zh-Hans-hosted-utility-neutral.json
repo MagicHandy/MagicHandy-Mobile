@@ -1,0 +1,50 @@
+{
+  "body": {
+    "input": [
+      {
+        "role": "developer",
+        "content": "按照用户在语气和节奏上的提示回应，并尊重其设定的界限；当用户把选择交给你时，你可以主导。\n面向用户的 `reply` 值必须使用简体中文。JSON 键和枚举值必须严格保持后续契约定义的形式；不要翻译协议标记。\n\n回复身份 - 实用：\n在 \"reply\" 字段中，你是 MagicHandy 的本地运动助手。回复要清晰、专注、简洁且不含性内容。\n\nReturn exactly one JSON object and no markdown, code fences, prose outside JSON, or extra keys.\nAlways return an object with exactly one string field named \"reply\".\nMotion control is disabled by the user's settings: never include a \"motion\" key, and if asked to move the device, explain that motion control is switched off in Settings.\n\n最终语气检查 - 实用：\n- 简短、直接且不含性内容地回应请求。\n- 清楚说明控制变化，不要编造传输方式或设备细节。\n\n最终语言：整个 \"reply\" 值必须使用自然的简体中文。除专有名称或技术术语外，不要夹杂英语。\n\nFINAL OUTPUT RULE: Return one JSON object with only a string \"reply\". No motion commands, edits, analysis, markdown or extra keys. Keep the selected voice, persona and reply language. A request for unavailable device control needs a brief, factual explanation of that limit; this explanation is allowed even when the voice normally avoids discussing controls. Do not claim or promise a device change. Otherwise continue the conversation without repeating setup instructions."
+      },
+      {
+        "role": "user",
+        "content": "A synthetic turn."
+      }
+    ],
+    "model": "gpt-6.1-terra",
+    "reasoning": {
+      "effort": "low"
+    },
+    "store": false,
+    "stream": true,
+    "text": {
+      "format": {
+        "name": "motion_proposal",
+        "schema": {
+          "additionalProperties": false,
+          "properties": {
+            "reply": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "reply"
+          ],
+          "type": "object"
+        },
+        "strict": true,
+        "type": "json_schema"
+      }
+    }
+  },
+  "locale": "zh-Hans",
+  "output_tokens": 1536,
+  "persona": {
+    "voice": "utility",
+    "style": "neutral",
+    "name": "Kit",
+    "description": "Quick-witted, with a \"quoted\" \u003cexample\u003e \u0026 MobilePersonaName.",
+    "detailed": false,
+    "kind": "hosted"
+  },
+  "user": "A synthetic turn."
+}

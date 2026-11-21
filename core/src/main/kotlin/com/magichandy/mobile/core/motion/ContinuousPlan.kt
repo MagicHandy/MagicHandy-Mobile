@@ -17,12 +17,30 @@ internal class ContinuousPlan(
             for (i in legs.indices) this[i + 1] = this[i] + legs[i].duration
         }
     private val duration = starts.last()
+    // Desktop Original Handy Cloud audition. Small authored strokes keep a tighter error budget.
+    private val sparseTolerance =
+        legs
+            .map { abs(it.states.last().position - it.states.first().position) }
+            .filter { it > 0.0 }
+            .minOrNull()
+            ?.let { (it * 0.12).coerceIn(precisePositionTolerance, 3.0) }
+            ?: precisePositionTolerance
+
+    override fun sparsePositionTolerance(start: Long, end: Long): Double = sparseTolerance
+
     private val knots =
         LongArray(starts.size) { (starts[it].toDouble() / duration * periodMillis).roundToLong() }
 
     fun phaseAt(at: Long) = (at.toDouble() / periodMillis) % 1.0
 
-    fun stateAt(at: Long): CurveState {
+    override fun legPeakSpeed(at: Long): Double {
+        val time = phaseAt(at) * duration
+        val found = starts.binarySearch(time.toLong())
+        val i = (if (found >= 0) found else -found - 2).coerceIn(0, legs.lastIndex)
+        return legs[i].peaks.velocity * 1000 * (duration.toDouble() / periodMillis)
+    }
+
+    override fun stateAt(at: Long): CurveState {
         val time = phaseAt(at) * duration
         val found = starts.binarySearch(time.toLong())
         val index = (if (found >= 0) found else -found - 2).coerceIn(0, legs.lastIndex)
@@ -90,9 +108,18 @@ internal class ContinuousPlan(
 }
 
 internal interface ContinuousPath : MotionPath {
+    fun stateAt(at: Long): CurveState
+
     val usesWireTiming: Boolean
         get() = true
 
     val maximumVelocity: Double
+
+    fun legPeakSpeed(at: Long): Double = maximumVelocity
+
     val accelerationBound: Double
+
+    fun sparsePositionTolerance(start: Long, end: Long): Double = precisePositionTolerance
+
+    fun accelerationBoundBetween(start: Long, end: Long): Double = accelerationBound
 }

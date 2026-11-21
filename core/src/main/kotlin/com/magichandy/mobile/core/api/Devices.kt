@@ -15,6 +15,8 @@ public data class DevicesState(
     public val isOnline: Boolean,
     public val scan: ScanState,
     public val hasAcknowledgedCoyoteNotes: Boolean,
+    /** Devices that still require a Stop on return or an explicit local check. */
+    public val awaitingReturn: Set<DeviceId> = emptySet(),
 )
 
 /** A vibration-capable endpoint reported by the named Intiface server. */
@@ -55,7 +57,13 @@ public data class DeviceSummary(
     public val output: DeviceOutput?,
     public val settings: DeviceSettings,
     public val afterLoss: AfterLossBehaviour,
-)
+    /** Why the last connection or read-only check failed. Cleared on a new attempt. */
+    public val connectionFailure: DeviceConnectionFailure? = null,
+) {
+    /** A fresh Handy Cloud probe can replace the pending attempt while the device is booting. */
+    public val canRetryWhileConnecting: Boolean
+        get() = connection == ConnectionKind.HandyCloud && status == DeviceStatus.Connecting
+}
 
 /** The device families the desktop supports, all of which the phone supports (plan §8). */
 public enum class DeviceFamily {
@@ -65,6 +73,20 @@ public enum class DeviceFamily {
     AutoblowUltra,
     VacuGlide,
     LinearActuator,
+}
+
+/** Handy calibration identifiers persisted by earlier versions and used by the motion compiler. */
+public enum class HandyProfile(public val storedName: String) {
+    Original("handy_original"),
+    Standard("handy_2_standard"),
+    Pro("handy_2_pro"),
+}
+
+/** The personal limits that can be changed from a device page. */
+public enum class DeviceLimit {
+    VibrationMaximum,
+    TempoMinimum,
+    TempoMaximum,
 }
 
 /** Independent Coyote strength channels. Strength belongs exclusively to the person. */
@@ -124,7 +146,12 @@ public sealed interface DeviceOutput {
     public data class Tempo(public val tempo: Percent) : DeviceOutput
 
     /** The Coyote's two channel strengths, in its own units. */
-    public data class Channels(public val strengthA: Int, public val strengthB: Int) : DeviceOutput
+    public data class Channels(
+        public val strengthA: Int,
+        public val strengthB: Int,
+        /** A manual step is waiting for its correlated device report. */
+        public val isAwaitingReport: Boolean = false,
+    ) : DeviceOutput
 }
 
 /** Settings that belong to one device, edited on its page. */

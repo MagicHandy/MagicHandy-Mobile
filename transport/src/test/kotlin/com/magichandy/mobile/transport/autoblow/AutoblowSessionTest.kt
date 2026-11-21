@@ -1,12 +1,29 @@
 package com.magichandy.mobile.transport.autoblow
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.Banner
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.StopOutcome
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.ports.DeviceDirectory
+import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.transport.simulated.DebugFixture
-import kotlin.test.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
-import kotlinx.serialization.json.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class AutoblowSessionTest {
@@ -25,7 +42,13 @@ internal class AutoblowSessionTest {
                         return stateReply
                     }
 
-                    override suspend fun events(receive: (String) -> Unit) = awaitCancellation()
+                    override suspend fun events(
+                        opened: () -> Unit,
+                        receive: (String) -> Unit,
+                    ): Unit {
+                        opened()
+                        awaitCancellation()
+                    }
 
                     override suspend fun put(
                         path: String,
@@ -90,4 +113,75 @@ internal class AutoblowSessionTest {
             )
             f.scope.cancel()
         }
+
+    @Test
+    fun `loss of the Ultra button feed stops a run despite healthy motor reads`() = runTest {
+        var events = 0
+        var moves = 0
+        val loss = MutableSharedFlow<DeviceId>(extraBufferCapacity = 1)
+        var buttonUp = true
+        val wire =
+            object : AutoblowWire {
+                override suspend fun state(priorityRead: Boolean) = buildJsonObject {
+                    put("operationalMode", "ONLINE_CONNECTED")
+                }
+
+                override suspend fun events(opened: () -> Unit, receive: (String) -> Unit) {
+                    opened()
+                    events++
+                    if (buttonUp) {
+                        delay(150)
+                        buttonUp = false
+                    }
+                    throw java.io.IOException("Synthetic button path closed")
+                }
+
+                override suspend fun put(
+                    path: String,
+                    body: JsonObject?,
+                    stop: Boolean,
+                    allowed: () -> Boolean,
+                ): JsonObject {
+                    if (path == "goto" && allowed()) moves++
+                    return state()
+                }
+            }
+        val id = DeviceId("ultra")
+        val f =
+            DebugFixture(this) { d ->
+                d.copy(
+                    devices =
+                        object : DeviceDirectory by d.devices {
+                            override val losses = loss
+
+                            override suspend fun connect(
+                                device: DeviceId,
+                                ownerScope: CoroutineScope,
+                            ): DeviceTransport {
+                                val row = saved.single { it.ref.id == device }
+                                return AutoblowSession(
+                                        row.ref,
+                                        wire,
+                                        d.clock,
+                                        ownerScope,
+                                        { row.settings },
+                                        { loss.tryEmit(id) },
+                                        {},
+                                    )
+                                    .also { it.initialize() }
+                            }
+                        }
+                )
+            }
+        f.onboard()
+        f.connect(id)
+        f.send(UserIntent.StartMotion)
+        advanceTimeBy(7000)
+        runCurrent()
+        assertEquals(1, events)
+        assertTrue(moves > 0)
+        assertEquals(RunPhase.Idle, f.core.state.value.run.phase)
+        assertTrue(f.core.state.value.banners.any { it is Banner.DeviceLost })
+        f.scope.cancel()
+    }
 }

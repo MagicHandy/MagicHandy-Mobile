@@ -24,7 +24,16 @@ public data class AppState(
     public val banners: List<Banner>,
     /** Last non-Stop action that needs attention. Cleared by the next user action. */
     public val backendNotice: BackendNotice? = null,
+    /** Whether durable initial settings and models are available for UI routing. */
+    public val startup: StartupState = StartupState.Ready,
 )
+
+/** Storage loading does not delay direct Stop or its recovery attempts. */
+public enum class StartupState {
+    Loading,
+    Ready,
+    StorageUnavailable,
+}
 
 /** A recoverable action outcome for setup and controls outside the first verified backend path. */
 public enum class BackendNotice {
@@ -40,8 +49,17 @@ public enum class BackendNotice {
     RunAlreadyActive,
 }
 
-/** First-run state. Chat stays closed until the adults-only acknowledgement is given. */
-public data class FirstRunState(public val hasAcknowledgedAdultsOnly: Boolean)
+/**
+ * First-run state. Chat stays closed until the adults-only acknowledgement is given.
+ *
+ * @property isSetupDone false on a fresh install until the person finishes setup's last step
+ *   ([UserIntent.FinishSetup]). An install that acknowledged adults only before setup existed
+ *   counts as done.
+ */
+public data class FirstRunState(
+    public val hasAcknowledgedAdultsOnly: Boolean,
+    public val isSetupDone: Boolean = true,
+)
 
 /** A persistent notice. Each names its cause; the UI gives it one next step. */
 public sealed interface Banner {

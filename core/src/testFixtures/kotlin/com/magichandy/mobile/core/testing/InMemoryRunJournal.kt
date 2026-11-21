@@ -29,6 +29,16 @@ public class InMemoryRunJournal(initial: RunJournal? = null) : RunJournalStore {
         }
     }
 
+    override suspend fun retainStops(record: RunJournal): Boolean {
+        while (true) {
+            val old = current.value
+            if (old != null && old.runId != record.runId) return false
+            val next =
+                old?.copy(devices = (old.devices + record.devices).distinctBy { it.id }) ?: record
+            if (current.compareAndSet(old, next)) return true
+        }
+    }
+
     override suspend fun reconcile(runId: RunId, confirmed: Set<DeviceId>) {
         current.update { old ->
             if (old == null || old.runId != runId) old

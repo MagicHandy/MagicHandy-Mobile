@@ -60,6 +60,19 @@ internal class QuinticSegment(val duration: Long, left: CurveState, right: Curve
 
     fun monotone(): Boolean =
         if (position(1.0) - position(0.0) < 0) maximumV <= 1e-9 else minimumV >= -1e-9
+
+    /** A connecting stroke may crest once. An interior speed minimum feels like a second start. */
+    fun hasSingleSpeedCrest(): Boolean {
+        var single = true
+        val direction = kotlin.math.sign(displacement)
+        cubicRoots(20 * d, 12 * c, 6 * b, 2 * a) { u ->
+            if (
+                u > 1e-6 && u < 1 - 1e-6 && direction * (6 * b + 24 * c * u + 60 * d * u * u) > 1e-8
+            )
+                single = false
+        }
+        return single
+    }
 }
 
 private inline fun quadraticRoots(a: Double, b: Double, c: Double, accept: (Double) -> Unit) {

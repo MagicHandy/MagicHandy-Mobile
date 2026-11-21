@@ -2,14 +2,33 @@
 // 1b80d72e.
 package com.magichandy.mobile.transport.intiface
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceOutput
+import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.BridgeSelectionRequired
+import com.magichandy.mobile.core.ports.DeviceRef
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticReporter
+import com.magichandy.mobile.core.ports.Epoch
+import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.OutputSlice
+import com.magichandy.mobile.core.ports.SavedDevice
+import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.TimedDevice
+import com.magichandy.mobile.core.ports.WriteResult
 import java.io.IOException
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.supervisorScope
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 public class IntifaceVibrator
 private constructor(
@@ -40,6 +59,8 @@ private constructor(
     override suspend fun output(slice: OutputSlice, fence: OutputFence): WriteResult {
         if (!fence.isCurrent()) return WriteResult.Stale
         val token = lease.generation
+        if (!lease.current(token))
+            return if (fence.isCurrent()) WriteResult.Uncertain else WriteResult.Stale
         val g = fence.epoch to fence.streamGeneration
         if (generation != g) {
             generation = g
@@ -64,16 +85,29 @@ private constructor(
                     cap,
                 )
             }
-        if (steps != last) {
-            bridge.request(
-                "ScalarCmd",
-                data = levels(steps),
-                allowed = { fence.isCurrent() && lease.current(token) },
-            )
-            last = steps
-        }
         val fraction =
             target.motors.indices.maxOf { i -> steps[i].toDouble() / target.motors[i].steps }
+        var sent = false
+        if (steps != last) {
+            try {
+                bridge.request(
+                    "ScalarCmd",
+                    data = levels(steps),
+                    allowed = {
+                        fence.isCurrent() &&
+                            lease.current(token) &&
+                            fraction <= maximum().value / 100.0
+                    },
+                )
+            } catch (_: FencedBridgeRequest) {
+                if (fence.isCurrent() && !lease.current(token)) return WriteResult.Uncertain
+                DiagnosticReporter.record(DiagnosticKind.WriteFenced)
+                return WriteResult.Stale
+            }
+            last = steps
+            sent = true
+        }
+        if (!sent && !fence.isCurrent()) return WriteResult.Stale
         val follows =
             slice.vibration?.mode?.let {
                 it == com.magichandy.mobile.core.score.VibrationMode.Follow
@@ -110,7 +144,7 @@ private constructor(
                 bridge.request(
                     "ScalarCmd",
                     data = levels(target.motors.map { 0 }),
-                    allowed = fence::isCurrent,
+                    allowed = { fence.isCurrent() && lease.session.owns(lease) },
                 )
                 true
             } catch (_: IOException) {

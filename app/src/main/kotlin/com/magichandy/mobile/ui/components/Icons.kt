@@ -84,6 +84,48 @@ object AppIcons {
         )
     }
 
+    /** ChatGPT's tile on Choose your AI: a rounded speech bubble. */
+    val Bubble: ImageVector by lazy {
+        outline(
+            "bubble",
+            "M2.5 4.5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v4.5a2 2 0 0 1-2 2H7l-3 2.5v-2.5h0a2 2 0 0 1-1.5-2z",
+        )
+    }
+
+    /** OpenRouter's tile: an API key. */
+    val Key: ImageVector by lazy {
+        outline(
+            "key",
+            "M5.5 5.4a2.6 2.6 0 1 0 0 5.2a2.6 2.6 0 1 0 0-5.2z",
+            "M8.1 8h5.4M11.5 8v2M13.5 8v1.6",
+        )
+    }
+
+    /** A server on the local network: two stacked units. */
+    val Server: ImageVector by lazy {
+        outline(
+            "server",
+            "M3.5 2.5h9a1 1 0 0 1 1 1v2.5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1z",
+            "M3.5 9h9a1 1 0 0 1 1 1v2.5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z",
+            "M5 4.75h.5M5 11.25h.5",
+        )
+    }
+
+    /** Editing a name in place. */
+    val Pencil: ImageVector by lazy {
+        outline("pencil", "M10.5 3.2l2.3 2.3M3 13l.6-2.9 7.6-7.6 2.3 2.3-7.6 7.6z")
+    }
+
+    /** More options: three dots in a column. */
+    val More: ImageVector by lazy {
+        filled(
+            "more",
+            "M8 2.1a1.4 1.4 0 1 0 0 2.8a1.4 1.4 0 1 0 0-2.8z",
+            "M8 6.6a1.4 1.4 0 1 0 0 2.8a1.4 1.4 0 1 0 0-2.8z",
+            "M8 11.1a1.4 1.4 0 1 0 0 2.8a1.4 1.4 0 1 0 0-2.8z",
+        )
+    }
+
     val Stop: ImageVector by lazy {
         filled(
             "stop",

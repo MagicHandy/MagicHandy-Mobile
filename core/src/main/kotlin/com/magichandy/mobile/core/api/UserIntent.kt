@@ -15,6 +15,9 @@ public sealed interface UserIntent {
     /** Records the first-run adult acknowledgement required before chat or device use. */
     public data object AcknowledgeAdultsOnly : UserIntent
 
+    /** Ends first-run setup. The app opens on Chat from then on. */
+    public data object FinishSetup : UserIntent
+
     // Chat
 
     /** Sends a message. A typed "stop" takes the Stop fast path before any inference. */
@@ -84,8 +87,38 @@ public sealed interface UserIntent {
     /** Chooses the motion style for subsequent plans. */
     public data class SetStyle(public val style: MotionStyle) : UserIntent
 
-    /** Takes effect on the next turn. */
+    /**
+     * Takes effect on the next turn. A turn already under way keeps the persona it started with,
+     * and its memory goes to that persona.
+     */
     public data class SetPersona(public val persona: PersonaId) : UserIntent
+
+    /**
+     * Creates a persona when [persona] is null, or saves one. The built-in persona keeps its name.
+     * With [use], the saved persona also replies from the next turn. Refusals: InvalidName (blank,
+     * longer than [PersonaLimits.NAME] or MagicHandy's), Duplicate (another persona has the name),
+     * TooLong (the description is longer than [PersonaLimits.DESCRIPTION]), LimitReached (already
+     * [PersonaLimits.PERSONAS] of the person's own) and NotFound.
+     */
+    public data class SavePersona(
+        public val persona: PersonaId?,
+        public val name: String,
+        public val personality: Personality,
+        public val use: Boolean = false,
+    ) : FormIntent
+
+    /**
+     * Saves a copy of [persona]'s saved settings as a new persona called [name], with no memory and
+     * not in use. Refusals as for [SavePersona].
+     */
+    public data class DuplicatePersona(public val persona: PersonaId, public val name: String) :
+        FormIntent
+
+    /**
+     * Deletes a persona the person made, with its memory. Chats keep their messages. If it was in
+     * use, MagicHandy replies next. The built-in persona can't be deleted (Unsupported).
+     */
+    public data class DeletePersona(public val persona: PersonaId) : FormIntent
 
     /** Binds chat turns to the saved model [connection]. */
     public data class SetChatConnection(public val connection: ConnectionId) : UserIntent
@@ -108,15 +141,22 @@ public sealed interface UserIntent {
     public data class ConnectScanResult(public val result: ScanResultId, public val name: String) :
         UserIntent
 
-    /** Saves a Handy Cloud connection using its secret connection key. */
-    public data class AddCloudHandy(public val name: String, public val connectionKey: Secret) :
-        FormIntent
+    /**
+     * Saves the key and, when [connectAfterSave] is requested, starts the idle connection
+     * handshake.
+     */
+    public data class AddCloudHandy(
+        public val name: String,
+        public val connectionKey: Secret,
+        public val connectAfterSave: Boolean = false,
+    ) : FormIntent
 
-    /** Adds an Autoblow Ultra or a VacuGlide by its device token. */
+    /** Saves an Autoblow token and optionally begins verified connection after the save commits. */
     public data class AddAutoblowDevice(
         public val family: DeviceFamily,
         public val name: String,
         public val deviceToken: Secret,
+        public val connectAfterSave: Boolean = false,
     ) : FormIntent
 
     /** Adds Intiface Central at [address], on this phone or on the local network. */
@@ -124,6 +164,8 @@ public sealed interface UserIntent {
         public val address: String,
         public val deviceIndex: Int? = null,
         public val selection: String? = null,
+        /** An existing bridge row explicitly being reselected after its identity changed. */
+        public val replaceDevice: DeviceId? = null,
     ) : FormIntent
 
     /** Save the linear feature chosen in the last lookup. Null selects the only offered feature. */
@@ -132,10 +174,15 @@ public sealed interface UserIntent {
         public val deviceIndex: Int? = null,
         public val actuatorIndex: Int? = null,
         public val selection: String? = null,
+        /** An existing bridge row explicitly being reselected after its identity changed. */
+        public val replaceDevice: DeviceId? = null,
     ) : FormIntent
 
     /** Connecting ends at Connected and idle. It never starts motion. */
     public data class Connect(public val device: DeviceId) : UserIntent
+
+    /** Cancel a pending Handy Cloud connection and start a fresh probe of the saved device. */
+    public data class RetryConnection(public val device: DeviceId) : UserIntent
 
     /** Releases [device] after its Stop attempt, stopping the run if one is active. */
     public data class Disconnect(public val device: DeviceId) : UserIntent
@@ -151,11 +198,30 @@ public sealed interface UserIntent {
     public data class Rename(public val device: DeviceId, public val name: String) : FormIntent
 
     /**
-     * Handy HSP applies mounting at the next Start or Resume. Intiface linear endpoints capture
-     * mounting when queued and use the current stroke window at wire submission.
+     * Mounting changes apply at the next Start or Resume on all linear transports. Intiface still
+     * applies the current stroke window at wire submission.
      */
     public data class SetReversed(public val device: DeviceId, public val isReversed: Boolean) :
         UserIntent
+
+    /** Selects the travel and velocity profile for a Handy outside an active run. */
+    public data class SetHandyModel(public val device: DeviceId, public val model: HandyProfile) :
+        UserIntent
+
+    /**
+     * Adjusts a personal output limit in five-point steps using its latest saved value. A physical
+     * VacuGlide speed-button press applies two steps together.
+     */
+    public data class StepDeviceLimit(
+        public val device: DeviceId,
+        public val limit: DeviceLimit,
+        public val direction: StepDirection,
+        public val steps: Int = 1,
+    ) : UserIntent {
+        init {
+            require(steps in 1..2)
+        }
+    }
 
     /** Checks the link without moving the device. */
     public data class CheckConnection(public val device: DeviceId) : UserIntent
@@ -202,26 +268,42 @@ public sealed interface UserIntent {
     /** Selects a model from the checked server's available models. */
     public data class SelectServerModel(public val model: String) : UserIntent
 
-    /** Saves a named server, selected model and supported contract level. */
+    /**
+     * Saves a named server, selected model and supported contract level. When [selectForChat] is
+     * true, the saved connection also becomes the chat model even if another connection is already
+     * selected.
+     */
     public data class SaveServer(
         public val name: String,
         public val address: String,
         public val model: String,
         public val capability: CapabilityLevel,
+        public val selectForChat: Boolean = false,
     ) : FormIntent
 
     /** Starts the browser sign-in flow for a ChatGPT connection. */
     public data object StartChatGptSignIn : UserIntent
 
+    /**
+     * Starts the browser sign-in flow for a ChatGPT connection and assigns it to the chat role once
+     * saved, even if another connection is already selected.
+     */
+    public data object StartChatGptSignInForChat : UserIntent
+
     /** Cancels the current browser sign-in attempt. */
     public data object CancelSignIn : UserIntent
 
-    /** Saves the OpenRouter credential, model and reasoning preference. */
+    /**
+     * Saves the OpenRouter credential, model and reasoning preference. When [selectForChat] is
+     * true, the saved connection also becomes the chat model even if another connection is already
+     * selected.
+     */
     public data class SaveOpenRouter(
         public val apiKey: Secret,
         public val model: String,
         public val capability: CapabilityLevel,
         public val isReasoningOn: Boolean,
+        public val selectForChat: Boolean = false,
     ) : FormIntent
 
     /** Removes the model connection and its associated credential. */

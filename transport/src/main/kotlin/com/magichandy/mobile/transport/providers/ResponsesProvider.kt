@@ -1,6 +1,7 @@
 // Ported from internal/llm/{openai_responses,prompt_budget}.go at 1b80d72e.
 package com.magichandy.mobile.transport.providers
 
+import com.magichandy.mobile.core.api.ProviderReplyFailure
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.chat.PromptBudget
 import com.magichandy.mobile.core.ports.DiagnosticKind
@@ -10,7 +11,10 @@ import com.magichandy.mobile.core.ports.StructuredProvider
 import com.magichandy.mobile.core.ports.TextMessage
 import com.magichandy.mobile.core.ports.TextResult
 import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.transport.http.asOneShot
 import com.magichandy.mobile.transport.http.exchange
+import com.magichandy.mobile.transport.http.hasEventStream
+import com.magichandy.mobile.transport.http.utf8Bom
 import java.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -31,6 +35,9 @@ import okio.BufferedSource
 public fun interface AccessTokenSource {
     /** A usable token, or null when the connection needs sign-in. */
     public suspend fun token(): Secret?
+
+    /** A 401 for this particular access token, delivered outside the OkHttp response callback. */
+    public suspend fun rejected(token: Secret) {}
 }
 
 /** Text-only ChatGPT plan Responses client. A terminal completed event is required to commit. */
@@ -82,7 +89,11 @@ internal constructor(
             budget.admit(messages, preserveTailMessages = contract?.preserveTail ?: 1)
                 ?: return TextResult.Interrupted
         return try {
-            val token = tokens.token() ?: return TextResult.Interrupted
+            val token =
+                tokens.token()
+                    ?: return TextResult.Failed(
+                        ProviderReplyFailure(ProviderReplyFailure.Reason.SignInRequired)
+                    )
             val body = buildJsonObject {
                 put("model", model)
                 put("stream", true)
@@ -121,20 +132,29 @@ internal constructor(
                     .url("https://api.openai.com/v1/responses")
                     .header("Authorization", "Bearer " + token.reveal())
                     .header("Accept", "text/event-stream, application/json")
-                    .post(body.toString().toRequestBody("application/json".toMediaType()))
+                    .post(
+                        body.toString().toRequestBody("application/json".toMediaType()).asOneShot()
+                    )
                     .build()
-            http.exchange(request) { response ->
-                if (
-                    !response.isSuccessful || response.body.contentType()?.subtype != "event-stream"
-                )
-                    TextResult.Interrupted
-                else readStream(response.body.source(), preview)
-            }
+            var unauthorized = false
+            val result =
+                http.exchange(request) { response ->
+                    unauthorized = response.code == 401
+                    if (!response.isSuccessful) return@exchange response.responsesFailure()
+                    val source = response.body.source()
+                    if (response.hasEventStream()) readStream(source, preview)
+                    else
+                        TextResult.Failed(
+                            ProviderReplyFailure(ProviderReplyFailure.Reason.UnexpectedResponse)
+                        )
+                }
+            if (unauthorized) tokens.rejected(token)
+            result
         } catch (_: IOException) {
             DiagnosticReporter.record(DiagnosticKind.ProviderUnavailable)
-            TextResult.Interrupted
+            TextResult.Failed(ProviderReplyFailure(ProviderReplyFailure.Reason.ServiceUnavailable))
         } catch (_: SerializationException) {
-            TextResult.Interrupted
+            TextResult.Failed(ProviderReplyFailure(ProviderReplyFailure.Reason.UnexpectedResponse))
         }
     }
 }
@@ -142,6 +162,7 @@ internal constructor(
 private const val maximumReplyBytes = 1 shl 20
 
 private fun readStream(source: BufferedSource, preview: (String) -> Unit): TextResult {
+    if (source.rangeEquals(0, utf8Bom)) source.skip(utf8Bom.size.toLong())
     val output = StringBuilder()
     val data = mutableListOf<String>()
     var inputBytes = 0L
@@ -168,8 +189,18 @@ private fun readStream(source: BufferedSource, preview: (String) -> Unit): TextR
             }
             "response.refusal.delta",
             "response.refusal.done" -> return TextResult.Refused
-            "error",
-            "response.failed",
+            "error" ->
+                return responsesFailure(
+                    null,
+                    event.string("code") ?: (event["error"] as? JsonObject)?.string("code"),
+                )
+            "response.failed" -> {
+                val response = event["response"] as? JsonObject
+                return responsesFailure(
+                    null,
+                    (response?.get("error") as? JsonObject)?.string("code"),
+                )
+            }
             "response.incomplete" -> return TextResult.Interrupted
             "response.completed" -> {
                 val result = event["response"] as? JsonObject ?: return TextResult.Interrupted

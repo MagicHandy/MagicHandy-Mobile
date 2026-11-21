@@ -12,7 +12,12 @@ internal interface MotionPath {
     fun knotTimes(start: Long, end: Long): Set<Long>
 }
 
-internal class BufferedSampler(private val plan: MotionPath) {
+internal const val precisePositionTolerance = 0.3
+
+internal class BufferedSampler(
+    private val plan: MotionPath,
+    private val preferSparseGeneratedMotion: Boolean = false,
+) {
     private var last: CurvePoint? = null
     val nextSampleMillis: Long
         get() = last?.timeMillis?.plus(1) ?: 0
@@ -48,10 +53,14 @@ internal class BufferedSampler(private val plan: MotionPath) {
             at
         val previous = last
         val reference = listOfNotNull(previous) + times.map(plan::sampleAt)
-        val firstPass = simplify(reference, mandatory, quantize = false)
-        val fitted = simplify(firstPass, mandatory, quantize = true)
+        val tolerance =
+            if (preferSparseGeneratedMotion && plan is ContinuousPath && plan.usesWireTiming)
+                plan.sparsePositionTolerance(reference.first().timeMillis, end)
+            else precisePositionTolerance
+        val firstPass = simplify(reference, mandatory, quantize = false, tolerance)
+        val fitted = simplify(firstPass, mandatory, quantize = true, tolerance + 0.5)
         if (plan is ContinuousPath && plan.usesWireTiming)
-            return WireTiming(reference, mandatory, plan).fit(fitted, previous)
+            return WireTiming(reference, mandatory, plan, tolerance).fit(fitted, previous)
         return if (previous == null) fitted else fitted.drop(1)
     }
 
@@ -59,6 +68,7 @@ internal class BufferedSampler(private val plan: MotionPath) {
         samples: List<CurvePoint>,
         mandatory: Set<Long>,
         quantize: Boolean,
+        tolerance: Double,
     ): List<CurvePoint> {
         val keep = BooleanArray(samples.size)
         val anchors =
@@ -77,21 +87,22 @@ internal class BufferedSampler(private val plan: MotionPath) {
                 val fraction =
                     (samples[i].timeMillis - a.timeMillis).toDouble() /
                         (b.timeMillis - a.timeMillis)
-                var error = abs(samples[i].position - (left + (right - left) * fraction))
+                var score =
+                    abs(samples[i].position - (left + (right - left) * fraction)) / tolerance
                 if (quantize && plan is ContinuousPath && plan.usesWireTiming && left != right) {
                     val ratio = ((samples[i].position - left) / (right - left)).coerceIn(0.0, 1.0)
                     val duration = b.timeMillis - a.timeMillis
                     val timing =
                         abs(samples[i].timeMillis - (a.timeMillis + ratio * duration)) /
                             maxOf(12.0, duration * 0.06)
-                    error = maxOf(error, timing * 0.8)
+                    score = maxOf(score, timing)
                 }
-                if (error > maximum) {
-                    maximum = error
+                if (score > maximum) {
+                    maximum = score
                     split = i
                 }
             }
-            if (maximum <= (if (quantize) 0.8 else 0.3)) return
+            if (maximum <= 1.0) return
             keep[split] = true
             mark(start, split)
             mark(split, end)

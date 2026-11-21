@@ -23,6 +23,7 @@ import com.magichandy.mobile.core.api.DeviceStopOutcome
 import com.magichandy.mobile.core.api.DeviceSummary
 import com.magichandy.mobile.core.api.DevicesState
 import com.magichandy.mobile.core.api.EntryId
+import com.magichandy.mobile.core.api.Explicitness
 import com.magichandy.mobile.core.api.FinishTarget
 import com.magichandy.mobile.core.api.FirstRunState
 import com.magichandy.mobile.core.api.InterruptCause
@@ -38,7 +39,10 @@ import com.magichandy.mobile.core.api.Palette
 import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.PersonaId
 import com.magichandy.mobile.core.api.PersonaRef
+import com.magichandy.mobile.core.api.Personality
 import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.ReactionStyle
+import com.magichandy.mobile.core.api.ReplyLength
 import com.magichandy.mobile.core.api.ReplyState
 import com.magichandy.mobile.core.api.RunEvent
 import com.magichandy.mobile.core.api.RunPhase
@@ -100,15 +104,51 @@ object SampleStates {
             status = ConnectionStatus.Ready,
         )
 
-    private val companion =
-        PersonaRef(PersonaId("companion"), "Companion", "Warm, attentive and unhurried.")
-
-    private val personas =
-        listOf(
-            companion,
-            PersonaRef(PersonaId("playful"), "Playful", "Light, teasing and quick to laugh."),
-            PersonaRef(PersonaId("guide"), "Calm guide", "Slow, steady and reassuring."),
+    /** The built-in persona, customized as on board V-PersonaDefault. */
+    val magicHandy =
+        PersonaRef(
+            PersonaId("magichandy"),
+            "MagicHandy",
+            summary = "",
+            personality =
+                Personality(
+                    explicitness = Explicitness.Intimate,
+                    style = ReactionStyle.Tender,
+                    description =
+                        "Soft-spoken and patient. Notices small things, checks in often and " +
+                            "likes to take it slow. A dry sense of humour.",
+                ),
+            isBuiltIn = true,
         )
+
+    private val mara =
+        PersonaRef(
+            PersonaId("mara"),
+            "Mara",
+            summary = "",
+            personality = Personality(Explicitness.Warm, ReactionStyle.Playful),
+        )
+
+    /** A persona the person made, as on board V-PersonaCustom. */
+    val kit =
+        PersonaRef(
+            PersonaId("kit"),
+            "Kit",
+            summary = "",
+            personality =
+                Personality(
+                    explicitness = Explicitness.Explicit,
+                    style = ReactionStyle.Dominant,
+                    description =
+                        "Confident and direct. Tells you what comes next and expects you to keep " +
+                            "up. Generous with praise when you do.",
+                    replyLength = ReplyLength.Detailed,
+                ),
+        )
+
+    private val companion = magicHandy
+
+    private val personas = listOf(magicHandy, mara, kit)
 
     private val transcript =
         listOf(
@@ -152,7 +192,7 @@ object SampleStates {
             chats =
                 listOf(
                     ChatSummary(ChatId("evening"), "Evening", companion.name, at(1)),
-                    ChatSummary(ChatId("sunday"), "Sunday", "Calm guide", at(-2 * 24 * 60)),
+                    ChatSummary(ChatId("sunday"), "Sunday", kit.name, at(-2 * 24 * 60)),
                 ),
             sendBlockedBy = null,
         )
@@ -272,11 +312,47 @@ object SampleStates {
     /** First launch: nothing set up yet (board V-Onboarding). */
     val firstRun =
         playing.copy(
-            firstRun = FirstRunState(hasAcknowledgedAdultsOnly = false),
+            firstRun = FirstRunState(hasAcknowledgedAdultsOnly = false, isSetupDone = false),
             run = idleRun,
             autopilot = autopilotOff,
             devices = playing.devices.copy(devices = emptyList()),
             chat = chat.copy(entries = emptyList(), reply = ReplyState.Idle),
+        )
+
+    private val freshMagicHandy = magicHandy.copy(personality = Personality())
+
+    /**
+     * Setup after Before you start (boards V-SetupModel to V-SetupReadyNoModel): no model yet, and
+     * MagicHandy as it ships.
+     */
+    val setup =
+        firstRun.copy(
+            firstRun = FirstRunState(hasAcknowledgedAdultsOnly = true, isSetupDone = false),
+            settings =
+                playing.settings.copy(
+                    persona = freshMagicHandy,
+                    personas = listOf(freshMagicHandy),
+                ),
+            models = playing.models.copy(connections = emptyList(), chatConnection = null),
+            chat =
+                chat.copy(
+                    entries = emptyList(),
+                    reply = ReplyState.Idle,
+                    sendBlockedBy = SendBlock.NoChatModel,
+                ),
+        )
+
+    /** You're set with ChatGPT chosen and MagicHandy made Warm and Playful (board V-SetupReady). */
+    val setupReady =
+        setup.copy(
+            settings =
+                setup.settings.copy(
+                    persona =
+                        freshMagicHandy.copy(
+                            personality = Personality(Explicitness.Warm, ReactionStyle.Playful)
+                        )
+                ),
+            models = playing.models.copy(connections = listOf(terra), chatConnection = terra.id),
         )
 
     /** After pressing Stop with three devices in the run (board V-StopReceipt). */

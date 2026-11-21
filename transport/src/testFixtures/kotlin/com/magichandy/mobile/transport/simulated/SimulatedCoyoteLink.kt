@@ -1,10 +1,16 @@
 package com.magichandy.mobile.transport.simulated
 
-import com.magichandy.mobile.transport.ble.*
+import com.magichandy.mobile.transport.ble.BluetoothLink
+import com.magichandy.mobile.transport.ble.BluetoothWriteFenced
+import com.magichandy.mobile.transport.ble.GattProfile
 import java.io.IOException
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 
 /** A byte-level Coyote 3.0 peer shared by the debug application and JVM tests. */
 internal class SimulatedCoyoteLink(
@@ -14,6 +20,7 @@ internal class SimulatedCoyoteLink(
     private val changes = Channel<ByteArray>(8)
     private var delayed: Job? = null
     private var closed = false
+    private var initializing = true
     private var ceilingA = 0
     private var ceilingB = 0
     private var a = 0
@@ -36,7 +43,7 @@ internal class SimulatedCoyoteLink(
     ) {
         synchronized(this) {
             if (closed) throw IOException("Simulated link closed")
-            if (!admitted()) return
+            if (!admitted()) throw BluetoothWriteFenced()
             when (bytes.firstOrNull()?.toInt()?.and(255)) {
                 0xbf -> {
                     require(bytes.size == 7)
@@ -61,6 +68,11 @@ internal class SimulatedCoyoteLink(
         if (control ushr 4 == 0) return
         delayed?.cancel()
         val report = byteArrayOf(0xb1.toByte(), (control ushr 4).toByte(), a.toByte(), b.toByte())
+        if (initializing && zero) {
+            initializing = false
+            changes.trySend(report).getOrThrow()
+            return
+        }
         delayed = scope.launch {
             delay(55)
             changes.send(report)

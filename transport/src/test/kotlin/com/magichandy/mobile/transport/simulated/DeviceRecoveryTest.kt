@@ -15,6 +15,7 @@ import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.NetworkState
 import com.magichandy.mobile.core.ports.OutputFence
 import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.TimedDevice
 import com.magichandy.mobile.core.testing.InMemoryDiagnostics
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,9 +47,7 @@ internal class DeviceRecoveryTest {
                                 ): DeviceTransport? {
                                     val owner = d.devices.connect(device, ownerScope) ?: return null
                                     if (device != DeviceId("coyote")) return owner
-                                    return object :
-                                        com.magichandy.mobile.core.ports.TimedDevice by (owner
-                                            as com.magichandy.mobile.core.ports.TimedDevice) {
+                                    return object : TimedDevice by (owner as TimedDevice) {
                                         override suspend fun stop(
                                             fence: OutputFence
                                         ): StopEvidence {
@@ -150,6 +149,8 @@ internal class DeviceRecoveryTest {
             f.onboard()
             f.connect(id)
             f.send(UserIntent.StartMotion)
+            advanceTimeBy(1200)
+            runCurrent()
             assertEquals(MotionMode.Tempo, f.core.state.value.settings.motionMode)
             assertNotNull(f.d.journal.read())
             val before = f.devices.output.value.getValue(id)
@@ -210,7 +211,7 @@ internal class DeviceRecoveryTest {
             f.devices.loseLink(id)
             runCurrent()
             assertEquals(listOf("Stop"), events)
-            if (stall) advanceTimeBy(900) else release.complete(Unit)
+            if (stall) advanceTimeBy(5000) else release.complete(Unit)
             runCurrent()
             assertEquals(
                 if (stall) listOf("Stop", "close") else listOf("Stop", "ack", "close"),
@@ -254,6 +255,8 @@ internal class DeviceRecoveryTest {
             f.onboard()
             f.connect(id)
             f.send(UserIntent.StartMotion)
+            advanceTimeBy(1200)
+            runCurrent()
             f.devices.loseLink(id)
             f.network.value = NetworkState(false, 1)
             runCurrent()

@@ -2,24 +2,35 @@ package com.magichandy.mobile.platform.bluetooth
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.*
-import android.bluetooth.le.*
-import android.content.*
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import com.magichandy.mobile.core.api.ScanResultId
-import com.magichandy.mobile.transport.ble.*
+import com.magichandy.mobile.transport.ble.Advertisement
+import com.magichandy.mobile.transport.ble.BluetoothConnector
+import com.magichandy.mobile.transport.ble.BluetoothScanner
+import com.magichandy.mobile.transport.ble.GattProfile
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.filter
 
 @SuppressLint("MissingPermission")
-internal class AndroidBluetooth(private val context: Context, private val lost: (String) -> Unit) :
-    BluetoothScanner, BluetoothConnector {
+internal class AndroidBluetooth(private val context: Context) : BluetoothScanner {
     private val adapter
         get() = context.getSystemService(BluetoothManager::class.java)?.adapter
 
@@ -77,12 +88,21 @@ internal class AndroidBluetooth(private val context: Context, private val lost: 
                     callbackType: Int,
                     result: android.bluetooth.le.ScanResult,
                 ) {
-                    val name = result.scanRecord?.deviceName ?: return
+                    val (name, address) =
+                        try {
+                            (result.scanRecord?.deviceName ?: result.device.name ?: return) to
+                                result.device.address
+                        } catch (denied: SecurityException) {
+                            close(denied)
+                            return
+                        }
                     val matches =
                         if (profile == GattProfile.Coyote) name == "47L121000"
-                        else listOf("OHD", "Handy", "The Handy").any(name::startsWith)
+                        else
+                            listOf("OHD", "Handy", "The Handy").any {
+                                name.startsWith(it, ignoreCase = true)
+                            }
                     if (!matches) return
-                    val address = result.device.address
                     if (address !in ids.keys && ids.size >= 64) return
                     val id =
                         ids.computeIfAbsent(address) { ScanResultId(UUID.randomUUID().toString()) }
@@ -92,31 +112,35 @@ internal class AndroidBluetooth(private val context: Context, private val lost: 
             }
         val filter =
             ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(profile.service)).build()
-        scanner.startScan(
-            listOf(filter),
-            ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
-            callback,
-        )
+        try {
+            scanner.startScan(
+                listOf(filter),
+                ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
+                callback,
+            )
+        } catch (_: IllegalStateException) {
+            throw IOException("Bluetooth adapter became unavailable")
+        }
         awaitClose {
             try {
                 scanner.stopScan(callback)
             } catch (_: SecurityException) {
                 refresh()
+            } catch (_: IllegalStateException) {
+                refresh()
             }
         }
     }
 
-    override suspend fun connect(
-        id: ScanResultId,
-        profile: GattProfile,
-        timeout: Duration,
-    ): BluetoothLink {
-        if (!has(Manifest.permission.BLUETOOTH_CONNECT))
-            throw SecurityException("Bluetooth permission required")
-        val address = selected[id] ?: id.value
-        if (!BluetoothAdapter.checkBluetoothAddress(address))
-            throw IOException("Expired Bluetooth selection")
-        val device = adapter?.getRemoteDevice(address) ?: throw IOException("Bluetooth unavailable")
-        return AndroidGattLink(profile) { lost(address) }.connect(context, device, timeout)
-    }
+    fun connector(onLost: () -> Unit): BluetoothConnector =
+        BluetoothConnector { id, profile, timeout ->
+            if (!has(Manifest.permission.BLUETOOTH_CONNECT))
+                throw SecurityException("Bluetooth permission required")
+            val address = selected[id] ?: id.value
+            if (!BluetoothAdapter.checkBluetoothAddress(address))
+                throw IOException("Expired Bluetooth selection")
+            val device =
+                adapter?.getRemoteDevice(address) ?: throw IOException("Bluetooth unavailable")
+            AndroidGattLink(profile, lost = onLost).connect(context, device, timeout)
+        }
 }

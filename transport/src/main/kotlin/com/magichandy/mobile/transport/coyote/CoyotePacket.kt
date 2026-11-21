@@ -2,7 +2,12 @@
 package com.magichandy.mobile.transport.coyote
 
 import com.magichandy.mobile.core.ports.OutputSlice
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 internal data class Strength(
     val sequence: Int = 0,

@@ -3,11 +3,12 @@ package com.magichandy.mobile.platform.bluetooth
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** One outstanding native call per generation. After timeout, a late callback has no successor. */
 internal class GattQueue(private val retire: () -> Unit) {
@@ -39,7 +40,7 @@ internal class GattQueue(private val retire: () -> Unit) {
             withTimeoutOrNull(timeout) {
                 acquire(priority)
                 try {
-                    submit(key, issue)
+                    submit(key, false, issue)
                 } finally {
                     serial.unlock()
                 }
@@ -53,13 +54,34 @@ internal class GattQueue(private val retire: () -> Unit) {
         }
     }
 
-    private suspend fun submit(key: String, issue: () -> Boolean): ByteArray {
+    /** Optional GATT operations never join the queue in front of a Stop or a motion write. */
+    suspend fun tryOptional(key: String, timeout: Duration, issue: () -> Boolean): ByteArray? {
+        if (stops.value != 0 || !serial.tryLock()) return null
+        return try {
+            if (closed || stops.value != 0) null
+            else withTimeoutOrNull(timeout) { submit(key, true, issue) }
+        } finally {
+            serial.unlock()
+        }
+    }
+
+    private suspend fun submit(key: String, optional: Boolean, issue: () -> Boolean): ByteArray? {
         if (closed) throw IOException("Bluetooth link closed")
         val slot = Pending(key, CompletableDeferred())
         check(pending.compareAndSet(null, slot))
         return try {
-            if (closed || !issue()) throw IOException("Bluetooth operation refused")
-            slot.reply.await()
+            if (closed) throw IOException("Bluetooth link closed")
+            if (!issue()) {
+                if (optional) return null
+                throw IOException("Bluetooth operation refused")
+            }
+            try {
+                slot.reply.await()
+            } catch (failure: GattStatus) {
+                // This native callback settled the operation. A refused optional characteristic
+                // supplies no reading, while the rest of this GATT generation remains usable.
+                if (optional) null else throw failure
+            }
         } catch (e: FencedGatt) {
             throw e
         } catch (e: Throwable) {

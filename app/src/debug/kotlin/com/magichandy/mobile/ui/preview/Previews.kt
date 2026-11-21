@@ -35,6 +35,8 @@ import com.magichandy.mobile.ui.models.ChatGptScreen
 import com.magichandy.mobile.ui.models.ModelExits
 import com.magichandy.mobile.ui.models.ModelsScreen
 import com.magichandy.mobile.ui.models.OpenRouterScreen
+import com.magichandy.mobile.ui.navigation.AppNavigator
+import com.magichandy.mobile.ui.navigation.Route
 import com.magichandy.mobile.ui.rememberDiagnosticsShare
 import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.settings.AppSettingsScreen
@@ -43,8 +45,10 @@ import com.magichandy.mobile.ui.settings.MemoryPage
 import com.magichandy.mobile.ui.settings.MotionModePage
 import com.magichandy.mobile.ui.settings.PersonaPage
 import com.magichandy.mobile.ui.settings.RefusalFallbackPage
+import com.magichandy.mobile.ui.settings.SheetExits
 import com.magichandy.mobile.ui.settings.SystemAccess
 import com.magichandy.mobile.ui.settings.SystemLinks
+import com.magichandy.mobile.ui.settings.refusalSubtitle
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -59,7 +63,7 @@ private fun WholeApp(state: AppState, palette: Palette) {
 }
 
 @Composable
-private fun InFrame(palette: Palette, content: @Composable () -> Unit) {
+internal fun InFrame(palette: Palette, content: @Composable () -> Unit) {
     MagicHandyTheme(palette) { AppFrame(stopLabel = "Stop", onStop = {}) { content() } }
 }
 
@@ -358,12 +362,13 @@ private fun ChatGpt(@PreviewParameter(PaletteProvider::class) palette: Palette) 
 private fun SheetPreview(
     palette: Palette,
     title: String,
+    subtitle: String? = null,
     page: @Composable () -> Unit,
 ) =
     InFrame(palette) {
         Box(Modifier.fillMaxSize()) {
             SheetOverlay(title = title, onDismiss = {}) {
-                SheetHeader(title = title, onClose = {})
+                SheetHeader(title = title, onClose = {}, subtitle = subtitle)
                 page()
             }
         }
@@ -377,7 +382,14 @@ private fun MotionModeSheet(@PreviewParameter(PaletteProvider::class) palette: P
 @Preview(widthDp = 390, heightDp = 844)
 @Composable
 private fun PersonaSheet(@PreviewParameter(PaletteProvider::class) palette: Palette) =
-    SheetPreview(palette, "Persona") { PersonaPage(SampleStates.playing, onIntent = {}) }
+    SheetPreview(palette, "Persona") {
+        PersonaPage(
+            SampleStates.playing,
+            AppNavigator(listOf(Route.Chat), emptyList()),
+            onIntent = {},
+            exits = SheetExits({}, {}, {}, {}),
+        )
+    }
 
 @Preview(widthDp = 390, heightDp = 844)
 @Composable
@@ -388,7 +400,7 @@ private fun MemorySheet(@PreviewParameter(PaletteProvider::class) palette: Palet
 @Preview(widthDp = 390, heightDp = 844)
 @Composable
 private fun RefusalFallbackSheet(@PreviewParameter(PaletteProvider::class) palette: Palette) =
-    SheetPreview(palette, "If Terra refuses") {
+    SheetPreview(palette, "If Terra refuses", refusalSubtitle(SampleStates.playing)) {
         RefusalFallbackPage(SampleStates.playing, onSet = {})
     }
 

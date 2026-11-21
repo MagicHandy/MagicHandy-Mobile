@@ -33,6 +33,8 @@ Use the JDK bundled with Android Studio: set `JAVA_HOME` to `%LOCALAPPDATA%\Prog
 
 Leave every change formatted, checked and tested.
 
+For a public release, follow the [release guide and changelog rules](docs/release.md#changelog-rules). The tagged note in `docs/releases/` supplies the GitHub release body.
+
 ## Rules that are easy to miss
 
 - **Stop is safety-critical.** Every Stop surface calls `MagicHandyCore.emergencyStop` directly. Never route Stop through a queue, storage or UI state.

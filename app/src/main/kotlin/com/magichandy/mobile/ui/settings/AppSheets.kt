@@ -34,6 +34,7 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 data class SheetExits(
     val openAppSettings: () -> Unit,
     val openModels: () -> Unit,
+    val openPersonas: () -> Unit,
     val addDevice: (DeviceFamily) -> Unit,
 )
 
@@ -76,7 +77,7 @@ fun BoxScope.AppSheets(
             SheetPage.Style -> StylePage(state, onIntent)
             SheetPage.Autopilot -> AutopilotPage(state, nav, onIntent)
             SheetPage.PlannerModel -> PlannerModelPage(state, onIntent)
-            SheetPage.Persona -> PersonaPage(state, onIntent)
+            SheetPage.Persona -> PersonaPage(state, nav, onIntent, exits)
             SheetPage.ChatModel -> ChatModelPage(state, nav, onIntent, exits)
             SheetPage.RefusalFallback -> RefusalFallbackPage(state, calls.setRefusalFallback)
             SheetPage.Memory -> MemoryPage(state, onIntent)
@@ -104,7 +105,7 @@ private fun sheetTitle(page: SheetPage, state: AppState): String =
     }
 
 @Composable
-private fun refusalSubtitle(state: AppState): String? =
+internal fun refusalSubtitle(state: AppState): String? =
     chatConnection(state)?.let { stringResource(R.string.refusal_desc, it.name) }
 
 @Composable

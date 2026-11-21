@@ -1,9 +1,20 @@
 package com.magichandy.mobile.transport.simulated
 
-import com.magichandy.mobile.core.api.*
-import kotlin.test.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import com.magichandy.mobile.core.api.CoyoteChannel
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceOutput
+import com.magichandy.mobile.core.api.StopOutcome
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UserIntent
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class SimulatedCoyoteTest {
@@ -28,6 +39,7 @@ internal class SimulatedCoyoteTest {
             advanceTimeBy(60)
             runCurrent()
             step(CoyoteChannel.A)
+            assertTrue(row().isAwaitingReport)
             step(CoyoteChannel.A)
             advanceTimeBy(48)
             runCurrent()
@@ -35,6 +47,7 @@ internal class SimulatedCoyoteTest {
             advanceTimeBy(55)
             runCurrent()
             assertEquals(1, row().strengthA)
+            assertFalse(row().isAwaitingReport)
             step(CoyoteChannel.B)
             advanceTimeBy(130)
             runCurrent()

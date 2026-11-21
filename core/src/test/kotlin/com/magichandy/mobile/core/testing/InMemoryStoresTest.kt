@@ -53,6 +53,34 @@ internal class InMemoryStoresTest {
     }
 
     @Test
+    fun `saving for chat replaces an existing default while ordinary saves preserve it`() =
+        runTest {
+            val store = InMemoryModels()
+            val first =
+                ModelConnection(
+                    ConnectionId("one"),
+                    "One",
+                    ProviderKind.OpenRouter,
+                    "fixture/one",
+                    "one",
+                    CapabilityLevel.Advanced,
+                    false,
+                    true,
+                    ConnectionStatus.Ready,
+                )
+            val second = first.copy(id = ConnectionId("two"), name = "Two", model = "fixture/two")
+            val third =
+                first.copy(id = ConnectionId("three"), name = "Three", model = "fixture/three")
+            store.save(SavedModel(first))
+            store.save(SavedModel(second))
+            assertEquals(first.id, store.state.value.chat)
+            store.save(SavedModel(third), selectForChat = true)
+            assertEquals(third.id, store.state.value.chat)
+            store.save(SavedModel(first), selectForChat = true)
+            assertEquals(first.id, store.state.value.chat)
+        }
+
+    @Test
     fun `the diagnostic ring retains only the newest redacted event kinds`() = runTest {
         val ring = InMemoryDiagnostics(2)
         for (i in 1..3) ring.record(
@@ -89,7 +117,7 @@ internal class InMemoryStoresTest {
         runTest {
             val store = InMemoryChats()
             val chat = ChatId("chat")
-            val persona = PersonaId("persona")
+            val persona = PersonaId("")
             val at = Instant.fromEpochSeconds(0)
             store.create(ChatSummary(chat, "", "", at))
             val reply = ChatEntry.Message(EntryId("reply"), at, Author.Persona, "Hello", null)

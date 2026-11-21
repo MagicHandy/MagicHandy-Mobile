@@ -1,6 +1,8 @@
 package com.magichandy.mobile.platform.storage
 
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.ports.DiagnosticEvent
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticsSink
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption

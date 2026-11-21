@@ -99,17 +99,22 @@ internal suspend fun reconcileStartup(
     if (!fence.isCurrent()) return WriteResult.Stale
     if (link.halt(fence) != StopEvidence.Acknowledged) return WriteResult.Uncertain
     if (!fence.isCurrent()) return WriteResult.Stale
-    var observed = link.read(fence) ?: return WriteResult.Accepted
+    val firstRead = link.read(fence)
+    if (!fence.isCurrent()) return WriteResult.Stale
+    var observed = firstRead ?: return WriteResult.Accepted
     repeat(2) {
         if (observed.valid() && observed.speedAbsolute > 5) {
             delay(150)
             if (!fence.isCurrent()) return WriteResult.Stale
-            observed = link.read(fence) ?: return WriteResult.Uncertain
+            val next = link.read(fence)
+            if (!fence.isCurrent()) return WriteResult.Stale
+            observed = next ?: return WriteResult.Uncertain
         }
     }
     if (!observed.valid() || observed.speedAbsolute > 5) return WriteResult.Uncertain
-    val lead = leadIn(observed, batch, link.reversed) ?: return WriteResult.Accepted
+    val lead = leadIn(observed, batch, link.reversed)
     if (!fence.isCurrent()) return WriteResult.Stale
+    if (lead == null) return WriteResult.Accepted
     val sent = link.position(lead.batch, fence)
     if (sent != WriteResult.Accepted) return sent
     delay(lead.millis + 150)

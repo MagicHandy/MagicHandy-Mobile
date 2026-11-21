@@ -11,13 +11,16 @@ internal class WireTiming(
     private val probes: List<CurvePoint>,
     private val mandatory: Set<Long>,
     private val path: ContinuousPath,
+    private val positionTolerance: Double,
 ) {
+    private val acceleration =
+        path.accelerationBoundBetween(probes.first().timeMillis, probes.last().timeMillis)
     private val tolerance = tolerance(0, probes.lastIndex)
 
     private fun tolerance(first: Int, last: Int): Double {
         var gap = 0L
         for (i in first + 1..last) gap = maxOf(gap, probes[i].timeMillis - probes[i - 1].timeMillis)
-        return 0.5 + maxOf(0.0, 0.3 - path.accelerationBound * gap * gap / 8e6)
+        return 0.5 + maxOf(0.0, positionTolerance - acceleration * gap * gap / 8e6)
     }
 
     fun fit(samples: List<CurvePoint>, previous: CurvePoint?): List<CurvePoint> {

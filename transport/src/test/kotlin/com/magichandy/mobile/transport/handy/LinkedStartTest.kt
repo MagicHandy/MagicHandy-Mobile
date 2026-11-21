@@ -1,12 +1,24 @@
 package com.magichandy.mobile.transport.handy
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.ports.DeviceDirectory
+import com.magichandy.mobile.core.ports.DeviceTransport
+import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.WriteResult
 import com.magichandy.mobile.transport.simulated.DebugFixture
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class LinkedStartTest {
@@ -49,7 +61,7 @@ internal class LinkedStartTest {
                                                 override suspend fun stop(allowed: () -> Boolean) =
                                                     StopEvidence.Acknowledged
                                             }
-                                        return HandyTransport(ref, wire, initiallyStopped = true)
+                                        return HandyTransport(ref, wire)
                                     }
                                 }
                         )

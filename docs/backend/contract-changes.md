@@ -1,5 +1,23 @@
 # UI contract changes
 
+## Personas and first-run setup, 2026-11-20
+
+The UI owner introduced the following additive declarations. The backend uses those declarations directly. The `Personality` data class also has a generated serializer for the two Room representations.
+
+| Declaration | Behavior for callers |
+|---|---|
+| `Explicitness`, `ReactionStyle`, `ReplyLength`, `Personality` | Four levels, six styles and two reply lengths. The four editable settings default to Utility, Neutral, an empty description and Short. The persona name is the fifth field. |
+| `PersonaLimits` and `characterCount(text)` | Both form validation and counters use the same grapheme iterator. The limits are 60 for the trimmed name, 500 for the description and 200 custom personas. |
+| `PersonaRef.personality`, `PersonaRef.isBuiltIn` | Defaults preserve earlier constructors. The empty ID identifies MagicHandy. The runtime lists it first, followed by custom names in case-insensitive order. Every summary is empty. |
+| `UserIntent.SavePersona(persona, name, personality, use = false)` | Null creates a new row. Saving and using it is one transaction. InvalidName covers blank, overlong and reserved names or a proposed rename of MagicHandy. Duplicate covers another custom name ignoring case. TooLong covers a description over 500. LimitReached covers creation at capacity. A missing edit target returns NotFound. |
+| `UserIntent.DuplicatePersona(persona, name)` | Copies the saved four personality fields under the supplied name. The new row starts inactive with empty memory. The same name and capacity checks apply. A missing source returns NotFound. |
+| `UserIntent.DeletePersona(persona)` | Acceptance means the row and its memory were removed. An active deletion selects MagicHandy in the same commit. A missing row returns NotFound and the built-in returns Unsupported. Existing messages keep their speaker. |
+| `FormReason.TooLong` and `FormReason.LimitReached` | Distinguish an overlong field from a full collection. Reasons carry no input text. The three forms share the existing Busy and StorageUnavailable outcomes. |
+| `FirstRunState.isSetupDone`, `UserIntent.FinishSetup` | The property defaults to true for existing fakes. The runtime supplies durable setup state. The acknowledged person can finish without adding a model or device. |
+| `ChatEntry.Message.speaker` | The stored name at the beginning of a persona-authored turn, including check-ins and a successful refusal fallback. A person's messages and legacy messages without attribution use null. |
+
+`SetPersona` changes the speaker for the next turn. `ClearMemory` applies to the selected ID. The global opt-in defaults to Off. [UI integration](ui-requests.md)
+
 ## Last non-UI items, 2026-11-20
 
 | Addition | Meaning and compatibility |

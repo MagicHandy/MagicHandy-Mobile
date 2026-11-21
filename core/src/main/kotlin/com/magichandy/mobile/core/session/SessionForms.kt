@@ -1,10 +1,28 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.AutopilotStatus
+import com.magichandy.mobile.core.api.BackendNotice
+import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormReason
+import com.magichandy.mobile.core.api.FormResult
+import com.magichandy.mobile.core.api.InterruptCause
+import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.core.motion.MotionEngine
-import com.magichandy.mobile.core.ports.*
-import kotlinx.coroutines.flow.*
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.PersonaChange
+import com.magichandy.mobile.core.ports.PreferenceField
+import com.magichandy.mobile.core.ports.SecretHandle
+import com.magichandy.mobile.core.ports.SecretsVault
+import com.magichandy.mobile.core.ports.SettingsDocument
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 
 internal class SessionForms(
     private val d: CoreDependencies,
@@ -35,14 +53,20 @@ internal class SessionForms(
     private suspend fun applyForm(intent: FormIntent): FormResult =
         when (intent) {
             is UserIntent.AddCloudHandy ->
-                setup.cloud(DeviceFamily.Handy, intent.name, intent.connectionKey)
+                setup.cloud(
+                    DeviceFamily.Handy,
+                    intent.name,
+                    intent.connectionKey,
+                    intent.connectAfterSave,
+                )
             is UserIntent.AddAutoblowDevice ->
-                setup.cloud(intent.family, intent.name, intent.deviceToken)
+                setup.cloud(intent.family, intent.name, intent.deviceToken, intent.connectAfterSave)
             is UserIntent.AddIntiface ->
                 setup.bridges.intiface(
                     intent.address,
                     intent.deviceIndex,
                     selection = intent.selection,
+                    replaceDevice = intent.replaceDevice,
                 )
             is UserIntent.AddIntifaceLinear ->
                 setup.bridges.intiface(
@@ -51,13 +75,24 @@ internal class SessionForms(
                     intent.actuatorIndex,
                     true,
                     intent.selection,
+                    intent.replaceDevice,
                 )
             is UserIntent.Rename -> setup.rename(intent)
             is UserIntent.Remove -> setup.remove(intent.device)
             is UserIntent.SaveOpenRouter -> accounts.saveOpenRouter(intent)
             is UserIntent.SaveServer -> servers.save(intent)
             is UserIntent.RemoveConnection -> removeConnection(intent.connection)
+            is UserIntent.SavePersona -> editPersonas { it.savePersona(intent) }
+            is UserIntent.DuplicatePersona -> editPersonas { it.duplicatePersona(intent) }
+            is UserIntent.DeletePersona -> editPersonas { it.deletePersona(intent.persona) }
         }
+
+    private suspend fun editPersonas(edit: (SettingsDocument) -> PersonaChange): FormResult {
+        val result = d.settings.editPersonas(edit)
+        if (result == FormResult.Accepted)
+            ui.update { it.showPersonas(d.settings.state.value, d.chats.state.value) }
+        return result
+    }
 
     private suspend fun removeConnection(id: ConnectionId): FormResult {
         val catalog = d.models.state.value
@@ -68,6 +103,8 @@ internal class SessionForms(
                 id in listOf(catalog.planner, catalog.chat)
         )
             return reject(FormReason.RunInProgress)
+        if (catalog.models[id]?.info?.provider == ProviderKind.ChatGpt)
+            accounts.cancelPendingSignIn()
         if (id == catalog.chat) chat.interrupt(InterruptCause.ProviderError)
         val handle = d.models.state.value.models[id]?.credential
         val settings = d.settings.state.value
@@ -96,7 +133,7 @@ internal suspend fun removeWithCredential(
     exists: () -> Boolean,
     remove: suspend () -> Unit,
 ) {
-    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+    withContext(NonCancellable) {
         val erased = handle?.let { vault.takeForRemoval(it) }
         try {
             remove()

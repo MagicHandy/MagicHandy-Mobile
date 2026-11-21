@@ -29,8 +29,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.BridgeDiscovery
 import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormReason
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.ui.CoreCalls
@@ -49,6 +52,8 @@ import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.settings.ChoiceList
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @Composable
@@ -166,7 +171,9 @@ internal sealed interface BridgeSearch<out T> {
 
     data object Finding : BridgeSearch<Nothing>
 
-    /** What the bridge at [address] reported; empty when it couldn't be reached. */
+    data class Failed(val reason: FormReason) : BridgeSearch<Nothing>
+
+    /** What the reachable bridge at [address] reported. */
     data class Found<T>(val address: String, val choices: List<T>) : BridgeSearch<T>
 }
 
@@ -208,14 +215,20 @@ internal val StrokerWords =
 
 /** Adds a vibrator through Intiface Central (board V-AddVibrator). */
 @Composable
-internal fun ColumnScope.AddVibrator(calls: CoreCalls, onDone: () -> Unit) {
+internal fun ColumnScope.AddVibrator(
+    calls: CoreCalls,
+    onDone: () -> Unit,
+    replaceDevice: DeviceId? = null,
+) {
     AddBridgeDevice(
         words = VibratorWords,
+        initialAddress =
+            replaceDevice?.let(calls.bridgeAddressForSetup) ?: DEFAULT_INTIFACE_ADDRESS,
         find = calls.findVibrators,
         name = { it.name },
         detail = { stringResource(R.string.vibrator_device, it.deviceIndex) },
         form = { address, choice ->
-            UserIntent.AddIntiface(address, choice.deviceIndex, choice.selection)
+            UserIntent.AddIntiface(address, choice.deviceIndex, choice.selection, replaceDevice)
         },
         submission = rememberFormSubmission(calls.submit),
         onDone = onDone,
@@ -228,10 +241,16 @@ internal fun ColumnScope.AddVibrator(calls: CoreCalls, onDone: () -> Unit) {
  * the device, so the caveat comes first.
  */
 @Composable
-internal fun ColumnScope.AddStroker(calls: CoreCalls, onDone: () -> Unit) {
+internal fun ColumnScope.AddStroker(
+    calls: CoreCalls,
+    onDone: () -> Unit,
+    replaceDevice: DeviceId? = null,
+) {
     IntifaceStopCaveat()
     AddBridgeDevice(
         words = StrokerWords,
+        initialAddress =
+            replaceDevice?.let(calls.bridgeAddressForSetup) ?: DEFAULT_INTIFACE_ADDRESS,
         find = calls.findLinearActuators,
         name = { it.name },
         detail = { stringResource(R.string.linear_device, it.deviceIndex, it.actuatorIndex) },
@@ -241,6 +260,7 @@ internal fun ColumnScope.AddStroker(calls: CoreCalls, onDone: () -> Unit) {
                 choice.deviceIndex,
                 choice.actuatorIndex,
                 choice.selection,
+                replaceDevice,
             )
         },
         submission = rememberFormSubmission(calls.submit),
@@ -265,16 +285,18 @@ internal fun IntifaceStopCaveat() {
  */
 @Composable
 private fun <T> ColumnScope.AddBridgeDevice(
+    initialAddress: String,
     words: BridgeWords,
-    find: suspend (address: String) -> List<T>,
+    find: suspend (address: String) -> BridgeDiscovery<T>,
     name: (T) -> String,
     detail: @Composable (T) -> String,
     form: (address: String, choice: T) -> FormIntent,
     submission: FormSubmission,
     onDone: () -> Unit,
 ) {
-    var address by rememberSaveable { mutableStateOf(DEFAULT_INTIFACE_ADDRESS) }
+    var address by rememberSaveable { mutableStateOf(initialAddress) }
     var search by remember { mutableStateOf<BridgeSearch<T>>(BridgeSearch.NotStarted) }
+    var lookup by remember { mutableStateOf<Job?>(null) }
     var selected by remember { mutableStateOf<T?>(null) }
     val scope = rememberCoroutineScope()
     BridgeSetup(
@@ -286,6 +308,7 @@ private fun <T> ColumnScope.AddBridgeDevice(
         detail = detail,
         submission = submission,
         onAddressChange = {
+            lookup?.cancel()
             address = it
             search = BridgeSearch.NotStarted
             selected = null
@@ -296,12 +319,16 @@ private fun <T> ColumnScope.AddBridgeDevice(
             search = BridgeSearch.Finding
             selected = null
             submission.edited()
-            scope.launch {
-                val choices = find(target)
-                // Editing the address meanwhile makes this answer stale.
-                if (search == BridgeSearch.Finding) {
-                    search = BridgeSearch.Found(target, choices)
-                    selected = choices.singleOrNull()
+            lookup?.cancel()
+            lookup = scope.launch {
+                val result = find(target)
+                ensureActive()
+                when (result) {
+                    is BridgeDiscovery.Found -> {
+                        search = BridgeSearch.Found(target, result.choices)
+                        selected = result.choices.singleOrNull()
+                    }
+                    is BridgeDiscovery.Failed -> search = BridgeSearch.Failed(result.reason)
                 }
             }
         },
@@ -346,7 +373,8 @@ internal fun <T> ColumnScope.BridgeSetup(
             when (search) {
                 BridgeSearch.NotStarted -> words.find
                 BridgeSearch.Finding -> words.finding
-                is BridgeSearch.Found -> words.findAgain
+                is BridgeSearch.Found,
+                is BridgeSearch.Failed -> words.findAgain
             }
         ),
         onFind,
@@ -354,6 +382,7 @@ internal fun <T> ColumnScope.BridgeSetup(
         isEnabled = address.isNotBlank() && search != BridgeSearch.Finding,
         modifier = Modifier.fillMaxWidth(),
     )
+    if (search is BridgeSearch.Failed) Hint(Words.formReason(search.reason))
     if (found != null && found.choices.isEmpty()) {
         Banner(
             tone = BannerTone.Warn,
@@ -432,7 +461,12 @@ internal fun ColumnScope.AddAutoblow(family: DeviceFamily, calls: CoreCalls, onD
         stringResource(if (submission.isSending) R.string.form_saving else R.string.action_connect),
         {
             submission.send(
-                UserIntent.AddAutoblowDevice(family, name.trim(), Secret(token.trim())),
+                UserIntent.AddAutoblowDevice(
+                    family,
+                    name.trim(),
+                    Secret(token.trim()),
+                    connectAfterSave = true,
+                ),
                 onDone,
             )
         },

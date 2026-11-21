@@ -52,6 +52,8 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 /**
  * Chat while playing (board V-Chat): the header, the transcript and its notices, then the deck.
  * While the keyboard is open, the deck keeps only the strip and the composer (board V-Keyboard).
+ *
+ * @param onChooseAi opens Choose your AI, offered while there's no chat model.
  */
 @Composable
 fun ChatScreen(
@@ -63,6 +65,7 @@ fun ChatScreen(
     onOpenDevices: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    onChooseAi: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize()) {
         if (!isTyping) ChatHeader(state, onOpenChats)
@@ -84,11 +87,16 @@ fun ChatScreen(
             // The Stop receipt already says why a reply stopped after Stop.
             interruption =
                 (reply as? ReplyState.Interrupted)
-                    ?.cause
-                    ?.takeIf { it != InterruptCause.MotionStopped }
+                    ?.takeIf { it.cause != InterruptCause.MotionStopped }
                     ?.let { interruptionText(it) },
         )
-        ChatDeck(state = state, isTyping = isTyping, onIntent = onIntent, onOpenLive = onOpenLive)
+        ChatDeck(
+            state = state,
+            isTyping = isTyping,
+            onIntent = onIntent,
+            onOpenLive = onOpenLive,
+            onChooseAi = onChooseAi,
+        )
     }
 }
 
@@ -176,6 +184,9 @@ private fun Transcript(state: AppState, onIntent: (UserIntent) -> Unit, modifier
         }
         return
     }
+    val builtInPersonaName =
+        state.settings.personas.firstOrNull { it.isBuiltIn }?.name
+            ?: stringResource(R.string.persona_builtin_name)
     LazyColumn(
         modifier.fillMaxWidth(),
         reverseLayout = true,
@@ -192,7 +203,7 @@ private fun Transcript(state: AppState, onIntent: (UserIntent) -> Unit, modifier
                 item(key = "streaming") {
                     Bubble(
                         meta =
-                            chat.personaName +
+                            streamingSpeaker(reply, chat.personaName) +
                                 stringResource(R.string.separator) +
                                 stringResource(R.string.time_now),
                         text = reply.text,
@@ -202,7 +213,7 @@ private fun Transcript(state: AppState, onIntent: (UserIntent) -> Unit, modifier
                 }
             is ReplyState.Interrupted ->
                 item(key = "interrupted") {
-                    InterruptedReply(reply.cause) { onIntent(UserIntent.SendAgain) }
+                    InterruptedReply(reply) { onIntent(UserIntent.SendAgain) }
                 }
             ReplyState.Idle -> Unit
         }
@@ -210,11 +221,13 @@ private fun Transcript(state: AppState, onIntent: (UserIntent) -> Unit, modifier
             when (entry) {
                 is ChatEntry.Message ->
                     Bubble(
+                        // A reply keeps the name of the persona that wrote it, even after a switch.
                         meta =
-                            (if (entry.author == Author.You) stringResource(R.string.author_you)
-                            else chat.personaName) +
-                                stringResource(R.string.separator) +
-                                Words.clockTime(entry.at),
+                            messageSpeaker(
+                                entry,
+                                stringResource(R.string.author_you),
+                                builtInPersonaName,
+                            ) + stringResource(R.string.separator) + Words.clockTime(entry.at),
                         text = entry.text,
                         isMine = entry.author == Author.You,
                         receipt = entry.receipt?.let { Words.receipt(it) },
@@ -309,19 +322,24 @@ private fun StreamingText(text: String) {
 
 /** Why a reply was discarded, in the interrupted bubble and for TalkBack. */
 @Composable
-private fun interruptionText(cause: InterruptCause): String =
-    stringResource(
-        when (cause) {
+private fun interruptionText(reply: ReplyState.Interrupted): String {
+    reply.providerFailure?.let {
+        return providerFailureText(it)
+    }
+    return stringResource(
+        when (reply.cause) {
             InterruptCause.MotionStopped -> R.string.reply_interrupted_stopped
             InterruptCause.ConnectionLost -> R.string.reply_interrupted_connection
             InterruptCause.AppInBackground -> R.string.reply_interrupted_background
+            InterruptCause.ProviderRefused -> R.string.reply_refused
             InterruptCause.ProviderError -> R.string.reply_interrupted_provider
         }
     )
+}
 
 @Composable
-private fun InterruptedReply(cause: InterruptCause, onSendAgain: () -> Unit) {
-    val text = interruptionText(cause)
+private fun InterruptedReply(reply: ReplyState.Interrupted, onSendAgain: () -> Unit) {
+    val text = interruptionText(reply)
     Column(verticalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.s)) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val shape = MagicHandyTheme.shapes.personaBubble
@@ -372,5 +390,24 @@ private fun MotionStoppedLine(entry: ChatEntry.MotionStopped) {
         )
     }
 }
+
+/**
+ * Speaker label for a saved message. Pre-persona replies ([ChatEntry.Message.speaker] == null)
+ * belong to the built-in persona and keep its name after switching personas.
+ */
+internal fun messageSpeaker(
+    entry: ChatEntry.Message,
+    youLabel: String,
+    builtInPersonaName: String,
+): String =
+    if (entry.author == Author.You) youLabel
+    else entry.speaker?.takeIf { it.isNotBlank() } ?: builtInPersonaName
+
+/**
+ * Speaker label for a live streaming preview. Preserves the speaker captured when the turn began
+ * even if the selected persona changes or is renamed mid-turn.
+ */
+internal fun streamingSpeaker(reply: ReplyState.Streaming, activePersonaName: String): String =
+    reply.speaker?.takeIf { it.isNotBlank() } ?: activePersonaName
 
 private const val MAX_HEADER_DEVICES = 3

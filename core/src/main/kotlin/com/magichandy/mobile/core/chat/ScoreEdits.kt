@@ -1,8 +1,25 @@
 // Ported from internal/chat/{hosted_layered,layered_geometry,creative_v2}.go at 1b80d72e.
 package com.magichandy.mobile.core.chat
 
-import com.magichandy.mobile.core.score.*
-import kotlinx.serialization.json.*
+import com.magichandy.mobile.core.score.FlowLayer
+import com.magichandy.mobile.core.score.GestureScore
+import com.magichandy.mobile.core.score.LayerAxis
+import com.magichandy.mobile.core.score.LayerShape
+import com.magichandy.mobile.core.score.LayeredScore
+import com.magichandy.mobile.core.score.SweepDirection
+import com.magichandy.mobile.core.score.flowLayer
+import com.magichandy.mobile.core.score.layeredScore
+import com.magichandy.mobile.core.score.readGroups
+import com.magichandy.mobile.core.score.toJson
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 internal fun JsonElement.editGroups(): JsonObject {
     if (this is JsonObject) return this

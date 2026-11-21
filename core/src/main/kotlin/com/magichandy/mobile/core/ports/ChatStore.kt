@@ -9,6 +9,13 @@ import kotlinx.coroutines.flow.StateFlow
 /** A saved chat and its ordered transcript. */
 public data class SavedChat(public val summary: ChatSummary, public val messages: List<ChatEntry>)
 
+/** Keep the chat list's speaker current while preserving attribution on individual messages. */
+public fun ChatSummary.after(entry: ChatEntry): ChatSummary =
+    copy(
+        lastActivity = entry.at,
+        personaName = (entry as? ChatEntry.Message)?.speaker ?: personaName,
+    )
+
 /** Immutable transaction view of conversations and persona-scoped memory. */
 public data class ChatArchive(
     public val chats: Map<ChatId, SavedChat> = emptyMap(),

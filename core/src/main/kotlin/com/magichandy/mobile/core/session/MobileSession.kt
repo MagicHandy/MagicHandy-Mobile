@@ -4,30 +4,44 @@ package com.magichandy.mobile.core.session
 import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.BackendNotice
 import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.ConnectionKind
+import com.magichandy.mobile.core.api.CoyoteChannel
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceLimit
+import com.magichandy.mobile.core.api.DeviceSettings
 import com.magichandy.mobile.core.api.FormIntent
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.InterruptCause
 import com.magichandy.mobile.core.api.LimitKind
 import com.magichandy.mobile.core.api.MagicHandyCore
 import com.magichandy.mobile.core.api.MotionMode
 import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.ReplyState
 import com.magichandy.mobile.core.api.RunMembership
 import com.magichandy.mobile.core.api.StartRefusal
+import com.magichandy.mobile.core.api.StartupState
 import com.magichandy.mobile.core.api.StepDirection
 import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UserIntent
-import com.magichandy.mobile.core.chat.isChatStopMessage
+import com.magichandy.mobile.core.api.isChatStopMessage
+import com.magichandy.mobile.core.motion.EndedRun
 import com.magichandy.mobile.core.motion.MotionEngine
+import com.magichandy.mobile.core.motion.StopTarget
+import com.magichandy.mobile.core.motion.WorkKind
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.DiagnosticReporter
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.PreferenceEdit
 import com.magichandy.mobile.core.ports.PreferenceField
+import com.magichandy.mobile.core.ports.activePersona
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
@@ -42,7 +56,7 @@ import kotlinx.coroutines.launch
 internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     private val parent = dependencies.scope.coroutineContext
     private val reports =
-        Channel<Pair<kotlin.time.Instant, DiagnosticKind>>(
+        Channel<Pair<Instant, DiagnosticKind>>(
             256,
             kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
         )
@@ -57,13 +71,22 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
                 )
         )
     private val engine =
-        MotionEngine(d.scope, d.dispatchers.stop, d.dispatchers.stopIo, d.clock, ::record)
+        MotionEngine(d.scope, d.dispatchers.stop, d.dispatchers.stopIo, d.clock, ::record) {
+            d.runHost.isRunning
+        }
     private val safety =
         RunSafety(engine, d.journal, d.runHost, d.devices, d.clock, d.scope, d.dispatchers.io)
-    private val ui = MutableStateFlow(initialState(d))
+    private val ui =
+        MutableStateFlow(
+            initialState(d)
+                .copy(
+                    startup =
+                        if (d.awaitStorage == null) StartupState.Ready else StartupState.Loading
+                )
+        )
     override val state = ui.asStateFlow()
     private val devices = Devices(d, engine, safety, ui, ::record)
-    private val setup = DeviceSetup(d, ui, devices, engine)
+    private val setup = DeviceSetup(d, ui, devices, engine, safety)
     private val servers = ServerSetup(d, ui)
     private val checkIns = VacuCheckIns(d, ui, this)
     private val autopilot = Autopilot(d, engine, devices, safety, ui)
@@ -93,6 +116,25 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     override suspend fun submit(intent: FormIntent) = forms.submissions.submit(intent)
 
     init {
+        d.awaitStorage?.let { load ->
+            d.scope.launch(d.dispatchers.session) {
+                try {
+                    load()
+                    safety.initialize()
+                    val doc = d.settings.state.value
+                    ui.update {
+                        it.preferences(doc.values)
+                            .showPersonas(doc, d.chats.state.value)
+                            .models(d.models.state.value, d.network.observe().value)
+                            .copy(startup = StartupState.Ready)
+                    }
+                    devices.projectSafety()
+                } catch (_: IOException) {
+                    record(DiagnosticKind.StoreUnavailable)
+                    ui.update { it.copy(startup = StartupState.StorageUnavailable) }
+                }
+            }
+        }
         d.scope.launch(d.dispatchers.io) {
             for ((at, kind) in reports) try {
                 d.diagnostics.record(at, kind)
@@ -123,8 +165,13 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         d.scope.launch(d.dispatchers.session) {
             var last = engine.epoch
             var uncertainEpoch: Epoch? = null
+            var lastEnd: EndedRun? = null
             engine.state.collect { s ->
                 diagnostics.observe(s.epoch, s.evidence ?: s.receipt)
+                if (s.endedRun != null && s.endedRun != lastEnd) {
+                    lastEnd = s.endedRun
+                    chat.recordStop(s.endedRun)
+                }
                 if (last != s.epoch) {
                     chat.stopEarlierThan(s.epoch)
                     autopilot.epochChanged(s.epoch)
@@ -141,7 +188,13 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             }
         }
         d.scope.launch(d.dispatchers.session) {
+            safety.inspectionComplete.collect { devices.projectSafety() }
+        }
+        d.scope.launch(d.dispatchers.session) {
             safety.interrupted.collect { devices.projectSafety() }
+        }
+        d.scope.launch(d.dispatchers.session) {
+            safety.awaitingReturn.collect { devices.projectSafety() }
         }
         d.scope.launch(d.dispatchers.session) {
             safety.journalUnavailable.collect {
@@ -151,9 +204,28 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             }
         }
         d.scope.launch(d.dispatchers.session) {
-            d.settings.state.collect { doc ->
-                ui.update { it.preferences(doc.values) }
-                autopilot.refresh()
+            var previous: com.magichandy.mobile.core.ports.Preferences? = null
+            d.settings.state.collect {
+                val doc = d.settings.state.value
+                val preferences = doc.values
+                val changed =
+                    previous?.copy(
+                        builtInPersonality = preferences.builtInPersonality,
+                        selectedPersona = preferences.selectedPersona,
+                    ) != preferences
+                previous = preferences
+                ui.update { state ->
+                    val next = if (changed) state.preferences(preferences) else state
+                    next.showPersonas(doc, d.chats.state.value)
+                }
+                if (changed) {
+                    if (preferences.mode == MotionMode.Off) {
+                        stopForOffMode()
+                        autopilot.off()
+                    } else {
+                        autopilot.refresh()
+                    }
+                }
             }
         }
         d.scope.launch(d.dispatchers.session) {
@@ -164,7 +236,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         }
         d.scope.launch(d.dispatchers.session) { d.chats.state.collect { chat.showArchive() } }
         d.scope.launch(d.dispatchers.session) {
-            ui.map { it.chat.reply is com.magichandy.mobile.core.api.ReplyState.Streaming }
+            ui.map { it.chat.reply is ReplyState.Streaming }
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { autopilot.refresh() }
@@ -175,9 +247,25 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         }
     }
 
+    private val hostRelease = AtomicReference<Job?>()
+
+    override suspend fun awaitEmergencyStop() {
+        safety.awaitSettled()
+        hostRelease.get()?.join()
+    }
+
     override fun emergencyStop(source: StopSource) {
         safety.emergencyStop(source)
         d.devices.stopOpenBridges(engine.epoch)
+        if (source == StopSource.TaskRemoved || source == StopSource.ServiceLost) {
+            val release =
+                d.scope.launch(d.dispatchers.session, start = CoroutineStart.LAZY) {
+                    devices.releaseAfterHostLoss()
+                }
+            hostRelease.set(release)
+            release.invokeOnCompletion { hostRelease.compareAndSet(release, null) }
+            release.start()
+        }
         record(DiagnosticKind.StopRequested)
     }
 
@@ -221,21 +309,40 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
         d.scope.launch(d.dispatchers.io) { d.chats.trimPages() }
     }
 
-    override suspend fun intifaceLinearActuators(address: String) = setup.bridges.linearsAt(address)
+    override fun bridgeAddressForSetup(device: DeviceId): String? =
+        d.devices.saved
+            .firstOrNull {
+                it.ref.id == device &&
+                    it.ref.connection in
+                        setOf(
+                            ConnectionKind.IntifaceOnNetwork,
+                            ConnectionKind.IntifaceOnPhone,
+                        )
+            }
+            ?.address
 
-    override suspend fun intifaceVibrators(address: String) = setup.bridges.vibratorsAt(address)
+    override suspend fun discoverIntifaceLinears(address: String) = setup.bridges.linearsAt(address)
+
+    override suspend fun intifaceLinearActuators(address: String) =
+        discoverIntifaceLinears(address).choices
+
+    override suspend fun discoverIntifaceVibrators(address: String) =
+        setup.bridges.vibratorsAt(address)
+
+    override suspend fun intifaceVibrators(address: String) =
+        discoverIntifaceVibrators(address).choices
 
     override fun setCoyoteLimits(device: DeviceId, maximumA: Int, maximumB: Int) =
         setup.setCoyoteLimits(device, maximumA, maximumB)
 
     override fun stepCoyote(
         device: DeviceId,
-        channel: com.magichandy.mobile.core.api.CoyoteChannel,
+        channel: CoyoteChannel,
         increase: Boolean,
     ) = setup.stepCoyote(device, channel, increase)
 
     override fun stepTempoRange(device: DeviceId, direction: StepDirection) =
-        setup.stepTempoRange(device, direction)
+        dispatch(UserIntent.StepDeviceLimit(device, DeviceLimit.TempoMaximum, direction, steps = 2))
 
     private fun record(kind: DiagnosticKind) {
         reports.trySend(d.clock.now() to kind)
@@ -246,18 +353,18 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             emergencyStop(StopSource.TypedStop)
             return
         }
-        if (
-            intent is UserIntent.SetMotionMode &&
-                intent.mode == MotionMode.Off &&
-                engine.state.value.members.isNotEmpty()
-        )
-            engine.stop(null)
+        if (intent is UserIntent.SetMotionMode && intent.mode == MotionMode.Off) stopForOffMode()
         if (queue.trySend(Queued(engine.epoch, intent)).isFailure) unavailable()
     }
 
     private suspend fun handle(epoch: Epoch, intent: UserIntent) {
         when (intent) {
             UserIntent.AcknowledgeAdultsOnly -> patch(PreferenceField.AdultsOnly.edit(true))
+            UserIntent.FinishSetup -> {
+                val saved = d.settings.state.value.values
+                if (saved.adultsOnly && !saved.isSetupDone)
+                    patch(PreferenceField.SetupDone.edit(true))
+            }
             UserIntent.AcknowledgeCoyoteNotes -> patch(PreferenceField.CoyoteNotes.edit(true))
             is UserIntent.SendMessage -> {
                 chat.send(epoch, intent.text)
@@ -282,16 +389,19 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             is UserIntent.SetEdge -> autopilot.edge(epoch, intent.isOn)
             is UserIntent.StepLimit -> step(intent)
             is UserIntent.Connect -> devices.connect(intent.device)
+            is UserIntent.RetryConnection -> devices.retryConnection(intent.device)
             is UserIntent.Disconnect -> devices.disconnect(intent.device)
             is UserIntent.SetInNextRun -> setMembership(intent)
             is UserIntent.SetLead -> devices.setLead(intent.device)
+            is UserIntent.SetHandyModel -> setup.setModel(intent)
+            is UserIntent.StepDeviceLimit -> setup.stepLimit(intent)
             is UserIntent.SetReversed -> devices.setReversed(intent.device, intent.isReversed)
             is UserIntent.ReconcileDevice -> reconcile(epoch, intent.device)
             UserIntent.DismissStopReceipt -> engine.dismissReceipt()
             UserIntent.DismissInterruptedRun -> safety.dismissInterrupted()
             UserIntent.ReconnectDevices -> devices.reconnectSaved()
             is UserIntent.SetMemory -> patch(PreferenceField.Memory.edit(intent.isOn))
-            UserIntent.ClearMemory -> d.chats.clearMemory(defaultPersona.id)
+            UserIntent.ClearMemory -> d.chats.clearMemory(d.settings.state.value.activePersona.id)
             UserIntent.DeleteAllChatsAndMemory -> chat.clearAll()
             is UserIntent.SetPalette -> patch(PreferenceField.PaletteChoice.edit(intent.palette))
             is UserIntent.SetLanguage -> patch(PreferenceField.Language.edit(intent.language))
@@ -301,10 +411,18 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             is UserIntent.SetChangeFrequency ->
                 patch(PreferenceField.Frequency.edit(intent.frequency))
             is UserIntent.SetFinishTarget -> setFinishTarget(intent)
-            is UserIntent.SetPersona -> if (intent.persona != defaultPersona.id) unavailable()
+            is UserIntent.SetPersona -> {
+                if (
+                    d.settings.editPersonas { it.selectPersona(intent.persona) }
+                        is FormResult.Rejected
+                )
+                    unavailable()
+                else ui.update { it.showPersonas(d.settings.state.value, d.chats.state.value) }
+            }
             is UserIntent.SetChatConnection -> d.models.bindChat(intent.connection)
             is UserIntent.SetPlannerConnection -> d.models.bindPlanner(intent.connection)
             UserIntent.StartChatGptSignIn -> accounts.startSignIn()
+            UserIntent.StartChatGptSignInForChat -> accounts.startSignIn(selectForChat = true)
             UserIntent.CancelSignIn -> accounts.cancelSignIn()
             is UserIntent.StartScan -> setup.startScan(intent.family)
             UserIntent.StopScan -> setup.stopScan()
@@ -319,14 +437,13 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             is UserIntent.SetCheckInInterval ->
                 if (intent.every == null || intent.every.isFinite() && intent.every.isPositive())
                     setup.edit(intent.device) { row ->
-                        val v =
-                            row.settings as? com.magichandy.mobile.core.api.DeviceSettings.VacuGlide
+                        val v = row.settings as? DeviceSettings.VacuGlide
                         if (v == null) row
                         else row.copy(settings = v.copy(checkInEvery = intent.every))
                     }
             is UserIntent.SetValveSteps ->
                 setup.edit(intent.device) { row ->
-                    val v = row.settings as? com.magichandy.mobile.core.api.DeviceSettings.VacuGlide
+                    val v = row.settings as? DeviceSettings.VacuGlide
                     if (v == null) row
                     else row.copy(settings = v.copy(mayStepValve = intent.isAllowed))
                 }
@@ -345,6 +462,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
                     if (intent.isIncluded) RunMembership.NextRun else RunMembership.NotInRun
             )
         }
+        devices.refreshLead()
     }
 
     private fun reconcile(epoch: Epoch, id: DeviceId) {
@@ -352,7 +470,10 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             ui.value.interruptedRun?.outcomes.orEmpty().any {
                 it.device == id && it.outcome != StopOutcome.Confirmed
             }
-        if (engine.reconcile(epoch, id, interrupted)) record(DiagnosticKind.DeviceReconciled)
+        if (engine.reconcile(epoch, id, interrupted, safety.awaitsReturn(id))) {
+            safety.checkedLocally(id)
+            record(DiagnosticKind.DeviceReconciled)
+        }
     }
 
     private suspend fun setFinishTarget(intent: UserIntent.SetFinishTarget) {
@@ -364,8 +485,24 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
 
     private suspend fun setMotionMode(mode: MotionMode) {
         if (mode !in ui.value.settings.availableModes) return unavailable()
-        if (mode == MotionMode.Off && engine.state.value.members.isNotEmpty()) engine.stop(null)
+        if (mode == MotionMode.Off) {
+            stopForOffMode()
+            autopilot.off()
+        }
         patch(PreferenceField.Mode.edit(mode))
+    }
+
+    private fun stopForOffMode() {
+        val current = engine.state.value
+        if (current.members.isNotEmpty() || WorkKind.Planner in current.work.values) {
+            engine.stop(
+                null,
+                targets = { state ->
+                    if (state.members.isEmpty()) emptyList()
+                    else state.owners.values.map(::StopTarget)
+                },
+            )
+        }
     }
 
     private suspend fun patch(edit: PreferenceEdit) {

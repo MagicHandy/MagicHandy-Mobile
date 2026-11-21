@@ -2,6 +2,7 @@
 <!-- Grouped by screen (plan §5.5). Wording follows the v1 design boards. -->
 <resources>
     <string name="app_name" translatable="false">MagicHandy</string>
+    <string name="persona_builtin_name" translatable="false">MagicHandy</string>
 
     <!-- Shared -->
     <string name="stop">Stop</string>
@@ -205,6 +206,7 @@
 
     <!-- Adding devices -->
     <string name="add_breadcrumb">Devices › Add</string>
+    <string name="setup_add_breadcrumb">Setup › Add</string>
     <string name="add_handy_title">Connect The Handy</string>
     <string name="add_handy_how">How it connects</string>
     <string name="add_handy_bluetooth">Bluetooth on this phone</string>
@@ -279,8 +281,6 @@
     <string name="battery_allowed">Allowed</string>
     <string name="battery_restricted">Restricted</string>
     <string name="vacuglide_output">Output</string>
-    <string name="vacuglide_tempo_range">Tempo range</string>
-    <string name="vacuglide_tempo_range_desc">Slowest to fastest the motor may run.</string>
     <string name="vacuglide_valve">Chat and Autopilot may step the stroke</string>
     <string name="vacuglide_valve_desc">Up to three valve steps either way per session.</string>
     <string name="vacuglide_test">Test motor</string>
@@ -441,7 +441,7 @@
     <string name="server_failure_unreachable">No answer. Is the server running, and is this phone on the same Wi-Fi?</string>
     <string name="server_failure_not_model_server">Something answered, but it isn\'t a model server.</string>
     <string name="server_failure_no_models">The server has no models yet. Pull one on the server, then check again.</string>
-    <string name="server_failure_not_private">Plain HTTP is only allowed on your local network. Use a local address.</string>
+    <string name="server_failure_not_private">A local server must resolve only to private network addresses. Check the server address.</string>
     <string name="openrouter_lead">Chat through OpenRouter with your own API key. The key is stored encrypted on this phone.</string>
     <string name="field_api_key">API key</string>
     <string name="field_model">Model</string>
@@ -449,8 +449,8 @@
     <string name="openrouter_reasoning">Reasoning</string>
     <string name="openrouter_reasoning_desc">With reasoning off, Advanced uses its no-reasoning contract.</string>
     <string name="chatgpt_lead">Sign in with your ChatGPT account in the browser. MagicHandy uses GPT-6.1 Terra at Advanced, as the desktop app does.</string>
-    <string name="chatgpt_sign_in">Sign in with ChatGPT</string>
-    <string name="chatgpt_waiting">Finish signing in through the browser…</string>
+    <string name="chatgpt_sign_in">Continue with ChatGPT</string>
+    <string name="chatgpt_waiting">Signing in to ChatGPT…</string>
     <string name="chatgpt_cancel">Cancel sign-in</string>
     <string name="sign_in_cancelled">Sign-in was cancelled.</string>
     <string name="sign_in_rejected">ChatGPT didn\'t accept the sign-in. Try again.</string>
@@ -506,7 +506,7 @@
 
     <!-- Run interrupted -->
     <string name="interrupted_title">Run interrupted</string>
-    <string name="interrupted_lead">MagicHandy stopped unexpectedly at %1$s while motion was running. Stop was sent again to every saved cloud device just now. Anything uncertain is listed first.</string>
+    <string name="interrupted_lead">Last safety record at %1$s. The results below show what could be verified for each device.</string>
     <string name="recovery_expected_paused">%1$s · expected paused</string>
     <string name="recovery_not_confirmed">%1$s · not confirmed</string>
     <string name="recovery_expected_silent">%1$s · expected silent</string>
@@ -528,7 +528,7 @@
     <!-- Retrying a refused message on a local server (board V-RefusalFallback). -->
     <string name="refusal_row">If %1$s refuses</string>
     <string name="refusal_title_generic">If the chat model refuses</string>
-    <string name="refusal_desc">%1$s runs online and can refuse a message. MagicHandy can then send that message, once, to a server you added on your network.</string>
+    <string name="refusal_desc">%1$s runs online and can refuse a message. MagicHandy can then send that message once to a server you added on your network, along with the persona\'s name, description and wording instructions, plus current relevant device capabilities, motion and limits. Earlier chat messages and saved memories aren\'t sent.</string>
     <string name="refusal_off_desc">Show the refusal. Nothing is sent anywhere else.</string>
     <string name="refusal_note">Only servers on your network are listed; ChatGPT and OpenRouter never are. Choosing Off cancels a retry that hasn\'t finished.</string>
     <string name="refusal_none">There\'s no server on your network yet. Add one in Models and providers to use this.</string>
@@ -593,10 +593,170 @@
     <string name="form_reconcile_device">Finish checking this device\'s Stop on Devices first.</string>
     <string name="form_busy">MagicHandy is still finishing the last change. Try again in a moment.</string>
     <string name="form_storage_unavailable">MagicHandy couldn\'t save that. Free some storage and try again.</string>
+    <string name="form_too_long">That\'s longer than it can be. Shorten it and try again.</string>
+    <string name="form_limit_reached">You\'ve reached the most the app keeps. Delete one to add another.</string>
 
     <!-- Sharing the redacted diagnostics report from App settings. -->
     <string name="app_diagnostics">Share diagnostics</string>
     <string name="app_diagnostics_value">Redacted</string>
     <string name="diagnostics_preparing">Preparing…</string>
     <string name="diagnostics_failed">Couldn\'t write the report. Free some storage and try again.</string>
+    <string name="reply_refused">The model declined this message.</string>
+    <string name="tempo_minimum">Minimum motor speed</string>
+    <string name="tempo_maximum">Maximum motor speed</string>
+    <string name="device_decrease_limit">Decrease %1$s</string>
+    <string name="device_increase_limit">Increase %1$s</string>
+    <string name="recovery_waiting_return">%1$s is waiting for another Stop on reconnect</string>
+    <string name="platform_check_in_due">%1$s check-in · %2$d s left. Tap to answer.</string>
+    <string name="form_ambiguous_device">These devices have identical descriptions. Give each a different display name in Intiface Central, then find them again.</string>
+    <string name="bridge_reselect_note">Select the device again in Intiface Central. If two look identical, give them different display names and search again.</string>
+    <string name="model_handy_original" translatable="false">The Handy Original</string>
+    <string name="model_handy_standard" translatable="false">The Handy 2 Standard</string>
+    <string name="model_handy_pro" translatable="false">The Handy 2 Pro</string>
+    <string name="device_percent_value" translatable="false">%1$d%%</string>
+
+    <!-- First-run setup (boards V-SetupModel, V-SetupCompanion, V-SetupReady and V-SetupReadyNoModel). -->
+    <string name="setup_label">Setup</string>
+    <string name="setup_step">%1$d of %2$d</string>
+    <string name="setup_page">%1$s, step %2$d of %3$d</string>
+    <string name="setup_continue">Continue</string>
+    <string name="setup_skip">Skip for now</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="choose_ai_title">Choose your AI</string>
+    <string name="choose_ai_lead">Where should Chat send your messages?</string>
+    <string name="choose_ai_chatgpt_desc">Sign in with your ChatGPT account.</string>
+    <string name="choose_ai_chatgpt_meta">Online · GPT-6.1 Terra · May refuse some messages</string>
+    <string name="choose_ai_openrouter_desc">Use your own API key and pay per use.</string>
+    <string name="choose_ai_openrouter_meta">Online · Choose a model</string>
+    <string name="choose_ai_server_desc">Enter the address of a server you run.</string>
+    <string name="choose_ai_server_meta">Ollama, llama.cpp or another OpenAI-compatible server</string>
+    <string name="choose_ai_skip_note">Live works with a connected device. Chat and Autopilot need a model.</string>
+    <string name="companion_title">Your companion</string>
+    <string name="companion_persona">%1$s · Built-in persona</string>
+    <string name="companion_explicit">How explicit may replies be?</string>
+    <string name="companion_same">Motion limits and Stop stay the same at every level.</string>
+    <string name="ready_title">You\'re set</string>
+    <string name="ready_lead">Change any of this later in Settings.</string>
+    <string name="ready_model">Chat model</string>
+    <string name="ready_model_value">%1$s · %2$s</string>
+    <string name="ready_no_model">No model chosen</string>
+    <string name="ready_choose_ai">Choose an AI</string>
+    <string name="ready_companion">Companion</string>
+    <string name="ready_device">Device</string>
+    <string name="ready_device_optional">Optional</string>
+    <string name="ready_add_device">Add a device</string>
+    <string name="ready_device_note">Connecting a device never starts motion.</string>
+    <string name="ready_privacy">Chats are saved on this phone. Your chosen provider receives the context for each reply.</string>
+    <string name="ready_explore">You can explore now. Chat and Autopilot need a model.</string>
+    <string name="ready_finish">Finish setup</string>
+
+    <!-- How explicit replies may be, and reaction styles. The definitions match the desktop app. -->
+    <string name="how_explicit">How explicit</string>
+    <string name="explicit_utility">Utility</string>
+    <string name="explicit_utility_desc">No sexual content. Replies stay practical.</string>
+    <string name="explicit_warm">Warm</string>
+    <string name="explicit_warm_desc">Flirty and suggestive, never graphic.</string>
+    <string name="explicit_intimate">Intimate</string>
+    <string name="explicit_intimate_desc">A sensual partner voice with indirect language.</string>
+    <string name="explicit_explicit">Explicit</string>
+    <string name="explicit_explicit_desc">Direct, graphic sexual language.</string>
+    <string name="reaction_style">Reaction style</string>
+    <string name="reaction_style_note">Shapes who leads the conversation. It never affects the device.</string>
+    <string name="reaction_neutral">Neutral</string>
+    <string name="reaction_neutral_desc">No added reaction style.</string>
+    <string name="reaction_playful">Playful</string>
+    <string name="reaction_playful_desc">Teases lightly and starts things.</string>
+    <string name="reaction_tender">Tender</string>
+    <string name="reaction_tender_desc">Attentive, reassuring and unhurried.</string>
+    <string name="reaction_teasing">Teasing</string>
+    <string name="reaction_teasing_desc">Withholds and draws things out.</string>
+    <string name="reaction_dominant">Dominant</string>
+    <string name="reaction_dominant_desc">Leads the conversation and says what happens next.</string>
+    <string name="reaction_submissive">Submissive</string>
+    <string name="reaction_submissive_desc">Follows, asks and defers.</string>
+    <string name="reply_length">Reply length</string>
+    <string name="reply_short">Short</string>
+    <string name="reply_detailed">Detailed</string>
+
+    <!-- Personas (boards V-Personas, V-PersonaDefault, V-PersonaCustom and V-PersonaStyle). -->
+    <string name="personas_title">Personas</string>
+    <string name="personas_lead">Each has its own memory. Tap one to edit it.</string>
+    <string name="personas_new">New persona</string>
+    <string name="personas_empty">Your own personas will appear here.</string>
+    <string name="personas_limit">That\'s the most personas the app keeps. Delete one to add another.</string>
+    <string name="personas_manage">Manage personas</string>
+    <string name="persona_in_use">In use</string>
+    <string name="persona_line">%1$s · %2$s</string>
+    <string name="persona_line_built_in">Built in · %1$s · %2$s</string>
+    <string name="persona_edit">Edit %1$s</string>
+    <string name="persona_edit_in_use">Edit %1$s, in use</string>
+    <string name="persona_built_in">Built-in persona</string>
+    <string name="persona_built_in_in_use">Built-in persona · in use</string>
+    <string name="persona_yours">Your persona</string>
+    <string name="persona_yours_in_use">Your persona · in use</string>
+    <string name="persona_name">Persona name</string>
+    <string name="persona_name_hint">Name</string>
+    <string name="persona_use">Use persona</string>
+    <string name="persona_save_and_use">Save and use</string>
+    <string name="persona_description">Personality description</string>
+    <string name="persona_description_hint">Their manner, humour and how they speak.</string>
+    <string name="persona_description_used">Used at Warm, Intimate and Explicit.</string>
+    <string name="persona_description_saved">Saved for Warm, Intimate and Explicit.</string>
+    <string name="persona_description_active">Describes how this persona speaks.</string>
+    <plurals name="persona_over_limit">
+        <item quantity="one">Remove %d character to save.</item>
+        <item quantity="other">Remove %d characters to save.</item>
+    </plurals>
+    <string name="persona_name_missing">Give this persona a name to save it.</string>
+    <string name="character_count" translatable="false">%1$d / %2$d</string>
+    <string name="persona_characters">Characters used: %1$d of %2$d</string>
+    <string name="persona_wording_only">Wording only. Your limits, Stop and what the model may control stay the same.</string>
+    <string name="persona_reset">Reset to default</string>
+    <string name="persona_reset_done">Defaults restored. Save to apply.</string>
+    <string name="persona_more">More options for %1$s</string>
+    <string name="persona_duplicate">Duplicate</string>
+    <string name="persona_delete">Delete</string>
+    <string name="persona_copy_name">%1$s copy</string>
+    <string name="persona_copy_name_numbered">%1$s copy %2$d</string>
+    <string name="persona_delete_title">Delete %1$s?</string>
+    <string name="persona_delete_body">%1$s and its memory will be deleted. Your chats keep their messages.</string>
+    <string name="persona_delete_body_in_use">%1$s and its memory will be deleted. Your chats keep their messages. %2$s will reply next.</string>
+    <string name="persona_delete_confirm">Delete %1$s</string>
+    <string name="persona_discard_title">Discard changes?</string>
+    <string name="persona_discard_body">Your changes haven\'t been saved.</string>
+    <string name="persona_keep_editing">Keep editing</string>
+    <string name="persona_discard">Discard changes</string>
+    <string name="form_duplicate_persona_name">Another persona already has that name.</string>
+    <string name="startup_storage_failed">Saved settings could not be opened. Close and reopen MagicHandy. Stop is available.</string>
+    <string name="sign_in_storage">Could not open or save the account on this phone. Unlock the phone and try again.</string>
+    <string name="chatgpt_browser_return">Close this tab to finish signing in to MagicHandy.</string>
+    <string name="sign_in_exchange_unavailable">ChatGPT couldn’t complete the sign-in code exchange. Start sign-in again.</string>
+    <string name="sign_in_exchange_rejected">ChatGPT rejected the sign-in code or returned an incomplete grant. Start sign-in again.</string>
+    <string name="sign_in_keys_unavailable">MagicHandy couldn’t download the keys needed to verify this sign-in. Check your connection and try again.</string>
+    <string name="sign_in_invalid_identity">MagicHandy couldn’t verify the identity ChatGPT returned. Check your phone’s date and time, then start sign-in again.</string>
+    <string name="sign_in_callback_unavailable">MagicHandy couldn’t receive the browser reply. Start sign-in again.</string>
+    <string name="sign_in_save_connection">ChatGPT verified your account, but MagicHandy couldn’t save the connection on this phone. Free some storage and try again.</string>
+    <string name="http_status" translatable="false">HTTP %1$s</string>
+    <string name="error_with_detail" translatable="false">%1$s (%2$s)</string>
+    <string name="sign_in_timeout">timed out</string>
+    <string name="sign_in_connection_lost">connection lost</string>
+    <string name="reply_provider_sign_in">The model session expired. Sign in again in Models, then resend your message.</string>
+    <string name="reply_provider_permission">This account does not have access to the requested model or feature. Check its plan or workspace permissions.</string>
+    <string name="reply_provider_limit">The provider limited this request. Check your plan usage and try again later.</string>
+    <string name="reply_provider_model">This model is unavailable for your account. Choose another connection in Models.</string>
+    <string name="reply_provider_request">The provider rejected the chat request. Check the selected model in Models.</string>
+    <string name="reply_provider_service">The model service is unavailable. Try sending your message again in a moment.</string>
+    <string name="reply_provider_format">The provider returned a reply MagicHandy could not read. Try sending your message again.</string>
+    <string name="handy_cloud_credential">Unlock this phone and reconnect to open the saved connection key.</string>
+    <string name="handy_cloud_offline">Handy Cloud reports the device offline. Check its Wi-Fi and connection key, then reconnect.</string>
+    <string name="handy_cloud_access">Handy Cloud denied access. Check the app’s Cloud access before reconnecting.</string>
+    <string name="handy_cloud_timeout">The Handy did not answer in time. If it is starting up, tap Reconnect when it is ready.</string>
+    <string name="handy_cloud_busy">The Handy is in maintenance or another unavailable mode. Finish at the device, then reconnect.</string>
+    <string name="device_retry_connection">Retry</string>
+    <string name="handy_cloud_rate">Handy Cloud received too many requests. Wait a moment before reconnecting.</string>
+    <string name="device_connection_service_start">Android could not start the device service. Open MagicHandy and reconnect.</string>
+    <string name="handy_cloud_service">Handy Cloud is unavailable. Check the network and reconnect.</string>
+    <string name="handy_cloud_reply">Handy Cloud returned an unrecognized reply. Check the firmware version and reconnect.</string>
+    <string name="handy_cloud_idle">The Handy did not confirm idle. Stop it locally, then reconnect.</string>
+    <string name="handy_cloud_code" translatable="false">Handy %1$s</string>
 </resources>

@@ -1,12 +1,32 @@
 package com.magichandy.mobile.transport.simulated
 
-import com.magichandy.mobile.core.api.*
+import com.magichandy.mobile.core.api.AutopilotStatus
+import com.magichandy.mobile.core.api.Banner
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.InterruptCause
+import com.magichandy.mobile.core.api.ReplyState
+import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.SendBlock
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.core.createMagicHandyCore
-import com.magichandy.mobile.core.ports.*
-import kotlin.test.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.test.*
+import com.magichandy.mobile.core.ports.DeviceDirectory
+import com.magichandy.mobile.core.ports.DeviceRef
+import com.magichandy.mobile.core.ports.NetworkState
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ChaosTest {
@@ -97,6 +117,8 @@ internal class ChaosTest {
         f.onboard()
         f.connect(id)
         f.send(UserIntent.StartMotion)
+        advanceTimeBy(1200)
+        runCurrent()
         f.devices.loseLink(id)
         runCurrent()
         assertNotNull(f.d.journal.read())
@@ -116,6 +138,8 @@ internal class ChaosTest {
             f.onboard()
             f.connect(id)
             f.send(UserIntent.StartMotion)
+            advanceTimeBy(1200)
+            runCurrent()
             f.devices.loseLink(id)
             runCurrent()
             val old = f.devices.output.value.getValue(id)

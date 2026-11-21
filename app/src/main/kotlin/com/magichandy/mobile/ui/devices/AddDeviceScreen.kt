@@ -50,10 +50,46 @@ import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.rememberFormSubmission
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
+/** Where device setup was opened from, which its Back and breadcrumb name. */
+enum class AddDeviceOrigin {
+    /** The Devices tab. */
+    Devices,
+
+    /** First-run setup (You're set). */
+    Setup,
+}
+
+internal data class AddDeviceReturnResources(
+    @param:StringRes val breadcrumb: Int,
+    @param:StringRes val backTo: Int?,
+)
+
+internal fun addDeviceReturnResources(origin: AddDeviceOrigin): AddDeviceReturnResources =
+    when (origin) {
+        AddDeviceOrigin.Devices ->
+            AddDeviceReturnResources(breadcrumb = R.string.add_breadcrumb, backTo = null)
+        AddDeviceOrigin.Setup ->
+            AddDeviceReturnResources(
+                breadcrumb = R.string.setup_add_breadcrumb,
+                backTo = R.string.setup_label,
+            )
+    }
+
+@Composable
+private fun addDeviceBackDescription(origin: AddDeviceOrigin): String {
+    val target = addDeviceReturnResources(origin).backTo
+    return if (target == null) stringResource(R.string.back_to_devices)
+    else stringResource(R.string.back_to_page, stringResource(target))
+}
+
+@Composable
+private fun addDeviceBreadcrumb(origin: AddDeviceOrigin): String =
+    stringResource(addDeviceReturnResources(origin).breadcrumb)
+
 /**
  * Setup for one device family (boards V-AddHandy, V-AddHandyIntiface, V-Coyote and V-AddVibrator).
  * Connecting ends at Connected and idle; it never starts motion. A form stays open until the core
- * has saved the device, and [onDone] then returns to Devices.
+ * has saved the device, and [onDone] then returns to [origin].
  *
  * @param calls asks an Intiface bridge what it has, without moving anything, and submits forms.
  */
@@ -66,6 +102,7 @@ fun AddDeviceScreen(
     onBack: () -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    origin: AddDeviceOrigin = AddDeviceOrigin.Devices,
 ) {
     val dimens = MagicHandyTheme.dimens
     // The main action sits just above Stop when there's room, as on the boards.
@@ -76,11 +113,11 @@ fun AddDeviceScreen(
     ) {
         when (family) {
             DeviceFamily.Coyote ->
-                SetupHeader(family, stringResource(R.string.add_coyote_before), onBack)
+                SetupHeader(family, stringResource(R.string.add_coyote_before), origin, onBack)
             DeviceFamily.Vibrator ->
-                SetupHeader(family, stringResource(R.string.add_vibrator_title), onBack)
+                SetupHeader(family, stringResource(R.string.add_vibrator_title), origin, onBack)
             DeviceFamily.LinearActuator ->
-                SetupHeader(family, stringResource(R.string.add_linear_title), onBack)
+                SetupHeader(family, stringResource(R.string.add_linear_title), origin, onBack)
             DeviceFamily.Handy,
             DeviceFamily.AutoblowUltra,
             DeviceFamily.VacuGlide ->
@@ -88,9 +125,9 @@ fun AddDeviceScreen(
                     title =
                         if (family == DeviceFamily.Handy) stringResource(R.string.add_handy_title)
                         else stringResource(R.string.add_autoblow_title, Words.family(family)),
-                    backDescription = stringResource(R.string.back_to_devices),
+                    backDescription = addDeviceBackDescription(origin),
                     onBack = onBack,
-                    breadcrumb = stringResource(R.string.add_breadcrumb),
+                    breadcrumb = addDeviceBreadcrumb(origin),
                 )
         }
         when (family) {
@@ -105,21 +142,26 @@ fun AddDeviceScreen(
 }
 
 /**
- * Back with the "Devices › Add" crumb, then the family's tile, its name and [subtitle] (boards
+ * Back with the origin's Add crumb, then the family's tile, its name and [subtitle] (boards
  * V-Coyote and V-AddVibrator).
  */
 @Composable
-private fun SetupHeader(family: DeviceFamily, subtitle: String, onBack: () -> Unit) {
+private fun SetupHeader(
+    family: DeviceFamily,
+    subtitle: String,
+    origin: AddDeviceOrigin,
+    onBack: () -> Unit,
+) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconAction(
                 AppIcons.Back,
-                stringResource(R.string.back_to_devices),
+                addDeviceBackDescription(origin),
                 onBack,
                 Modifier.offset(x = -MagicHandyTheme.dimens.backOffset),
             )
             Text(
-                stringResource(R.string.add_breadcrumb),
+                addDeviceBreadcrumb(origin),
                 style = MagicHandyTheme.type.small,
                 color = MagicHandyTheme.colors.muted,
             )
@@ -251,7 +293,12 @@ private fun ColumnScope.CloudHandyForm(calls: CoreCalls, onDone: () -> Unit) {
         stringResource(
             if (submission.isSending) R.string.form_saving else R.string.add_cloud_connect
         ),
-        { submission.send(UserIntent.AddCloudHandy(name.trim(), Secret(key.trim())), onDone) },
+        {
+            submission.send(
+                UserIntent.AddCloudHandy(name.trim(), Secret(key.trim()), connectAfterSave = true),
+                onDone,
+            )
+        },
         kind = ButtonKind.Primary,
         isEnabled = name.isNotBlank() && key.isNotBlank() && !submission.isSending,
         modifier = Modifier.fillMaxWidth(),

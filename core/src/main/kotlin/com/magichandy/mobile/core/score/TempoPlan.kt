@@ -1,8 +1,20 @@
 // Ported from internal/motion/{tempo,tempo_engine}.go at 1b80d72e (ADR 0071).
 package com.magichandy.mobile.core.score
 
-import kotlin.math.*
-import kotlinx.serialization.json.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.roundToLong
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 internal enum class TempoShape {
     Steady,

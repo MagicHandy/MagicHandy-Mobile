@@ -7,20 +7,22 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
-import com.magichandy.mobile.core.api.Banner
 import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.core.api.StartupState
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.ui.chat.ChatScreen
@@ -28,6 +30,7 @@ import com.magichandy.mobile.ui.components.AppFrame
 import com.magichandy.mobile.ui.components.BottomTabs
 import com.magichandy.mobile.ui.components.MainTab
 import com.magichandy.mobile.ui.components.isTyping
+import com.magichandy.mobile.ui.devices.AddDeviceOrigin
 import com.magichandy.mobile.ui.devices.AddDeviceScreen
 import com.magichandy.mobile.ui.devices.DeviceDetailScreen
 import com.magichandy.mobile.ui.devices.DevicesScreen
@@ -37,14 +40,22 @@ import com.magichandy.mobile.ui.models.ChatGptScreen
 import com.magichandy.mobile.ui.models.ModelExits
 import com.magichandy.mobile.ui.models.ModelsScreen
 import com.magichandy.mobile.ui.models.OpenRouterScreen
+import com.magichandy.mobile.ui.models.ProviderOrigin
 import com.magichandy.mobile.ui.navigation.AppNavigator
 import com.magichandy.mobile.ui.navigation.Route
 import com.magichandy.mobile.ui.navigation.SheetPage
 import com.magichandy.mobile.ui.navigation.rememberAppNavigator
 import com.magichandy.mobile.ui.onboarding.BeforeYouStartScreen
+import com.magichandy.mobile.ui.personas.PersonaEditorScreen
+import com.magichandy.mobile.ui.personas.PersonasScreen
 import com.magichandy.mobile.ui.settings.AppSettingsScreen
 import com.magichandy.mobile.ui.settings.AppSheets
 import com.magichandy.mobile.ui.settings.SheetExits
+import com.magichandy.mobile.ui.setup.ChooseAiExits
+import com.magichandy.mobile.ui.setup.ChooseAiScreen
+import com.magichandy.mobile.ui.setup.CompanionStepScreen
+import com.magichandy.mobile.ui.setup.ReadyExits
+import com.magichandy.mobile.ui.setup.ReadyStepScreen
 import com.magichandy.mobile.ui.stop.ReceiptScrim
 import com.magichandy.mobile.ui.stop.RunInterruptedScreen
 import com.magichandy.mobile.ui.stop.StopReceiptPanel
@@ -93,13 +104,18 @@ fun AppContent(
 ) {
     val nav = rememberAppNavigator()
     val receipt = state.stopReceipt
-    LaunchedEffect(receipt?.pressCount) { if (receipt != null) nav.closeSheet() }
+    LaunchedEffect(receipt?.episodeId, receipt?.at) { if (receipt != null) nav.closeSheet() }
     val interrupted = state.interruptedRun
-    val isGated = !state.firstRun.hasAcknowledgedAdultsOnly || interrupted != null
-    // A tap on the ongoing notification opens Live (board V-System), unless a gate is showing.
-    LaunchedEffect(openLive) {
-        if (openLive) {
-            if (!isGated) nav.openLive()
+    val launchScreen = initialScreen(state)
+    val isGated = launchScreen != InitialScreen.App
+    // After Before you start, setup's other steps run as routes until Finish setup.
+    val inSetup = state.firstRun.hasAcknowledgedAdultsOnly && !state.firstRun.isSetupDone
+    // A tap on the ongoing notification opens Live (board V-System), unless a gate or setup is
+    // showing.
+    val stackInSetup = nav.stack.any { it is Route.Setup }
+    LaunchedEffect(openLive, isGated, inSetup, stackInSetup) {
+        if (openLive && !isGated && !inSetup && !stackInSetup) {
+            nav.openLive()
             onLiveOpened()
         }
     }
@@ -112,18 +128,13 @@ fun AppContent(
         if (receipt != null) dismissedReceipt = dismissalKey(receipt)
         onIntent(UserIntent.DismissStopReceipt)
     }
-    // A device-loss banner already says who confirmed Stop (board V-ConnectionLost), and Run
-    // interrupted lists every device itself, so neither needs the receipt panel too.
-    val hasLossBanner = state.banners.any { it is Banner.DeviceLost }
-    val shownReceipt = receipt?.takeIf {
-        !hasLossBanner && interrupted == null && !isDismissed(it, dismissedReceipt)
-    }
+    val shownReceipt = receipt?.takeIf { interrupted == null && !isDismissed(it, dismissedReceipt) }
     val stopLabel =
         stringResource(
             if (shownReceipt != null && !shownReceipt.isNoDevice) R.string.stop_again
             else R.string.stop
         )
-    val showTabs = !isGated && nav.isAtDestination
+    val showTabs = !isGated && !inSetup && nav.isAtDestination
     AppFrame(
         stopLabel = stopLabel,
         contentBackground =
@@ -168,6 +179,7 @@ fun AppContent(
                         SheetExits(
                             openAppSettings = { nav.push(Route.AppSettings) },
                             openModels = { nav.push(Route.Models) },
+                            openPersonas = { nav.push(Route.Personas) },
                             addDevice = { nav.push(Route.AddDevice(it)) },
                         ),
                 )
@@ -192,24 +204,122 @@ fun AppContent(
             }
         },
     ) {
-        when {
-            !state.firstRun.hasAcknowledgedAdultsOnly ->
-                BeforeYouStartScreen(onAcknowledge = { onIntent(UserIntent.AcknowledgeAdultsOnly) })
-            interrupted != null -> RunInterruptedScreen(interrupted, onIntent)
-            else -> RouteContent(state, nav, onIntent, calls)
+        when (launchScreen) {
+            InitialScreen.Recovery -> RunInterruptedScreen(requireNotNull(interrupted), onIntent)
+            InitialScreen.Loading -> Unit
+            InitialScreen.StorageError ->
+                Text(
+                    stringResource(R.string.startup_storage_failed),
+                    modifier = Modifier.padding(MagicHandyTheme.dimens.l),
+                    color = MagicHandyTheme.colors.text,
+                )
+            InitialScreen.Consent ->
+                BeforeYouStartScreen(onContinue = { onIntent(UserIntent.AcknowledgeAdultsOnly) })
+            InitialScreen.App ->
+                if (inSetup != stackInSetup) {
+                    LaunchedEffect(inSetup) {
+                        nav.resetTo(if (inSetup) SetupStart else listOf(Route.Chat))
+                    }
+                } else
+                    RouteStates(nav) { route -> RouteContent(route, state, nav, onIntent, calls) }
         }
     }
 }
 
+internal enum class InitialScreen {
+    Recovery,
+    Loading,
+    StorageError,
+    Consent,
+    App,
+}
+
+/** The independent run journal can identify a device needing Stop even if Room cannot open. */
+internal fun initialScreen(state: AppState): InitialScreen =
+    when {
+        state.interruptedRun != null -> InitialScreen.Recovery
+        state.startup == StartupState.Loading -> InitialScreen.Loading
+        state.startup == StartupState.StorageUnavailable -> InitialScreen.StorageError
+        !state.firstRun.hasAcknowledgedAdultsOnly -> InitialScreen.Consent
+        else -> InitialScreen.App
+    }
+
+/** Where setup resumes once Before you start is acknowledged: Choose your AI, above step 1. */
+private val SetupStart = listOf(Route.Setup(1), Route.Setup(2))
+
+/** Routes whose saved state is kept even while they're off the stack, as the tabs switch. */
+private val Destinations = setOf(Route.Chat.key, Route.Devices.key)
+
+/**
+ * Shows the current route with the state it saved, such as a draft or a scroll position, kept while
+ * it's on the stack: Chat's draft survives a trip to Choose your AI. A route that's popped starts
+ * afresh next time, except the two destinations.
+ */
+@Composable
+private fun RouteStates(nav: AppNavigator, content: @Composable (Route) -> Unit) {
+    val holder = rememberSaveableStateHolder()
+    val keys = nav.stack.map { it.key }
+    var kept by rememberSaveable { mutableStateOf(listOf<String>()) }
+    LaunchedEffect(keys) {
+        val gone = kept.filter { it !in keys && it !in Destinations }
+        gone.forEach(holder::removeState)
+        kept = (kept - gone.toSet() + keys).distinct()
+    }
+    val route = nav.current
+    holder.SaveableStateProvider(route.key) { content(route) }
+}
+
+/** Moves setup on to [step] from the step before it, so a second tap does nothing. */
+private fun AppNavigator.toSetupStep(step: Int) {
+    if (current == Route.Setup(step - 1)) push(Route.Setup(step))
+}
+
+/**
+ * After a provider is saved: setup goes on to Your companion, Choose your AI opened from Chat
+ * returns to Chat, and Models shows the new connection.
+ */
+private fun AppNavigator.providerSaved() {
+    when (previous) {
+        is Route.Setup -> {
+            pop()
+            push(Route.Setup(3))
+        }
+        Route.ChooseAi -> {
+            pop()
+            pop()
+        }
+        else -> pop()
+    }
+}
+
+/** Leaves a persona's editor for Personas, which it was opened from. */
+private fun AppNavigator.leavePersonaEditor() {
+    if (Route.Personas in stack) popTo(Route.Personas) else pop()
+}
+
+/** Provider pages name the page Back returns to: Models, or Choose your AI. */
+internal fun providerOrigin(previous: Route?): ProviderOrigin =
+    if (previous is Route.Setup || previous == Route.ChooseAi) {
+        ProviderOrigin.ChooseAi
+    } else {
+        ProviderOrigin.Models
+    }
+
+/** Add device pages name the page Back returns to: Devices, or Setup. */
+internal fun addDeviceOrigin(previous: Route?): AddDeviceOrigin =
+    if (previous is Route.Setup) AddDeviceOrigin.Setup else AddDeviceOrigin.Devices
+
 @Composable
 private fun RouteContent(
+    route: Route,
     state: AppState,
     nav: AppNavigator,
     onIntent: (UserIntent) -> Unit,
     calls: CoreCalls,
 ) {
     val system = systemAccess(state.app)
-    when (val route = nav.current) {
+    val origin = providerOrigin(nav.previous)
+    when (route) {
         Route.Chat ->
             ChatScreen(
                 state = state,
@@ -219,6 +329,10 @@ private fun RouteContent(
                 onOpenLive = { nav.push(Route.Live) },
                 onOpenDevices = { nav.selectDestination(Route.Devices) },
                 onOpenSettings = { nav.openSheet(SheetPage.Settings) },
+                onChooseAi = {
+                    nav.push(Route.ChooseAi)
+                    if (state.models.chatNeedsSignIn) nav.push(Route.ChatGptSetup)
+                },
             )
         Route.Devices ->
             DevicesScreen(
@@ -252,6 +366,7 @@ private fun RouteContent(
                     onSetCoyoteLimits = calls.setCoyoteLimits,
                     onBack = { nav.pop() },
                     onOpenBatterySettings = links.openBatterySettings,
+                    calls = calls,
                 )
             }
         }
@@ -263,6 +378,7 @@ private fun RouteContent(
                 calls = calls,
                 onBack = { nav.pop() },
                 onDone = { nav.pop() },
+                origin = addDeviceOrigin(nav.previous),
             )
         Route.AppSettings ->
             AppSettingsScreen(
@@ -286,8 +402,105 @@ private fun RouteContent(
                         addChatGpt = { nav.push(Route.ChatGptSetup) },
                     ),
             )
-        Route.AddServer -> AddServerScreen(state, onIntent, calls.submit, onBack = { nav.pop() })
-        Route.OpenRouterSetup -> OpenRouterScreen(calls.submit, onBack = { nav.pop() })
-        Route.ChatGptSetup -> ChatGptScreen(state, onIntent, onBack = { nav.pop() })
+        Route.AddServer ->
+            AddServerScreen(
+                state,
+                onIntent,
+                calls.submit,
+                onBack = { nav.pop() },
+                origin = origin,
+                onSaved = { nav.providerSaved() },
+            )
+        Route.OpenRouterSetup ->
+            OpenRouterScreen(
+                calls.submit,
+                onBack = { nav.pop() },
+                origin = origin,
+                onSaved = { nav.providerSaved() },
+            )
+        Route.ChatGptSetup ->
+            ChatGptScreen(
+                state,
+                onIntent,
+                onBack = { nav.pop() },
+                origin = origin,
+                onSaved = { nav.providerSaved() },
+            )
+        is Route.Setup -> SetupStep(route.step, state, nav, onIntent, calls)
+        Route.ChooseAi ->
+            ChooseAiScreen(
+                ChooseAiExits(
+                    back = { nav.pop() },
+                    chatGpt = { nav.push(Route.ChatGptSetup) },
+                    openRouter = { nav.push(Route.OpenRouterSetup) },
+                    server = { nav.push(Route.AddServer) },
+                )
+            )
+        Route.Personas ->
+            PersonasScreen(
+                state = state,
+                onBack = { nav.pop() },
+                onNew = { nav.push(Route.PersonaEditor(null)) },
+                onEdit = { nav.push(Route.PersonaEditor(it)) },
+            )
+        is Route.PersonaEditor -> {
+            val persona =
+                route.persona?.let { id -> state.settings.personas.firstOrNull { it.id == id } }
+            if (route.persona != null && persona == null) {
+                // Deleted, here or elsewhere: there's nothing left to edit.
+                LaunchedEffect(route) { nav.leavePersonaEditor() }
+            } else {
+                PersonaEditorScreen(
+                    state = state,
+                    persona = persona,
+                    onIntent = onIntent,
+                    submit = calls.submit,
+                    onDone = { nav.leavePersonaEditor() },
+                )
+            }
+        }
+    }
+}
+
+/** One step of setup after Before you start's first visit. Back walks back through the steps. */
+@Composable
+private fun SetupStep(
+    step: Int,
+    state: AppState,
+    nav: AppNavigator,
+    onIntent: (UserIntent) -> Unit,
+    calls: CoreCalls,
+) {
+    when (step) {
+        1 -> BeforeYouStartScreen(onContinue = { nav.toSetupStep(2) }, hasAcknowledged = true)
+        2 ->
+            ChooseAiScreen(
+                ChooseAiExits(
+                    back = { nav.pop() },
+                    chatGpt = { nav.push(Route.ChatGptSetup) },
+                    openRouter = { nav.push(Route.OpenRouterSetup) },
+                    server = { nav.push(Route.AddServer) },
+                    skip = { nav.toSetupStep(3) },
+                )
+            )
+        3 ->
+            CompanionStepScreen(
+                state = state,
+                submit = calls.submit,
+                onBack = { nav.pop() },
+                onNext = { nav.toSetupStep(4) },
+            )
+        else ->
+            ReadyStepScreen(
+                state = state,
+                exits =
+                    ReadyExits(
+                        back = { nav.pop() },
+                        chooseAi = { nav.popTo(Route.Setup(2)) },
+                        companion = { nav.popTo(Route.Setup(3)) },
+                        addDevice = { nav.openSheet(SheetPage.DeviceType) },
+                        finish = { onIntent(UserIntent.FinishSetup) },
+                    ),
+            )
     }
 }

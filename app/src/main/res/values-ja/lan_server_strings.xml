@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="server_failure_model_unavailable">選択したモデルは一覧にありません。もう一度サーバーを確認し、利用できるモデルを選んでください。</string>
+    <string name="server_failure_incomplete">サーバーは見つかりましたが、このモデルは構造化された応答のテストを完了できませんでした。別のモデルを選ぶか、もう一度テストしてください。</string>
+</resources>

@@ -6,9 +6,28 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
-import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
-import okhttp3.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+import kotlinx.serialization.json.put
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.utf8Size
+
+internal class FencedBridgeRequest : IOException("Bridge submission fenced before dispatch")
 
 internal class ButtplugSocket(
     private val lost: () -> Unit,
@@ -28,6 +47,9 @@ internal class ButtplugSocket(
     private var next = 0L
     private val ready = CompletableDeferred<Unit>()
     private val closed = AtomicBoolean()
+    val isClosed: Boolean
+        get() = closed.get()
+
     @Volatile private var socket: WebSocket? = null
 
     suspend fun open(http: OkHttpClient, address: String) {
@@ -54,9 +76,15 @@ internal class ButtplugSocket(
 
     override fun onMessage(webSocket: WebSocket, text: String) {
         try {
-            require(text.length <= 65536)
+            require(text.length <= maximumDeviceListBytes)
+            val bytes = text.utf8Size()
+            require(bytes <= maximumDeviceListBytes)
             val batch = Json.parseToJsonElement(text).jsonArray
             require(batch.size in 1..64)
+            // A discovery reply carries every device's feature descriptors. Ordinary replies and
+            // notifications still have the smaller bound, including when a discovery is pending.
+            if (bytes > maximumMessageBytes)
+                require(batch.singleOrNull()?.jsonObject?.keys == setOf("DeviceList"))
             for (item in batch) {
                 val (kind, payload) = item.jsonObject.entries.single()
                 val data = payload.jsonObject
@@ -103,10 +131,10 @@ internal class ButtplugSocket(
             if (
                 closed.get() ||
                     next >= 0xffffffffL ||
-                    pending.size >= (if (kind in stopKinds) 160 else 128) ||
-                    !allowed()
+                    pending.size >= (if (kind in stopKinds) 160 else 128)
             )
                 throw IOException("Bridge submission refused")
+            if (!allowed()) throw FencedBridgeRequest()
             val id = ++next
             val slot = Pending(reply)
             val payload = buildJsonObject {
@@ -145,6 +173,8 @@ internal class ButtplugSocket(
     }
 
     companion object {
+        private const val maximumMessageBytes = 64 * 1024
+        private const val maximumDeviceListBytes = 256 * 1024
         private val stopKinds = setOf("StopAllDevices", "StopDeviceCmd")
     }
 }

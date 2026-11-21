@@ -86,11 +86,11 @@ internal class HandyBluetoothTest {
                 runCurrent()
                 core.dispatch(UserIntent.StartMotion)
                 runCurrent()
-                assertEquals(listOf(715, 841, 860), radio.methods.take(3))
+                assertEquals(listOf(715, 715, 841, 860), radio.methods)
                 core.emergencyStop(StopSource.Notification)
                 try {
                     runCurrent()
-                    assertEquals(listOf(715, 841, 860), radio.methods)
+                    assertEquals(listOf(715, 715, 841, 860), radio.methods)
                     assertTrue(!radio.retired)
                     advanceTimeBy(if (stall) 1000 else 50)
                     runCurrent()
@@ -99,7 +99,7 @@ internal class HandyBluetoothTest {
                     if (stall) {
                         assertTrue(radio.retired)
                         assertEquals(UnconfirmedCause.WriteFailed, receipt.outcomes.single().cause)
-                        assertEquals(listOf(715, 841, 860), radio.methods)
+                        assertEquals(listOf(715, 715, 841, 860), radio.methods)
                     } else {
                         assertEquals(715, radio.methods.last())
                         assertTrue(!radio.retired)
@@ -224,7 +224,7 @@ internal class HandyBluetoothTest {
             runCurrent()
             core.dispatch(UserIntent.StartMotion)
             runCurrent()
-            assertEquals(listOf(715, 841, 860), radio.methods)
+            assertEquals(listOf(715, 715, 841, 860), radio.methods)
             hold = true
             try {
                 core.emergencyStop(StopSource.AppFooter)
@@ -236,7 +236,7 @@ internal class HandyBluetoothTest {
                     requireNotNull(core.state.value.stopReceipt).outcomes.single().cause,
                 )
                 assertTrue(radio.retired)
-                assertEquals(listOf(715, 841, 860), radio.methods)
+                assertEquals(listOf(715, 715, 841, 860), radio.methods)
             } finally {
                 hold = false
                 radio.nativeClose.complete(Unit)

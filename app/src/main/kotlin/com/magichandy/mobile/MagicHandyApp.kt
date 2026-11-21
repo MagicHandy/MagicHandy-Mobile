@@ -4,6 +4,7 @@ import android.app.Application
 import com.magichandy.mobile.core.api.MagicHandyCore
 import com.magichandy.mobile.platform.AndroidHost
 import com.magichandy.mobile.platform.CoreOwner
+import com.magichandy.mobile.platform.SignInTabs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,6 +23,11 @@ class MagicHandyApp : Application(), CoreOwner {
     /** Owns the core's work and executors for the life of the process. */
     internal val processScope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    override val stopScope: CoroutineScope
+        get() = processScope
+
+    internal val signInTabs = SignInTabs()
 
     private val instance = lazy { createCore(this) }
 

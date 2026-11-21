@@ -4,10 +4,15 @@ import com.magichandy.mobile.core.api.ConnectionKind
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceSettings
+import com.magichandy.mobile.core.api.IntifaceChoice
 import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.ScanResult
 import com.magichandy.mobile.core.api.ScanResultId
+import com.magichandy.mobile.core.api.ScanResultStatus
 import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.BridgeTarget
 import com.magichandy.mobile.core.ports.Clock
+import com.magichandy.mobile.core.ports.DeviceConfiguration
 import com.magichandy.mobile.core.ports.DeviceDirectory
 import com.magichandy.mobile.core.ports.DeviceRef
 import com.magichandy.mobile.core.ports.DeviceTransport
@@ -16,15 +21,21 @@ import com.magichandy.mobile.core.ports.OutputFence
 import com.magichandy.mobile.core.ports.SavedDevice
 import com.magichandy.mobile.core.ports.StopEvidence
 import com.magichandy.mobile.core.ports.WriteResult
+import com.magichandy.mobile.core.ports.defaultDeviceSettings
+import com.magichandy.mobile.transport.autoblow.AutoblowSession
 import com.magichandy.mobile.transport.ble.BluetoothConnector
+import com.magichandy.mobile.transport.coyote.CoyoteSession
 import com.magichandy.mobile.transport.handy.HandyBluetoothSession
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 
 /** Command-side simulator state. VacuGlide retains speed across host death and link loss. */
@@ -58,7 +69,7 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
                         "Vibrator",
                         DeviceFamily.Vibrator,
                         ConnectionKind.IntifaceOnPhone,
-                        DeviceSettings.Vibrator(Percent(70)),
+                        defaultDeviceSettings(DeviceFamily.Vibrator),
                     )
                     .copy(address = "ws://127.0.0.1:12345", bridgeIdentity = "sim-vibration"),
                 item(
@@ -87,17 +98,17 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
     override val saved: List<SavedDevice>
         get() = catalog.value
 
-    override val configuration: com.magichandy.mobile.core.ports.DeviceConfiguration =
-        object : com.magichandy.mobile.core.ports.DeviceConfiguration {
+    override val configuration: DeviceConfiguration =
+        object : DeviceConfiguration {
             override suspend fun bridgeTargets(address: String) =
                 listOf(
-                    com.magichandy.mobile.core.ports.BridgeTarget(
+                    BridgeTarget(
                         0,
                         "Simulated vibrator",
                         "sim-vibration",
                         DeviceFamily.Vibrator,
                     ),
-                    com.magichandy.mobile.core.ports.BridgeTarget(
+                    BridgeTarget(
                         1,
                         "Simulated linear actuator",
                         "sim-linear",
@@ -108,7 +119,7 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
                 )
 
             override suspend fun intifaceVibrators(address: String) =
-                listOf(com.magichandy.mobile.core.api.IntifaceChoice(0, "Simulated vibrator"))
+                listOf(IntifaceChoice(0, "Simulated vibrator"))
 
             override val rows = catalog.asStateFlow()
 
@@ -123,22 +134,25 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
                 }
             }
 
+            override suspend fun update(id: DeviceId, transform: (SavedDevice) -> SavedDevice) {
+                catalog.update { rows -> rows.map { if (it.ref.id == id) transform(it) else it } }
+            }
+
             override suspend fun remove(id: DeviceId) {
                 catalog.update { list -> list.filterNot { it.ref.id == id } }
                 outputs.update { it - id }
             }
 
-            override fun scan(family: DeviceFamily) =
-                kotlinx.coroutines.flow.flow {
-                    emit(
-                        com.magichandy.mobile.core.api.ScanResult(
-                            ScanResultId("sim-" + family.name),
-                            "Simulated " + family.name,
-                            -50,
-                            com.magichandy.mobile.core.api.ScanResultStatus.Found,
-                        )
+            override fun scan(family: DeviceFamily) = flow {
+                emit(
+                    ScanResult(
+                        ScanResultId("sim-" + family.name),
+                        "Simulated " + family.name,
+                        -50,
+                        ScanResultStatus.Found,
                     )
-                }
+                )
+            }
 
             override fun address(result: ScanResultId) =
                 result.value.takeIf { it.startsWith("sim-") }
@@ -164,15 +178,15 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
     public val output: StateFlow<Map<DeviceId, SimulatedOutput>> = outputs.asStateFlow()
     private val lost = MutableSharedFlow<DeviceId>(extraBufferCapacity = 16)
     private val restored = MutableSharedFlow<DeviceId>(extraBufferCapacity = 16)
-    override val returns: kotlinx.coroutines.flow.Flow<DeviceId> = restored
-    override val losses: kotlinx.coroutines.flow.Flow<DeviceId> = lost
+    override val returns: Flow<DeviceId> = restored
+    override val losses: Flow<DeviceId> = lost
     private val unavailable = MutableStateFlow<Set<DeviceId>>(emptySet())
     private val connections = MutableStateFlow<Map<DeviceId, Owner>>(emptyMap())
 
     private val coyotes =
         java.util.concurrent.ConcurrentHashMap<
             DeviceId,
-            com.magichandy.mobile.transport.coyote.CoyoteSession,
+            CoyoteSession,
         >()
 
     private suspend fun connectCoyote(
@@ -195,7 +209,7 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
                 }
             }
         val session =
-            com.magichandy.mobile.transport.coyote.CoyoteSession.connect(
+            CoyoteSession.connect(
                 row.ref,
                 ScanResultId(id.value),
                 BluetoothConnector { _, _, _ -> link },
@@ -215,9 +229,47 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
         settings: DeviceSettings,
     ) = SavedDevice(DeviceRef(DeviceId(id), name, family, kind), settings)
 
+    private val cloudSessions = java.util.concurrent.ConcurrentHashMap<DeviceId, AutoblowSession>()
+
+    private suspend fun connectVacuGlide(
+        row: SavedDevice,
+        ownerScope: CoroutineScope,
+    ): DeviceTransport {
+        val id = row.ref.id
+        val wire =
+            SimulatedVacuGlide(
+                { id !in unavailable.value },
+                { outputs.value.getValue(id).speed },
+                { value ->
+                    outputs.update { all ->
+                        val before = all.getValue(id)
+                        all +
+                            (id to
+                                before.copy(speed = Percent(value), batches = before.batches + 1))
+                    }
+                },
+                { rememberStop(id) },
+            )
+        val session =
+            AutoblowSession(
+                row.ref,
+                wire,
+                clock ?: systemClock,
+                ownerScope,
+                { saved.single { it.ref.id == id }.settings },
+                { lost.tryEmit(id) },
+                {},
+            )
+        session.initialize()
+        cloudSessions[id] = session
+        return session
+    }
+
     override suspend fun connect(device: DeviceId, ownerScope: CoroutineScope): DeviceTransport? {
         val savedDevice = saved.firstOrNull { it.ref.id == device } ?: return null
         if (device in unavailable.value) return null
+        if (savedDevice.ref.family == DeviceFamily.VacuGlide)
+            return connectVacuGlide(savedDevice, ownerScope)
         if (savedDevice.ref.family == DeviceFamily.Coyote)
             return connectCoyote(savedDevice, ownerScope)
         val radio =
@@ -246,6 +298,7 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
     }
 
     override suspend fun disconnect(device: DeviceId) {
+        cloudSessions.remove(device)?.close()
         coyotes.remove(device)?.close()
         connections.value[device]?.session?.disconnect()
         connections.update { it - device }
@@ -253,6 +306,7 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
 
     /** Drop only this device's link. A persistent-speed motor keeps the last accepted speed. */
     public suspend fun loseLink(id: DeviceId) {
+        cloudSessions.remove(id)?.close()
         coyotes.remove(id)?.close()
         connections.value[id]?.radio?.retire()
         unavailable.update { it + id }
@@ -271,6 +325,8 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
     public fun hostDied() {
         coyotes.values.forEach { it.close() }
         coyotes.clear()
+        cloudSessions.values.forEach { it.close() }
+        cloudSessions.clear()
         connections.value.values.forEach { it.radio?.retire() }
         connections.value = emptyMap()
         saved.filterNot { it.ref.family == DeviceFamily.VacuGlide }.forEach { idle(it.ref.id) }
@@ -296,6 +352,11 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
         if (!fence.isCurrent() || device.id in unavailable.value)
             return StopEvidence.Unconfirmed(UnconfirmedCause.LinkLost)
         rememberStop(device.id)
+        if (
+            device.connection == ConnectionKind.IntifaceOnPhone ||
+                device.connection == ConnectionKind.IntifaceOnNetwork
+        )
+            return StopEvidence.Unconfirmed(UnconfirmedCause.BridgeOnly)
         return when (device.family) {
             DeviceFamily.Coyote -> StopEvidence.Unconfirmed(UnconfirmedCause.NoReply)
             DeviceFamily.LinearActuator,
@@ -341,12 +402,11 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
             val accepted = session?.write(batch, fence)
             if (accepted != null && accepted != WriteResult.Accepted) return accepted
             val speed =
-                when (val settings = selected.settings) {
+                when (val settings = saved.first { it.ref.id == device.id }.settings) {
                     is DeviceSettings.Coyote ->
                         0 // No reported baseline or manual strength was supplied.
                     is DeviceSettings.Vibrator -> minOf(settings.maxLevel.value, batch.pace.value)
-                    is DeviceSettings.VacuGlide ->
-                        batch.pace.value.coerceIn(0, settings.tempoRange.last)
+                    is DeviceSettings.VacuGlide -> error("VacuGlide uses its timed transport")
                     is DeviceSettings.Handy,
                     is DeviceSettings.LinearActuator,
                     DeviceSettings.AutoblowUltra -> batch.pace.value
@@ -371,3 +431,12 @@ public class SimulatedDevices(private val clock: Clock? = null) : DeviceDirector
             session?.stop(fence) ?: stopDevice(device, fence)
     }
 }
+
+private val systemClock =
+    object : Clock {
+        private val origin = TimeSource.Monotonic.markNow()
+
+        override fun elapsed() = origin.elapsedNow()
+
+        override fun now() = kotlin.time.Clock.System.now()
+    }

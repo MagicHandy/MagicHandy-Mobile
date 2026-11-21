@@ -1,15 +1,71 @@
 package com.magichandy.mobile.transport.simulated
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import kotlin.test.*
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.Explicitness
+import com.magichandy.mobile.core.api.Personality
+import com.magichandy.mobile.core.api.ReactionStyle
+import com.magichandy.mobile.core.api.ReplyLength
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.ports.DiagnosticEvent
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticsSink
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DiagnosticsExportTest {
+    @Test
+    fun `report includes only persona count and three enumerated wording settings`() = runTest {
+        val f = DebugFixture(this)
+        f.onboard()
+        val name = "Sensitive synthetic speaker"
+        val description = "Description marker\nStopRequested"
+        val memory = "sensitive memory for the persona"
+        val p =
+            Personality(
+                Explicitness.Intimate,
+                ReactionStyle.Tender,
+                description,
+                ReplyLength.Detailed,
+            )
+        f.core.submit(UserIntent.SavePersona(null, name, p, use = true))
+        f.core.submit(
+            UserIntent.DuplicatePersona(f.core.state.value.settings.persona.id, "Private copy")
+        )
+        f.send(UserIntent.SetMemory(true))
+        f.send(UserIntent.SendMessage("Remember that $memory"))
+        advanceTimeBy(150)
+        runCurrent()
+        assertEquals(listOf(memory), f.core.state.value.settings.memories)
+        val report = f.core.diagnosticsReport()
+        assertContains(report.text, "Personas 3\n")
+        assertContains(report.text, "Active wording Intimate Tender Detailed\n")
+        for (privateText in
+            listOf(
+                name,
+                description,
+                "Description marker",
+                memory,
+                "Private copy",
+                f.core.state.value.settings.persona.id.value,
+            )) {
+            assertFalse(privateText in report.text || privateText in report.fileName)
+        }
+        assertTrue(report.text.encodeToByteArray().size <= 256 * 1024)
+        f.scope.cancel()
+    }
+
     @Test
     fun `report retains Stop evidence after dismissal using only permitted fields`() = runTest {
         val secret = "private-marker-47"
@@ -59,5 +115,12 @@ internal class DiagnosticsExportTest {
         assertContains(report.text, "BridgeOnly")
         assertTrue(report.fileName.matches(Regex("MagicHandy-diagnostics-[0-9]+[.]txt")))
         f.scope.cancel()
+    }
+
+    @Test
+    fun `phone test diagnostics identify the exact installed build`() = runTest {
+        val fixture = DebugFixture(this) { it.copy(versionName = "0.1.1-device-test") }
+        assertContains(fixture.core.diagnosticsReport().text, "App version 0.1.1-device-test\n")
+        fixture.scope.cancel()
     }
 }

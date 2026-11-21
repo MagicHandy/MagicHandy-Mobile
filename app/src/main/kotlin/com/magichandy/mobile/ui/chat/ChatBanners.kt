@@ -52,24 +52,28 @@ fun ChatBanners(
                                 }
                             ),
                     )
-                is Banner.CheckInDue ->
-                    BannerView(
-                        tone = BannerTone.Warn,
-                        title = stringResource(R.string.banner_check_in_title),
-                        body =
-                            stringResource(
-                                R.string.banner_check_in_body,
-                                Words.countdown(banner.answerWithin),
-                                banner.name,
-                            ),
-                        actionLabel = stringResource(R.string.banner_check_in_action),
-                        onAction = { onIntent(UserIntent.AnswerCheckIn(banner.device)) },
-                    )
+                is Banner.CheckInDue -> CheckInBanner(banner, onIntent)
                 is Banner.StartRefused ->
                     StartRefusedBanner(banner.cause, onOpenDevices, onOpenSettings)
             }
         }
     }
+}
+
+@Composable
+internal fun CheckInBanner(banner: Banner.CheckInDue, onIntent: (UserIntent) -> Unit) {
+    BannerView(
+        tone = BannerTone.Warn,
+        title = stringResource(R.string.banner_check_in_title),
+        body =
+            stringResource(
+                R.string.banner_check_in_body,
+                Words.countdown(banner.answerWithin),
+                banner.name,
+            ),
+        actionLabel = stringResource(R.string.banner_check_in_action),
+        onAction = { onIntent(UserIntent.AnswerCheckIn(banner.device)) },
+    )
 }
 
 @Composable

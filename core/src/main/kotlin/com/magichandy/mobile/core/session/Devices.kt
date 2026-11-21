@@ -4,6 +4,8 @@ package com.magichandy.mobile.core.session
 import com.magichandy.mobile.core.CoreDependencies
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.Banner
+import com.magichandy.mobile.core.api.ConnectionKind
+import com.magichandy.mobile.core.api.DeviceConnectionFailure
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceOutput
@@ -15,8 +17,13 @@ import com.magichandy.mobile.core.api.RunMembership
 import com.magichandy.mobile.core.api.StartRefusal
 import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.motion.MotionEngine
+import com.magichandy.mobile.core.ports.BridgeSelectionRequired
+import com.magichandy.mobile.core.ports.DeviceConnectionException
+import com.magichandy.mobile.core.ports.DeviceLinkLoss
+import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import java.io.IOException
+import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -30,6 +37,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal class Devices(
     private val d: CoreDependencies,
@@ -42,6 +50,7 @@ internal class Devices(
     private var lead: DeviceId? = null
 
     private class Connection(val scope: CoroutineScope) {
+        var failure: DeviceConnectionFailure? = null
         var checking: Job? = null
         var opening: Job? = null
         var closing = false
@@ -57,16 +66,34 @@ internal class Devices(
         val read = owner.checkConnection ?: return
         connection.checking =
             connection.scope.launch(d.dispatchers.session) {
+                val started = d.clock.elapsed()
                 val reachable =
                     try {
-                        kotlinx.coroutines.withTimeoutOrNull(5000) {
-                            withContext(d.dispatchers.io) { read() }
-                        } == true
+                        val handyCloud = owner.device.connection == ConnectionKind.HandyCloud
+                        val result =
+                            withTimeoutOrNull(if (handyCloud) 8500L else 5000L) {
+                                withContext(d.dispatchers.io) { read() }
+                            }
+                        if (result == null && handyCloud)
+                            connection.failure =
+                                DeviceConnectionFailure(DeviceConnectionFailure.Reason.TimedOut)
+                        result == true
+                    } catch (e: DeviceConnectionException) {
+                        connection.failure = e.failure
+                        false
                     } catch (_: IOException) {
                         false
                     } catch (_: SecurityException) {
                         false
                     }
+                if (reachable)
+                    updateReadings(
+                        owner,
+                        (d.clock.elapsed() - started).takeIf {
+                            owner.device.connection == ConnectionKind.HandyCloud ||
+                                owner.device.connection == ConnectionKind.AutoblowCloud
+                        },
+                    )
                 if (!reachable && !connection.closing && engine.state.value.owners[id] === owner)
                     d.scope.launch(d.dispatchers.session) {
                         if (engine.state.value.owners[id] === owner) lose(listOf(id))
@@ -97,37 +124,67 @@ internal class Devices(
         val connection =
             Connection(CoroutineScope(context + SupervisorJob(context[Job]) + d.dispatchers.stopIo))
         connections[id] = connection
-        edit(id) { it.copy(status = DeviceStatus.Connecting) }
-        connection.opening = connection.scope.launch(d.dispatchers.session) { open(id, connection) }
+        edit(id) { it.copy(status = DeviceStatus.Connecting, connectionFailure = null) }
+        connection.opening =
+            connection.scope.launch(d.dispatchers.session) { open(id, row.connection, connection) }
     }
 
-    private suspend fun open(id: DeviceId, connection: Connection) {
+    suspend fun retryConnection(id: DeviceId) {
+        val row = ui.value.devices.devices.singleOrNull { it.id == id } ?: return
+        if (row.connection != ConnectionKind.HandyCloud) return
+        if (row.canRetryWhileConnecting) {
+            if (connections[id]?.closing != false || id in engine.state.value.owners) return
+            disconnect(id)
+        } else if (row.status != DeviceStatus.Lost && row.status != DeviceStatus.NotConnected)
+            return
+        connect(id)
+    }
+
+    private suspend fun verifiedOwner(id: DeviceId, connection: Connection): DeviceTransport {
+        val ready =
+            withContext(d.dispatchers.io) {
+                try {
+                    d.runHost.ensureRunning()
+                } catch (_: IOException) {
+                    record(DiagnosticKind.ServiceUnavailable)
+                    false
+                }
+            }
+        if (!ready) {
+            refused(StartRefusal.ServiceUnavailable)
+            throw DeviceConnectionException(
+                DeviceConnectionFailure(DeviceConnectionFailure.Reason.ServiceStartFailed)
+            )
+        }
+        return withContext(d.dispatchers.io) { d.devices.connect(id, connection.scope) }
+            ?: throw IOException("Device connection unavailable")
+    }
+
+    private suspend fun open(id: DeviceId, kind: ConnectionKind, connection: Connection) {
         var attached = false
         var needsSelection = false
         try {
-            val ready =
-                withContext(d.dispatchers.io) {
-                    try {
-                        d.runHost.ensureRunning()
-                    } catch (_: IOException) {
-                        record(DiagnosticKind.ServiceUnavailable)
-                        false
-                    }
-                }
-            if (!ready) {
-                refused(StartRefusal.ServiceUnavailable)
+            val owner =
+                if (kind == ConnectionKind.HandyCloud) {
+                    // One deadline covers service admission and every cloud exchange in this
+                    // attempt.
+                    withTimeoutOrNull(3000L) { verifiedOwner(id, connection) }
+                        ?: throw DeviceConnectionException(
+                            DeviceConnectionFailure(DeviceConnectionFailure.Reason.TimedOut)
+                        )
+                } else verifiedOwner(id, connection)
+            if (connection.closing || !d.runHost.isRunning) return
+            if (owner.device.id != id) {
+                record(DiagnosticKind.DeviceConnectionFailed)
                 return
             }
-            val owner = withContext(d.dispatchers.io) { d.devices.connect(id, connection.scope) }
-            if (connection.closing || owner == null || owner.device.id != id) return
             engine.attach(owner)
             attached = true
             owner.feedback?.let { flow ->
                 connection.scope.launch(d.dispatchers.session) {
                     flow.collect { value ->
                         if (
-                            value != null &&
-                                engine.state.value.owners[id] === owner &&
+                            engine.state.value.owners[id] === owner &&
                                 id in engine.state.value.members
                         )
                             ui.update { s ->
@@ -156,9 +213,19 @@ internal class Devices(
                 }
             }
             edit(id) {
-                it.copy(status = DeviceStatus.Connected, membership = RunMembership.NextRun)
+                it.copy(
+                    status = DeviceStatus.Connected,
+                    membership = RunMembership.NextRun,
+                    connectionFailure = null,
+                )
             }
-            if (lead == null) setLead(id)
+            ui.update { state ->
+                state.copy(
+                    banners = state.banners.filterNot { it is Banner.DeviceLost && it.device == id }
+                )
+            }
+            refreshLead()
+            connection.scope.launch(d.dispatchers.session) { updateReadings(owner) }
             if (
                 safety.awaitsReturn(id) ||
                     engine.state.value.receipt?.outcomes.orEmpty().any {
@@ -166,8 +233,11 @@ internal class Devices(
                     }
             )
                 safety.retryRecovery(id)
-        } catch (_: com.magichandy.mobile.core.ports.BridgeSelectionRequired) {
+        } catch (_: BridgeSelectionRequired) {
             needsSelection = true
+            record(DiagnosticKind.DeviceConnectionFailed)
+        } catch (e: DeviceConnectionException) {
+            connection.failure = e.failure
             record(DiagnosticKind.DeviceConnectionFailed)
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -182,12 +252,34 @@ internal class Devices(
         }
     }
 
+    private suspend fun updateReadings(owner: DeviceTransport, latency: Duration? = null) {
+        val battery =
+            try {
+                withContext(d.dispatchers.io) { owner.readBattery() }
+            } catch (_: IOException) {
+                null
+            } catch (_: SecurityException) {
+                null
+            }
+        if (engine.state.value.owners[owner.device.id] === owner)
+            edit(owner.device.id) {
+                it.copy(battery = battery, linkLatency = latency ?: owner.measuredLatency)
+            }
+    }
+
+    suspend fun linkLost(loss: DeviceLinkLoss) {
+        val active = connections[loss.device] ?: return
+        if (loss.generation == null || active.scope.coroutineContext[Job] === loss.generation)
+            lose(listOf(loss.device))
+    }
+
     suspend fun lose(ids: List<DeviceId>) {
+        val original = ids.associateWith(connections::get)
         val state = engine.state.value
         val participants = ids.filter { it in state.members }.mapNotNull(state.owners::get)
         if (participants.isNotEmpty()) {
             participants.forEach { safety.lost(it.device) }
-            engine.stop(null, expected = state.epoch)
+            engine.stop(null, expected = state.epoch, lostDevice = participants.first().device.name)
             ui.update { s ->
                 s.copy(
                     banners =
@@ -198,10 +290,16 @@ internal class Devices(
                 )
             }
         }
-        for (id in ids) disconnect(id, lost = true)
+        for ((id, connection) in original) {
+            if (connection != null && connections[id] === connection) disconnect(id, lost = true)
+        }
     }
 
-    suspend fun disconnect(id: DeviceId, lost: Boolean = false) {
+    suspend fun releaseAfterHostLoss() {
+        for (id in connections.keys.toList()) disconnect(id, alreadyStopped = true)
+    }
+
+    suspend fun disconnect(id: DeviceId, lost: Boolean = false, alreadyStopped: Boolean = false) {
         val connection = connections[id] ?: return
         if (connection.closing) return
         connection.closing = true
@@ -214,7 +312,7 @@ internal class Devices(
         if (lost && id in engine.state.value.members) {
             safety.lost(owner.device)
             // Preserve the target in the Stop fan-out before removing its live handle.
-            engine.stop(null)
+            engine.stop(null, lostDevice = owner.device.name)
             ui.update { s ->
                 s.copy(
                     banners =
@@ -228,7 +326,7 @@ internal class Devices(
                         ) + s.banners.filterNot { it is Banner.DeviceLost && it.device == id }
                 )
             }
-        } else if (!lost) {
+        } else if (!lost && !alreadyStopped) {
             engine.stop(null, disconnecting = owner)
         }
         engine.detach(owner)
@@ -249,11 +347,14 @@ internal class Devices(
         edit(id) {
             it.copy(
                 status = if (lost) DeviceStatus.Lost else DeviceStatus.NotConnected,
+                connectionFailure = if (lost) connection.failure else null,
                 output = null,
+                battery = null,
+                linkLatency = null,
                 membership = RunMembership.NotInRun,
             )
         }
-        if (id == lead) setLead(engine.state.value.owners.keys.firstOrNull())
+        refreshLead()
     }
 
     suspend fun reconnectSaved() {
@@ -268,6 +369,14 @@ internal class Devices(
         for (id in (saved + unresolved).distinct()) {
             if (id !in engine.state.value.owners) connect(id)
         }
+    }
+
+    fun refreshLead() {
+        val eligible =
+            ui.value.devices.devices.filter {
+                it.status == DeviceStatus.Connected && it.membership == RunMembership.NextRun
+            }
+        setLead(eligible.firstOrNull { it.id == lead }?.id ?: eligible.firstOrNull()?.id)
     }
 
     fun setLead(id: DeviceId?) {
@@ -313,7 +422,20 @@ internal class Devices(
     }
 
     fun projectSafety() {
-        ui.update { it.withRunEvidence(engine.state.value, safety.interrupted.value, lead) }
+        ui.update { before ->
+            val s = engine.state.value
+            val projected = before.withRunEvidence(s, safety.interrupted.value, lead)
+            projected.copy(
+                stopReceipt =
+                    projected.stopReceipt?.takeUnless {
+                        it.isNoDevice && !safety.inspectionComplete.value
+                    },
+                devices =
+                    projected.devices.copy(
+                        awaitingReturn = safety.awaitingReturn.value.keys - s.reconciled
+                    ),
+            )
+        }
     }
 
     fun refused(cause: StartRefusal) {

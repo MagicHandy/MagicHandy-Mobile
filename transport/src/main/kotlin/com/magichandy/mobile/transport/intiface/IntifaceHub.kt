@@ -1,13 +1,28 @@
 // Ported from internal/transport/intiface_{hub,session,devices}.go at 1b80d72e.
 package com.magichandy.mobile.transport.intiface
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.ports.BridgeSelectionRequired
+import com.magichandy.mobile.core.ports.BridgeTarget
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticReporter
+import com.magichandy.mobile.core.ports.Epoch
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
-import okhttp3.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * One process-owned v3 connection per canonical address. Discovery and output use reference-counted
@@ -22,7 +37,7 @@ public class IntifaceHub(private val http: OkHttpClient, private val scope: Coro
         val origin = Request.Builder().url(address).build().url
         val entry =
             synchronized(entries) {
-                (entries[origin]
+                (entries[origin]?.takeUnless { it.ready.isCancelled || it.session.isRetired }
                         ?: run {
                             val session = BridgeSession(scope)
                             Entry(
@@ -131,7 +146,11 @@ internal class BridgeSession(private val scope: CoroutineScope) {
 
     private var ping: Job? = null
     private var stopping = 0
-    private var failed = false
+    @Volatile private var failed = false
+
+    // A lost owner may keep its lease while a new discovery opens a fresh socket for this origin.
+    val isRetired: Boolean
+        get() = failed || socket.isClosed
 
     suspend fun open(http: OkHttpClient, address: String) {
         socket.open(http, address)
@@ -160,6 +179,10 @@ internal class BridgeSession(private val scope: CoroutineScope) {
     fun usable(l: BridgeLease) =
         synchronized(socket.wire) { !failed && claims[l.feature.index] === l && stopping == 0 }
 
+    /** Targeted zero is valid during StopAll only while this lease still owns the device index. */
+    fun owns(l: BridgeLease) =
+        synchronized(socket.wire) { !failed && claims[l.feature.index] === l }
+
     fun drop(l: BridgeLease) {
         synchronized(socket.wire) { claims.remove(l.feature.index, l) }
     }
@@ -182,6 +205,7 @@ internal class BridgeSession(private val scope: CoroutineScope) {
                     it.forEach(BridgeLease::invalidate)
                 }
             }
+        ping?.cancel()
         affected.forEach { it.lost() }
     }
 

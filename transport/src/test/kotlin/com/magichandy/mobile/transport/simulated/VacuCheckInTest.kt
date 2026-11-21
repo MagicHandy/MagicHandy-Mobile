@@ -1,13 +1,24 @@
 package com.magichandy.mobile.transport.simulated
 
-import com.magichandy.mobile.core.api.*
-import kotlin.test.*
+import com.magichandy.mobile.core.api.Banner
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceSettings
+import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.UserIntent
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class VacuCheckInTest {
     @Test
     fun `answering a check-in rearms it while an unanswered minute triggers a real Stop`() =
@@ -55,4 +66,22 @@ internal class VacuCheckInTest {
             assertEquals(RunPhase.Playing, f.core.state.value.run.phase)
             f.scope.cancel()
         }
+
+    @Test
+    fun `a pending check-in shows its remaining time`() = runTest {
+        val f = DebugFixture(this)
+        val id = DeviceId("vacuglide")
+        f.onboard()
+        f.connect(id)
+        f.send(UserIntent.SetCheckInInterval(id, Duration.parse("10s")))
+        f.send(UserIntent.StartMotion)
+        advanceTimeBy(69000)
+        runCurrent()
+        val due = f.core.state.value.banners.filterIsInstance<Banner.CheckInDue>().single()
+        assertEquals(1L, due.answerWithin.inWholeSeconds)
+        advanceTimeBy(1100)
+        runCurrent()
+        assertEquals(RunPhase.Idle, f.core.state.value.run.phase)
+        f.scope.cancel()
+    }
 }

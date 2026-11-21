@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /** The tone of a [Banner]. */
@@ -89,12 +90,13 @@ fun Banner(
 
 /** A short line of muted guidance. */
 @Composable
-fun Hint(text: String, modifier: Modifier = Modifier) {
+fun Hint(text: String, modifier: Modifier = Modifier, textAlign: TextAlign? = null) {
     Text(
         text,
         style =
             MagicHandyTheme.type.caption.copy(lineHeight = MagicHandyTheme.type.small.lineHeight),
         color = MagicHandyTheme.colors.muted,
+        textAlign = textAlign,
         modifier = modifier,
     )
 }

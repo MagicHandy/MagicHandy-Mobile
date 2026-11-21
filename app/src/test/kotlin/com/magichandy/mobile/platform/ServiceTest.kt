@@ -1,18 +1,27 @@
 package com.magichandy.mobile.platform
 
-import android.app.*
+import android.app.Application
+import android.app.Notification
 import android.content.Intent
-import com.magichandy.mobile.core.api.*
+import android.os.Looper
+import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.createMagicHandyCore
 import com.magichandy.mobile.transport.simulated.simulatedDependencies
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.runTest
-import org.junit.*
+import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.*
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 internal class SyntheticApp : Application(), CoreOwner {
@@ -21,12 +30,18 @@ internal class SyntheticApp : Application(), CoreOwner {
             simulatedDependencies(CoroutineScope(SupervisorJob() + Dispatchers.Default))
         )
     }
+    override val stopScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val tileEvents = mutableListOf<Boolean>()
     val stops = mutableListOf<StopSource>()
+    var stopBarrier: CompletableDeferred<Unit>? = null
     override val core by lazy {
         object : MagicHandyCore by fake {
             override fun updateStopTileAdded(added: Boolean) {
                 tileEvents += added
+            }
+
+            override suspend fun awaitEmergencyStop() {
+                stopBarrier?.await()
             }
 
             override fun emergencyStop(source: StopSource) {
@@ -100,7 +115,11 @@ internal class ServiceTest {
     @Test
     fun browserHasNoListenerBeforeSignInAndClosesItsReservedLoopbackPort() {
         val browser =
-            LoopbackBrowser(CoroutineScope(SupervisorJob() + Dispatchers.Default)) {
+            LoopbackBrowser(
+                CoroutineScope(SupervisorJob() + Dispatchers.Default),
+                {},
+                { "Return" },
+            ) { _, _ ->
                 error("unexpected browser launch")
             }
         val uri = java.net.URI(browser.redirectUri)
@@ -110,5 +129,22 @@ internal class ServiceTest {
         java.net.ServerSocket(uri.port, 1, java.net.InetAddress.getByName("127.0.0.1")).use {
             assertTrue(it.isBound)
         }
+    }
+
+    @Test
+    fun `task removal fences immediately and retains the service through Stop delivery`() {
+        val controller = Robolectric.buildService(CoreService::class.java).create()
+        val service = controller.get()
+        val main = Shadows.shadowOf(Looper.getMainLooper())
+        val barrier = CompletableDeferred<Unit>()
+        app.stopBarrier = barrier
+        service.onTaskRemoved(Intent())
+        main.idle()
+        assertEquals(listOf(StopSource.TaskRemoved), app.stops)
+        assertFalse(Shadows.shadowOf(service).isStoppedBySelf)
+        barrier.complete(Unit)
+        main.idle()
+        assertTrue(Shadows.shadowOf(service).isStoppedBySelf)
+        controller.destroy()
     }
 }

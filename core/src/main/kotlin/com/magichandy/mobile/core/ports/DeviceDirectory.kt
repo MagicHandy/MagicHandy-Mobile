@@ -3,6 +3,7 @@ package com.magichandy.mobile.core.ports
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceSettings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -20,6 +21,9 @@ public data class SavedDevice(
      */
     public val bridgeIdentity: String? = null,
 )
+
+/** A loss belongs to the scope supplied to connect; legacy directories may omit that identity. */
+public data class DeviceLinkLoss(public val device: DeviceId, public val generation: Job? = null)
 
 /** Device connection boundary. Connecting an owner verifies it and leaves it idle. */
 public interface DeviceDirectory : RecoveryStops {
@@ -46,6 +50,10 @@ public interface DeviceDirectory : RecoveryStops {
     public val bluetoothOn: StateFlow<Boolean>
     /** Notify the core about unexpected link loss, including when only Bluetooth drops. */
     public val losses: Flow<DeviceId>
+    /** Supplies generation-bound callbacks when available. Older directories publish [losses]. */
+    public val connectionLosses: Flow<DeviceLinkLoss>?
+        get() = null
+
     /** Previously lost saved devices becoming reachable again, when the adapter has an event. */
     public val returns: Flow<DeviceId>
         get() = kotlinx.coroutines.flow.emptyFlow()

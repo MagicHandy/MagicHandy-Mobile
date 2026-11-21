@@ -1,9 +1,15 @@
 package com.magichandy.mobile.transport.simulated
 
-import com.magichandy.mobile.core.api.*
-import kotlin.test.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.api.UserIntent
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.runTest
 
 internal class BridgeRecoveryTest {
     @Test

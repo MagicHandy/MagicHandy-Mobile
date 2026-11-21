@@ -1,6 +1,7 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.api.ConnectionKind
+import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.StartRefusal
 import com.magichandy.mobile.core.api.StopOutcome
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -56,22 +58,32 @@ internal class RunSafety(
     private val host: RunHost,
     private val recovery: RecoveryStops,
     private val clock: Clock,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     private val storage: CoroutineDispatcher,
 ) {
     private val serial = Mutex()
-    private var inspected = false
+    @Volatile private var inspected = false
+    val inspectionComplete = MutableStateFlow(false)
     private val restored = MutableStateFlow<RunJournal?>(null)
     val interrupted = restored.asStateFlow()
     private val unavailable = MutableStateFlow(false)
     val journalUnavailable = unavailable.asStateFlow()
-    private val lostPersistent = MutableStateFlow<Map<DeviceId, DeviceRef>>(emptyMap())
+
+    internal class ReturnStop(val ref: DeviceRef)
+
+    private val lostPersistent = MutableStateFlow<Map<DeviceId, ReturnStop>>(emptyMap())
+
+    val awaitingReturn = lostPersistent.asStateFlow()
+
+    fun checkedLocally(id: DeviceId) {
+        lostPersistent.update { it - id }
+    }
 
     fun awaitsReturn(id: DeviceId) = id in lostPersistent.value
 
     fun lost(ref: DeviceRef) {
-        if (ref.family == com.magichandy.mobile.core.api.DeviceFamily.VacuGlide)
-            lostPersistent.update { it + (ref.id to ref) }
+        if (ref.family == DeviceFamily.VacuGlide)
+            lostPersistent.update { it + (ref.id to ReturnStop(ref)) }
     }
 
     init {
@@ -86,7 +98,7 @@ internal class RunSafety(
                             .map { it.device }
                             .toSet()
                     s.journal?.devices.orEmpty().filter { ref ->
-                        ref.family == com.magichandy.mobile.core.api.DeviceFamily.VacuGlide &&
+                        ref.family == DeviceFamily.VacuGlide &&
                             ref.id !in s.reconciled &&
                             (ref.id in lost || ref.id in unresolved)
                     }
@@ -105,15 +117,14 @@ internal class RunSafety(
 
         scope.launch(storage) {
             combine(engine.state, lostPersistent) { s, lost ->
-                    s.journal?.runId to
-                        if (s.members.isEmpty())
-                            s.resolved - s.inFlight.values.toSet() - (lost.keys - s.reconciled)
-                        else emptySet()
+                    val record = s.journal?.takeIf { s.members.isEmpty() } ?: return@combine null
+                    val resolved =
+                        s.resolved - s.inFlight.values.toSet() - (lost.keys - s.reconciled)
+                    record.runId to (record.devices.map { it.id }.toSet() - resolved)
                 }
                 .distinctUntilChanged()
-                .collect { (id, confirmed) ->
-                    if (id != null && confirmed.isNotEmpty())
-                        serial.withLock { persistEvidence(id, confirmed) }
+                .collect { change ->
+                    if (change != null) serial.withLock { syncStopped(change.first) }
                 }
         }
     }
@@ -144,10 +155,11 @@ internal class RunSafety(
         }
         unavailable.value = false
         inspected = true
+        inspectionComplete.value = true
         return true
     }
 
-    private fun stopSaved(record: RunJournal, returning: Set<DeviceId> = emptySet()) {
+    private fun stopSaved(record: RunJournal, returning: Map<DeviceId, ReturnStop> = emptyMap()) {
         engine.stop(
             null,
             targets = { state ->
@@ -158,13 +170,22 @@ internal class RunSafety(
                             it.id in state.resolved
                     }
                     .map { ref ->
-                        state.owners[ref.id]?.let(::StopTarget) ?: savedTarget(ref)
+                        val target = state.owners[ref.id]?.let(::StopTarget) ?: savedTarget(ref)
+                        returning[ref.id]?.let { trackReturn(target, it) } ?: target
                     }
             },
             forceRetry = record.devices.map { it.id }.toSet(),
             journal = record,
         )
     }
+
+    private fun trackReturn(target: StopTarget, obligation: ReturnStop): StopTarget =
+        target.copy(
+            onConfirmed = {
+                val id = target.device.id
+                lostPersistent.update { lost -> if (lost[id] === obligation) lost - id else lost }
+            }
+        )
 
     fun emergencyStop(source: StopSource) {
         engine.stop(
@@ -182,9 +203,23 @@ internal class RunSafety(
                         }
                         .map {
                             savedTarget(DeviceRef(it.device, it.name, it.family, it.connection))
-                        }
+                        } +
+                    lostPersistent.value.values
+                        .filter { it.ref.id !in state.owners && it.ref.id !in state.reconciled }
+                        .map { savedTarget(it.ref) }
             },
         )
+        if (!inspected) scope.launch(storage) { initialize() }
+    }
+
+    /**
+     * Wait only after the direct Stop has fenced output. Flush recovery evidence before returning.
+     */
+    suspend fun awaitSettled() {
+        initialize()
+        val settled = engine.state.first { it.pending.isEmpty() && it.inFlight.isEmpty() }
+        val record = settled.journal ?: return
+        withContext(storage) { serial.withLock { syncStopped(record.runId) } }
     }
 
     private fun savedTarget(ref: DeviceRef): StopTarget =
@@ -196,6 +231,40 @@ internal class RunSafety(
                 ConnectionKind.IntifaceOnPhone,
                 ConnectionKind.IntifaceOnNetwork ->
                     StopEvidence.Unconfirmed(UnconfirmedCause.AppStopped)
+            }
+        }
+
+    private suspend fun syncStopped(id: RunId) {
+        if (!inspect()) return
+        val state = engine.state.value
+        val record = state.journal?.takeIf { it.runId == id && state.members.isEmpty() } ?: return
+        val retained = lostPersistent.value.keys - state.reconciled
+        val resolved = state.resolved - state.inFlight.values.toSet() - retained
+        val outstanding = record.devices.filterNot { it.id in resolved }
+        try {
+            if (
+                outstanding.isNotEmpty() && !store.retainStops(record.copy(devices = outstanding))
+            ) {
+                unavailable.value = true
+                return
+            }
+            persistEvidence(id, resolved)
+        } catch (_: IOException) {
+            DiagnosticReporter.record(DiagnosticKind.JournalUnavailable)
+            unavailable.value = true
+        }
+    }
+
+    suspend fun canForget(device: DeviceId): Boolean =
+        withContext(storage) {
+            serial.withLock {
+                if (!inspect()) return@withLock false
+                val s = engine.state.value
+                if (device in lostPersistent.value && device !in s.reconciled) return@withLock false
+                if (device in s.pending || device in s.inFlight.values) return@withLock false
+                val record = store.read()
+                record?.devices.orEmpty().none { it.id == device } ||
+                    record?.runId == s.journal?.runId && device in s.resolved
             }
         }
 
@@ -278,7 +347,8 @@ internal class RunSafety(
             serial.withLock {
                 val current = engine.state.value
                 val record = current.journal ?: return@withLock current.epoch == expected
-                if (current.members.isEmpty() || current.epoch != expected) return@withLock false
+                if (current.epoch != expected) return@withLock false
+                if (current.members.isEmpty()) return@withLock current.canStart
                 if (record.autopilot == on) return@withLock true
                 val next =
                     transition(record.copy(autopilot = on), record.intended)
@@ -364,17 +434,14 @@ internal class RunSafety(
                 val returning =
                     lostPersistent.value.filterKeys { returned == null || it == returned }
                 if (saved != null && saved.version == 1) {
-                    val retry = returning.keys - state.reconciled
-                    stopSaved(saved, retry)
-                    lostPersistent.update { it - retry - state.reconciled }
+                    stopSaved(saved, returning.filterKeys { it !in state.reconciled })
                 } else if (returning.isNotEmpty()) {
                     engine.stop(
                         null,
                         expected = state.epoch,
-                        targets = { returning.values.map(::savedTarget) },
+                        targets = { returning.values.map { trackReturn(savedTarget(it.ref), it) } },
                         forceRetry = returning.keys,
                     )
-                    lostPersistent.update { it - returning.keys }
                 }
             }
         }

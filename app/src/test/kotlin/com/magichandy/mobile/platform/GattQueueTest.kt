@@ -1,15 +1,78 @@
 package com.magichandy.mobile.platform
 
-import com.magichandy.mobile.platform.bluetooth.*
+import com.magichandy.mobile.platform.bluetooth.FencedGatt
+import com.magichandy.mobile.platform.bluetooth.GattQueue
 import java.io.IOException
-import kotlin.test.*
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class GattQueueTest {
+    @Test
+    fun `an optional read skips a busy link and a settled read refusal leaves priority Stop usable`() =
+        runTest {
+            val queue = GattQueue { error("a settled optional read retired the link") }
+            val read = async { queue.tryOptional("battery", 500.milliseconds) { true } }
+            runCurrent()
+            assertEquals(
+                null,
+                queue.tryOptional("second-read", 500.milliseconds) {
+                    error("queued optional read")
+                },
+            )
+            var sent = false
+            val stop = async {
+                queue.execute("write", 300.milliseconds, priority = true) {
+                    sent = true
+                    true
+                }
+            }
+            runCurrent()
+            queue.complete("battery", 5)
+            assertEquals(null, read.await())
+            runCurrent()
+            assertTrue(sent)
+            queue.complete("write", 0)
+            stop.await()
+            assertEquals(null, queue.tryOptional("battery", 500.milliseconds) { false })
+        }
+
+    @Test
+    fun `a timed out optional native read retires its generation and a late callback cannot satisfy its successor`() =
+        runTest {
+            val holder = java.util.concurrent.atomic.AtomicReference<GattQueue>()
+            var retires = 0
+            val old = GattQueue {
+                retires++
+                holder.get().close()
+            }
+                .also(holder::set)
+            val reading = async { old.tryOptional("battery", 100.milliseconds) { true } }
+            runCurrent()
+            advanceTimeBy(101)
+            assertEquals(null, reading.await())
+            assertEquals(1, retires)
+            val fresh = GattQueue { error("successor unexpectedly retired") }
+            val current = async { fresh.execute("battery", 100.milliseconds) { true } }
+            runCurrent()
+            old.complete("battery", 0, byteArrayOf(7))
+            runCurrent()
+            assertFalse(current.isCompleted)
+            fresh.complete("battery", 0, byteArrayOf(42))
+            assertContentEquals(byteArrayOf(42), current.await())
+        }
+
     @Test
     fun `only a matching callback releases a slot and a late callback cannot release its successor`() =
         runTest {
@@ -108,4 +171,22 @@ internal class GattQueueTest {
             assertIs<IOException>(later.await().exceptionOrNull())
             assertEquals(1, retired)
         }
+
+    @Test
+    fun `an optional priority hint cannot invalidate Stop evidence after a permission or binder change`() {
+        var attempts = 0
+        val link =
+            com.magichandy.mobile.platform.bluetooth.AndroidGattLink(
+                com.magichandy.mobile.transport.ble.GattProfile.Coyote,
+                lost = {},
+                applyPriority = {
+                    attempts++
+                    if (attempts == 1) throw SecurityException("synthetic permission")
+                    throw IllegalStateException("synthetic retired link")
+                },
+            )
+        link.setActive(true)
+        link.setActive(false)
+        assertEquals(2, attempts)
+    }
 }

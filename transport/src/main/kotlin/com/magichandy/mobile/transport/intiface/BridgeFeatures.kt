@@ -1,11 +1,21 @@
 // Ported from internal/transport/intiface_{types,devices,protocol}.go at 1b80d72e.
 package com.magichandy.mobile.transport.intiface
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.ports.BridgeTarget
 import java.io.IOException
 import java.security.MessageDigest
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 internal data class Motor(val index: Int, val steps: Int)
 
@@ -73,10 +83,15 @@ private fun features(device: JsonObject): List<Feature> {
             .toHexString()
     fun identity(kind: String, feature: Int) = "$fingerprint/$kind/$feature"
     val linear = commands["LinearCmd"] as? JsonArray
-    if (linear != null)
+    if (!linear.isNullOrEmpty())
         return linear.mapIndexedNotNull { axis, item ->
             val f = item as? JsonObject ?: return@mapIndexedNotNull null
-            if (f.containsKey("ActuatorType") && f["ActuatorType"] != JsonPrimitive("Position"))
+            // The v3 DeviceList example uses Linear; Central also advertises Position.
+            val actuator = f["ActuatorType"]
+            if (
+                actuator != null &&
+                    (actuator as? JsonPrimitive)?.contentOrNull !in setOf("Position", "Linear")
+            )
                 return@mapIndexedNotNull null
             val steps =
                 (f["StepCount"] as? JsonPrimitive)?.longOrNull?.takeIf { it in 1..0xffffffffL }

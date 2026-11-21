@@ -5,12 +5,16 @@ import com.magichandy.mobile.core.api.AfterLossBehaviour
 import com.magichandy.mobile.core.api.ConnectionKind
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceOutput
 import com.magichandy.mobile.core.api.Limits
 import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.UnconfirmedCause
 import com.magichandy.mobile.core.motion.MotionFrame
 import com.magichandy.mobile.core.motion.hasIncreasingTimes
 import kotlin.time.Duration
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.StateFlow
 
 /** Stable device identity and recovery information. Contains no address, credential or payload. */
 @kotlinx.serialization.Serializable
@@ -75,8 +79,14 @@ public data class MotionBatch(
 }
 
 /**
- * Outcome at the transport boundary. An uncertain write retires the link and requires recovery
- * Stop.
+ * Outcome at the transport boundary.
+ * - [Accepted]: command bytes were accepted; a late acceptance after fence expiry triggers recovery
+ *   Stop.
+ * - [Stale]: known pre-submission denial before any write bytes were sent (expired fence or changed
+ *   personal ceiling); does not retire the link, and a still-current timed stream skips and
+ *   resamples.
+ * - [Uncertain]: delivery is uncertain or partially submitted; retires the link and triggers
+ *   recovery Stop.
  */
 public enum class WriteResult {
     Accepted,
@@ -84,10 +94,12 @@ public enum class WriteResult {
     Uncertain,
 }
 
-/** Connection verification can send Stop only. The caller cannot obtain a motion fence. */
+/**
+ * Connection verification may read device state or establish idle, with cancellation as its fence.
+ */
 public suspend fun DeviceTransport.confirmIdleForConnection(): StopEvidence {
-    val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
-    return stop(OutputFence(Epoch(-1)) { job?.isActive != false })
+    val job = currentCoroutineContext()[Job]
+    return establishIdle(OutputFence(Epoch(-1)) { job?.isActive != false })
 }
 
 /** Stop evidence is attributed to the device or describes why the result is unresolved. */
@@ -99,19 +111,44 @@ public sealed interface StopEvidence {
     public data class Unconfirmed(public val cause: UnconfirmedCause) : StopEvidence
 }
 
+/**
+ * Monotonic Play origin estimated from its round trip and the longest of the last eight buffered
+ * writes.
+ */
+public data class BufferedPlaybackTiming(
+    public val startedAt: Duration? = null,
+    public val recentCommandLatency: Duration = Duration.ZERO,
+)
+
 /** One device owner. All output enters here from the single motion engine. */
 public interface DeviceTransport {
+    /**
+     * Establish verified idle for a new owner. Implementations may read state or stop, never start
+     * motion.
+     */
+    public suspend fun establishIdle(fence: OutputFence): StopEvidence = stop(fence)
+
     /** Capabilities for engine-owned fitting of an immediate linear stream. */
     public val linearSampling: LinearSampling?
         get() = null
+
+    /** Latest measured cloud request round trip, when available. */
+    public val measuredLatency: Duration?
+        get() = null
+
+    /** Timing of an HSP device's accepted buffer and Play, when the transport measures them. */
+    public val bufferedTiming: BufferedPlaybackTiming?
+        get() = null
+
+    /** Optional device-reported battery percentage from a verified characteristic. */
+    public suspend fun readBattery(): Percent? = null
 
     /** Optional read-only check of the attached generation or remote device state. */
     public val checkConnection: (suspend () -> Boolean)?
         get() = null
 
     /** The latest device-reported or actually submitted output, when the owner can expose it. */
-    public val feedback:
-        kotlinx.coroutines.flow.StateFlow<com.magichandy.mobile.core.api.DeviceOutput?>?
+    public val feedback: StateFlow<DeviceOutput?>?
         get() = null
 
     /** Buffered owners capable of a separate aligned Play expose this port. */
@@ -145,4 +182,8 @@ public interface DeviceTransport {
 /** Play an already prepared neutral buffer at an offset from the shared monotonic origin. */
 public fun interface LinkedStart {
     public suspend fun play(offsetMillis: Long, fence: OutputFence): WriteResult
+
+    /** Read elapsed time at dispatch after any transport clock synchronization. */
+    public suspend fun playAligned(offsetMillis: () -> Long, fence: OutputFence): WriteResult =
+        play(offsetMillis(), fence)
 }

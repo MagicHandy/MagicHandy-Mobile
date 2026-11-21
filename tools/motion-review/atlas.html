@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MagicHandy · Android motion review</title>
+<style>
+:root{font:16px/1.5 Inter,"Segoe UI",sans-serif;color:#202b37;background:#f5f7f8}*{box-sizing:border-box}
+body{margin:0}main{max-width:1150px;margin:auto;padding:30px 24px 50px}h1{font-size:clamp(2rem,5vw,3.3rem);letter-spacing:-.055em;margin:0}h2{font-size:1.5rem;letter-spacing:-.025em;margin:1.8rem 0 .45rem}p{max-width:88ch;margin:.5rem 0}header{border-bottom:2px solid #273542;padding-bottom:20px}
+nav,.controls,.files{display:flex;flex-wrap:wrap;gap:8px 18px;margin:14px 0}a{color:#165b98}nav a{font-weight:600}label{display:grid;gap:3px;font-size:.78rem;font-weight:650;color:#435360}
+select{min-width:138px;max-width:100%;font:inherit;font-size:.95rem;background:white;border:1px solid #b9c5ce;padding:8px 10px;border-radius:5px}
+figure{margin:14px 0;background:white;border:1px solid #d9e1e6;border-radius:7px;overflow:hidden}figure img{display:block;width:100%;height:auto}figcaption{padding:8px 14px 11px;font-size:.88rem;color:#485967}
+.metric{display:flex;flex-wrap:wrap;gap:8px 24px;margin:10px 0}.metric span{font-size:.88rem;color:#526474}.metric b{display:block;color:#1d2b38;font-size:1.3rem}.warn{color:#933c10}footer{margin-top:26px;color:#526474;font-size:.87rem}
+</style></head><body><main>
+<header><h1>Handy motion review</h1><p>Desktop alpha.89, Android 0.1.5 and the updated Android build, compared at the same requested speed, device calibration and stroke window.</p>
+<nav><a href="#steady">Steady motion</a><a href="#runtime">Application playback</a><a href="#bridge">Intiface</a><a href="#sheets">Overview sheets</a><a href="metrics.csv">Metrics CSV</a><a href="captures.zip">Raw captures</a><a hidden id="neon" href="gemini-neon-review.zip">Neon review</a></nav></header>
+<section id="steady"><h2>Steady motion</h2><p>Choose a matched run to see the whole loop, the first 12 seconds of encoded points and a close view of its first reversal.</p>
+<div class="controls"><label>Handy model<select id="model"></select></label><label>Connection<select id="route"></select></label><label>Motion<select id="shape"></select></label><label>Requested speed<select id="speed"></select></label></div>
+<div id="numbers" class="metric" aria-live="polite"></div>
+<figure><img id="detail" alt="Matched position, velocity, acceleration and phase plots"><figcaption id="caption"></figcaption></figure></section>
+<section id="runtime"><h2>Application playback</h2><p>These traces follow the public controls through the production Handy encoders. An in-memory HTTP peer records Cloud JSON. A simulated GATT peer records the Bluetooth packets.</p><figure><img loading="lazy" src="plots/turnaround-comparison.png" alt="Manual Start and chat point counts and curves at the first reversal"></figure><figure><img loading="lazy" src="plots/application-playback.png" alt="Production Cloud and Bluetooth append and Stop timelines"><figcaption>The shaded interval contains points already sent for future playback when Stop was requested.</figcaption></figure></section>
+<section id="bridge"><h2>Intiface linear commands</h2><p>A bridge command specifies a destination and duration. Its advertised minimum interval limits which turns can be represented.</p><figure><img loading="lazy" src="plots/bridge-turns.png" alt="Quantized bridge paths and retained turn counts"><figcaption>Time and physical position are taken from the fitted endpoints. The unrepresentable case is retained in the raw captures.</figcaption></figure></section>
+<section id="sheets"><h2>Overview sheets</h2><label>Comparison sheet<select id="sheet"></select></label><figure><img loading="lazy" id="overview" alt="Overview of the selected model, connection and motion cases"></figure></section>
+<section hidden id="outlier"><h2>Remaining difference</h2><figure><img loading="lazy" src="plots/pro-outlier.png" alt="Remaining difference in the encoded motion"><figcaption id="difference"></figcaption></figure></section>
+<footer>All positions, derivatives and buffer times describe commands or their planned trajectory. Carriage motion needs a separate observation on the physical Handy.</footer>
+</main><script>
+const atlas=/*ATLAS*/{};
+const $=id=>document.getElementById(id);
+$('neon').hidden=!atlas.has_neon;if(atlas.outlier_difference!==null){$('outlier').hidden=false;$('difference').textContent='The maximum difference between the two interpolated command paths is '+atlas.outlier_difference+' percentage points of stroke.';}
+function options(id,rows){const select=$(id);select.replaceChildren(...rows.map(([v,t])=>new Option(t,v)));}
+options('model',Object.entries(atlas.models));options('route',[['cloud','Handy Cloud'],['ble','Native Bluetooth']]);options('shape',Object.entries(atlas.shapes));
+function speeds(){const old=$('speed').value;const rows=atlas.cases.filter(r=>r.model===$('model').value&&r.route===$('route').value&&r.shape===$('shape').value);options('speed',rows.map(r=>r.speed).sort((a,b)=>a-b).map(v=>[v,v+'%']));if(rows.some(r=>r.speed===Number(old)))$('speed').value=old;else if(rows.some(r=>r.speed===25))$('speed').value=25;update()}
+function update(){const r=atlas.cases.find(r=>r.model===$('model').value&&r.route===$('route').value&&r.shape===$('shape').value&&r.speed===Number($('speed').value));if(!r)return;
+const line=$('numbers');line.replaceChildren();if(r.error){$('caption').textContent=r.error;$('detail').removeAttribute('src');return;}
+for(const [k,v] of [['Desktop points',r.desktop],['Previous Android',r.before],['Updated Android',r.after],['Missing turn times',r.missing_turns],['Max wire error',r.max_error_pct+'%']]){const node=document.createElement('span');const b=document.createElement('b');b.textContent=v;node.append(b,k);line.append(node)}
+$('detail').src='plots/'+r.id+'.png';$('caption').textContent=(r.exact?'Every updated point matches the desktop timestamp and position in the first 12 seconds.':'The updated output differs from desktop at one or more optional points. Inspect the close view and raw data.')+' Counts include time zero and end just before 12 seconds.';}
+options('sheet',atlas.sheets.map(([title,file])=>[file,title]));$('sheet').onchange=()=>$('overview').src=$('sheet').value;$('sheet').onchange();
+for(const id of ['model','route','shape'])$(id).onchange=speeds;$('speed').onchange=update;$('shape').value='full';speeds();
+</script></body></html>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="server_failure_model_unavailable">列表中已没有所选模型。请重新检查服务器并选择可用的模型。</string>
+    <string name="server_failure_incomplete">已找到服务器，但此模型未完成结构化回复测试。请尝试其他模型或重新测试。</string>
+</resources>

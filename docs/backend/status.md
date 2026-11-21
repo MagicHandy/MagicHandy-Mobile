@@ -1,5 +1,55 @@
 # Backend status
 
+## First public release
+
+The owner completed physical testing with ChatGPT on a Pixel 10 Pro XL and accepted the performance of 0.1.6 for release on November 21, 2026. The device checklist tracks broader testing across firmware, providers and phones. [Phone acceptance record](device-checklist.md)
+
+## Android 0.1.6 motion-quality build
+
+Manual and chat Start now reproduce the desktop's full-sweep positions and timestamps over Handy Cloud and Bluetooth in all four end-to-end captures. The 210-case HSP atlas matched desktop point counts and authored turn times in every case. The Intiface comparison reproduced and corrected an unintended 110 ms stationary step at a reversal. The signed test build passed 953 tests. [Review and package verification](../reviews/2026-11-21-handy-motion-quality.md)
+
+## Android 0.1.5 Handy Cloud phone-test build
+
+The owner confirmed a connection to their real Handy from the emulator using the previously saved entry in 0.1.4. Their boot-time retry check led to a three-second total connection deadline and a **Retry** action while connecting in 0.1.5. The handshake verifies device-wide idle. Further changes cover device command replay, Stop evidence, retained Bluetooth and bridge callbacks, structured LAN-model readiness, and ChatGPT token rotation. [Diagnosis, independent review and verification](../reviews/2026-11-21-handy-cloud-and-integration-review.md)
+
+## Android 0.1.3 phone-test build
+
+ChatGPT sign-in and the first real reply were verified on the Android 17 emulator. The signed update recognizes a complete event stream without a usable media type and preserves the reply after restart. The 907-test gate passed. [Diagnosis, Gemini findings and verification](../reviews/2026-11-20-sign-in-and-release-readiness.md)
+
+## Personas and first-run setup, 2026-11-20
+
+All five backend steps are implemented. The final offline rerun passed **828 JVM tests** (298 core, 170 transport and 360 app), with zero failures, errors or skips. This includes 60 screenshot comparisons and both UI boundary tests. Both APKs assembled. R8 contents verification passed, and the two packaged prompt banks and the Go numerical licence matched their source bytes in both archives.
+
+The full gate exits on **two Android Lint MissingTranslation errors**. The synced UI has English values for `form_too_long` and `form_limit_reached` and needs the four other supported locales. The gate used `--continue` so the test suites and release package also ran. A separate offline invocation of Spotless verification, core and transport checks, the app JVM tests, both assemblies and the R8 contents check exited successfully. The [UI handoff](ui-requests.md) lists the translations, screen integration and copy. The [device checklist](device-checklist.md) covers the remaining on-device acceptance.
+
+**3.1 · Persona lifecycle.** Room v3 adds the custom roster and keeps selection and built-in personality in revisioned settings. Save and use, duplicate and delete commit together with their affected settings and memory. A turn captures its speaker before suspending. A late reply can finish after a deletion with historical attribution. The write transaction checks that its memory owner still exists. The full gate ran 726 JVM tests (225 core, 144 transport, 357 app), all passed, including 60 screenshot comparisons. Both APKs assembled. Lint reports two missing UI translations in the synced resources, tracked in the [UI handoff](ui-requests.md).
+
+**3.2 · Prompt composition.** All 820 JVM tests passed (298 core, 165 transport, 357 app). The gate assembled both APKs and reported the same two UI-owned lint errors. Two fixture exports matched on 267 payloads and the manifest, including the 197 original hashes. Two vocabulary exports matched on both resources. Seventy raw references cover five languages across hosted chat, Simple, Intermediate and check-ins. Twenty additional public-core hosted cases compare every Responses field. Default requests retain their bytes. The opt-in voice blocks use the [listed wording differences](port-deviations.md) to satisfy the control-vocabulary constraint. A held check-in and a one-call refusal fallback both preserve their speaker.
+
+**3.3 · First run.** A new installation starts incomplete. An older preferences document with an existing adult acknowledgement loads as complete. Acknowledging today keeps setup incomplete across Room reopen, and FinishSetup works with no model or device. Deleting all chats and memory preserves the flag. The gate ran 822 passing JVM tests (298 core, 166 transport, 358 app), assembled both APKs and reported the two UI translation errors.
+
+**3.4 · Diagnostics and privacy.** The report adds the total persona count and the active level, style and reply length. A regression test looks for synthetic custom and duplicate names, IDs, description and saved memory in both text and filename. Robolectric checks the merged backup flag, database location and all excluded storage domains for both backup and transfer. The gate ran 824 passing JVM tests (298 core, 167 transport, 359 app). Both APKs assembled. The same two UI lint errors remain.
+
+**3.5 · Debug model.** The simulator labels canned text from the captured name and level, including at Utility. A virtual-time test switches speakers during a simulated Start, observes the original label on that reply and the new label on the next, and verifies the same motion and direct Stop. All 825 JVM tests passed (298 core, 168 transport, 359 app). Both APKs assembled. The two missing UI translations still block Lint.
+
+**Final integration.** A blocked persona write leaves direct Stop available and cannot restart the run on completion. Repeatedly saving identical settings preserves their revision. The Android debug composition root now backs chats, personas, memory and preferences with its own no-backup Room database while its devices and model still run in process. The JVM fixture graph retains independent in-memory stores.
+
+## Android port review follow-up
+
+The November 20 device-test build uses the release Android factory, production device adapters and durable stores. Its own application ID permits a side-by-side install. The [original review](../reviews/2026-11-20-android-port-behavior-review.md) records the failures at commit `4524e9f`. The [phone checklist](device-checklist.md#first-checks-on-the-device-test-build) covers physical acceptance.
+
+| Area | Implemented behavior and regression coverage |
+|---|---|
+| Stop and recovery | Unexpected foreground-service loss revokes queued output and directly requests Stop. An unresolved Stop at idle survives process replacement. A VacuGlide awaiting return keeps its saved row and credentials until there is evidence or a local check. A later Stop gets its own receipt, a reconnected device clears its loss banner, and a stopped run adds one timestamped event to the open chat. |
+| Output and configuration | A VacuGlide motor write must satisfy both the current personal range and the Live ceiling. The real Intiface scalar driver enforces the editable vibrator limit, initially 40% for a newly saved device. Existing personal values persist. Handy model selection changes calibration. Mounting is sampled at Start or Resume. The lead comes from the included roster. |
+| Feedback and connection loss | Coyote Live waits for measured strength. Three consecutive late packet writes stop the run. The Autoblow button channel must be available to attach and its loss stops active output. Handy Cloud connection checks read device state. Supported devices show measured battery or connection latency. Re-selection of a uniquely identified bridge feature preserves the saved row and settings. |
+| Chat and Autopilot | A hosted refusal can send the current message once to the chosen private LAN server. Prior conversation and saved memories are excluded, and revoking consent cancels the request. Transient planner failures retry after 2 to 30 seconds. Unaffected LAN traffic survives an internet-validation change. A second draft stays in the composer while a reply streams, and typed Stop remains available. |
+| Phone UI and simulation | A due VacuGlide check-in counts down on Chat and Live. The private notification opens Live to answer it. Recovery shows the last safety record and per-device evidence. Settings identifies the single built-in companion. Debug uses validated structured chat replies and the production VacuGlide session over an in-memory peer. The formatter now checks explicit imports across production, fixtures and tests. |
+
+The final offline build reran 181 Gradle tasks. All 722 tests passed with zero skips, failures or errors, including 225 core tests, 141 transport tests and 356 app tests. All 60 screenshot comparisons passed. Android Lint reported zero issues for both the debug and device-test variants.
+
+Android SDK apksigner verified the v2 signature of the 4,744,167-byte APK. Package inspection confirmed the non-debuggable `com.magichandy.mobile.devicetest` manifest, the production adapters in DEX, the bundled prompt catalog and 16 KiB alignment. The APK SHA-256 is `a13e15df9efb5db63e77a4f7c17ef52ec861f8d59962fcdc2936f98cd889b719`. The release graph and service lifecycle ran under Robolectric. An install on an emulator or phone, firmware behavior, timing under Doze and real-provider acceptance remain open. [Device-test packaging](../release.md) · [Phone acceptance](device-checklist.md)
+
 ## Last non-UI items, 2026-11-20
 
 All seven items are implemented. The final offline rerun executed all 127 Gradle tasks and passed 367 JVM tests with zero failures, errors or skips. The Android Lint XML reports zero issues. Both UI boundary tests passed. On the final source, the disposable signer verified the staged APK and SHA256SUMS, then restored the unsigned output. ZIP checks passed for both APKs and their embedded prompt catalog and numerical licence matched the source bytes. The debug APK is 37,396,184 bytes and the unsigned release APK is 4,516,111 bytes.

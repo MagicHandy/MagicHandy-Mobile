@@ -30,3 +30,12 @@ The two additional `StopSource` entries are `ModelReply` and `CheckInTimeout`. C
 | Remove connection | Wait for the active role to be released, or refresh the list if it was already removed. |
 
 Handle `Busy`, `Unsupported` and `StorageUnavailable` for every form. The motor-test duration is confirmed at 1.5 seconds. Settings in the bottom row is confirmed. [Detailed form contract](contract-changes.md)
+
+## Personas and first-run setup
+
+| Request | Contract and reason | UI status |
+|---|---|---|
+| Translate both new form reasons in es, pt-BR, ja and zh-Hans | Android Lint reports MissingTranslation for `form_too_long` and `form_limit_reached` in the synced UI. | Done 2026-11-20, with every setup and persona string in all four languages |
+| Roster, editors and picker | Read `settings.personas`, `settings.persona` and the optional `Message.speaker`. Use the active name for future replies and the stored speaker for transcript attribution. Submit the three persona forms and keep the draft open on a rejection. Reset is a normal save of `Personality()`. | Done 2026-11-20: Personas, both editors, the pickers and the Persona sheet; replies show `speaker` |
+| Companion and ready steps | Use the existing acknowledgement for step one, save the built-in personality if edited, and dispatch `FinishSetup` on the final step, including when model and device setup were skipped. Read `firstRun.isSetupDone` to decide whether to offer setup. | Done 2026-11-20 and checked on the emulator from a fresh install |
+| Description, memory and fallback disclosure | Describe the Utility omission, count graphemes with `characterCount`, and identify the selected persona before clearing its memory. A successful delete retains historical names in messages. The chosen local refusal server receives one current message and its normal wording instructions, which can include the active profile. Earlier dialogue and memory are excluded. | Done 2026-11-20: the description says when it's used, the Memory sheet names the persona, and the refusal fallback says the persona's wording instructions go with the message |

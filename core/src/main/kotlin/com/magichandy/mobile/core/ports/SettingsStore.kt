@@ -4,11 +4,16 @@ package com.magichandy.mobile.core.ports
 import com.magichandy.mobile.core.api.AppLanguage
 import com.magichandy.mobile.core.api.ChangeFrequency
 import com.magichandy.mobile.core.api.CheckIns
+import com.magichandy.mobile.core.api.FormReason
+import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.Limits
 import com.magichandy.mobile.core.api.MotionMode
 import com.magichandy.mobile.core.api.MotionStyle
 import com.magichandy.mobile.core.api.Palette
 import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.PersonaId
+import com.magichandy.mobile.core.api.PersonaRef
+import com.magichandy.mobile.core.api.Personality
 import kotlin.time.Duration
 import kotlinx.coroutines.flow.StateFlow
 
@@ -37,6 +42,12 @@ public data class Preferences(
     public val askedNotifications: Boolean = false,
     public val refusalFallback: com.magichandy.mobile.core.api.ConnectionId? = null,
     public val stopTile: TilePresence = TilePresence.Unknown,
+    /** The built-in settings edit independently of the custom roster rows. */
+    public val builtInPersonality: Personality = Personality(),
+    /** Stable ID selected for the next turn. */
+    public val selectedPersona: PersonaId = builtInPersona.id,
+    /** When decoding a legacy document, its existing adult acknowledgement completes setup. */
+    public val isSetupDone: Boolean = adultsOnly,
 )
 
 /** A field carries its typed update function and stable persisted name. */
@@ -47,6 +58,12 @@ private constructor(public val name: String, internal val set: (Preferences, T) 
 
     /** Fields accepted by revisioned patches. */
     public companion object {
+        /** Affects only the four editable fields of MagicHandy. */
+        public val BuiltInPersonality: PreferenceField<Personality> =
+            PreferenceField("built_in_personality") { s, v -> s.copy(builtInPersonality = v) }
+        /** The next speaker. Changes after a turn starts preserve its original speaker. */
+        public val SelectedPersona: PreferenceField<PersonaId> =
+            PreferenceField("selected_persona") { s, v -> s.copy(selectedPersona = v) }
         public val StopTile: PreferenceField<TilePresence> =
             PreferenceField("stop_tile") { s, v -> s.copy(stopTile = v) }
         public val AskedNotifications: PreferenceField<Boolean> =
@@ -54,6 +71,9 @@ private constructor(public val name: String, internal val set: (Preferences, T) 
         /** Explicit local role for one hosted refusal retry. */
         public val RefusalFallback: PreferenceField<com.magichandy.mobile.core.api.ConnectionId?> =
             PreferenceField("refusal_fallback") { s, v -> s.copy(refusalFallback = v) }
+        /** The final step of the mobile setup flow. */
+        public val SetupDone: PreferenceField<Boolean> =
+            PreferenceField("setup_done") { s, v -> s.copy(isSetupDone = v) }
         /** The onboarding acknowledgement. */
         public val AdultsOnly: PreferenceField<Boolean> =
             PreferenceField("adults_only") { s, v -> s.copy(adultsOnly = v) }
@@ -100,12 +120,20 @@ public data class SettingsDocument(
     public val revision: Long = 0,
     public val values: Preferences = Preferences(),
     public val changedAt: Map<String, Long> = emptyMap(),
+    /** Transactional projection of the separate Room rows, sorted by name. */
+    @kotlinx.serialization.Transient public val customPersonas: List<PersonaRef> = emptyList(),
 )
 
 /** Atomically merge all dirty fields or report a conflict. */
 public interface SettingsStore {
     /** The most recent revision and complete settings document. */
     public val state: StateFlow<SettingsDocument>
+
+    /**
+     * Apply one roster edit, its settings fields and any memory deletion in a single transaction.
+     */
+    public suspend fun editPersonas(edit: (SettingsDocument) -> PersonaChange): FormResult =
+        FormResult.Rejected(FormReason.Unsupported)
 
     /** Reject future revisions and overlapping stale fields. No partial application. */
     public suspend fun patch(baseRevision: Long, edits: List<PreferenceEdit>): Boolean

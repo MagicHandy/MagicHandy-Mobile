@@ -1,6 +1,6 @@
 # Developer guide
 
-![Kotlin 2.4.21](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF) ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4) ![minSdk 31](https://img.shields.io/badge/minSdk-31-3DDC84) ![M0–M4 built, phone testing next](https://img.shields.io/badge/M0%E2%80%93M4-built%2C%20phone%20testing%20next-5B9DD9)
+![Kotlin 2.4.21](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF) ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4) ![minSdk 31](https://img.shields.io/badge/minSdk-31-3DDC84)
 
 This guide is for people working on MagicHandy Mobile: how it's built, where it stands and how to contribute. The [README](../README.md) describes the app for the people who use it.
 
@@ -50,12 +50,12 @@ The thick arrow is the safety rule: Stop never waits behind UI state, an intent 
 
 ## Current status
 
-As of 2026-11-20, all five milestones (M0–M4) are built, UI included. There's no release yet: the app runs as a debug build, and the release build still needs testing on a phone.
+Version 0.1.6 is the first public Android release. The owner tested with ChatGPT on a physical Pixel 10 Pro XL and accepted its performance. [Release notes](releases/v0.1.6.md)
 
 - **Working in debug builds:** the full Compose UI on the real core, with five simulated device families and canned model replies. The simulated Handy runs the real Bluetooth RPC session against an in-memory peer. Debug builds also use the real foreground service and its notification.
-- **Built for release, with phone testing still to do:** the foreground service and its notification, Stop from the notification and from a Quick Settings tile, Android Bluetooth (GATT), Room storage, the on-disk run journal, the Keystore vault, ChatGPT sign-in through a Custom Tab, network monitoring and diagnostics. The [phone checklist](backend/device-checklist.md) lists what only a phone can prove.
-- **Verified automatically:** `./gradlew check` passes ktfmt formatting, Android Lint (warnings as errors), debug and release builds, a check of the shrunk release APK's contents, and **700 JVM tests** (225 in `:core`, 122 in `:transport` and 353 in `:app`). The app's tests include Robolectric tests that build the release graph, 268 palette contrast checks and screenshots of all 60 previews. The Kotlin motion compiler matches all 135 desktop atlas cases.
-- **Left before a release:** phone acceptance on real devices and accounts, then a signed release ([release guide](release.md)). See the [frontend status](frontend/status.md).
+- **Production build.** The app uses Android Bluetooth, a foreground service, notification and Quick Settings Stop, Room storage, the run journal, Android Keystore, browser-based ChatGPT sign-in, network monitoring and diagnostics. The phone checklist records hardware coverage and remaining cases. [Phone checklist](backend/device-checklist.md)
+- **Automated verification.** The 0.1.6 gate passed 953 tests, including 80 screenshot comparisons, plus Android Lint, formatting and release packaging checks. The motion review compares 210 Android Handy cases with the desktop renderer. [Motion review](reviews/2026-11-21-handy-motion-quality.md)
+- **Publishing.** The release guide covers the production key, artifact verification and public changelog. [Release guide](release.md)
 
 <details>
 <summary>v1 milestones (M0–M4), planned devices, model providers and out-of-scope features</summary>
@@ -67,17 +67,17 @@ v1 ships as a whole once M0–M4 are complete; milestones only order the work ([
 | Milestone | Scope | Status |
 |---|---|---|
 | **M0: Fixtures and spike** | Exported desktop verification fixtures, 3-module Gradle setup, 21-case bounded-ramp sampler, Stop and run-journal core, Handy protocol spike, hosted Responses/OAuth spike, debug wiring and Compose UI | Complete; the Pixel measurements are on the phone checklist |
-| **M1: Engine, The Handy, hosted chat** | Full motion engine (all 135 atlas cases), Handy Cloud and real Bluetooth GATT, Advanced motion chat with repair and memory, ChatGPT and OpenRouter, Android service, Room, Keystore, notification and Quick Settings tile | Complete; phone testing pending |
+| **M1: Engine, The Handy, hosted chat** | Full motion engine (all 135 atlas cases), Handy Cloud and real Bluetooth GATT, Advanced motion chat with repair and memory, ChatGPT and OpenRouter, Android service, Room, Keystore, notification and Quick Settings tile | Complete. Pixel 10 Pro XL with ChatGPT accepted for 0.1.6. Other combinations are on the phone checklist. |
 | **M2: Autopilot** | Hosted planner with auto timing (ADR 0072), check-ins, optional finish target, background runs and Recent changes on Live | Complete; phone testing pending |
 | **M3: LAN models and other devices** | Ollama and `llama.cpp` servers added by address (Simple and Intermediate contracts), Intiface vibrators and strokers (The Handy included), multiple Handys, DG-LAB Coyote 3.0, Autoblow Ultra, linked sessions and Edge | Complete; phone testing pending |
-| **M4: VacuGlide and hardening** | VacuGlide with phone safeguards and timed check-ins, chaos testing, five locales (`en`, `es`, `pt-BR`, `ja`, `zh-Hans`), palette contrast checks and release packaging | Complete; phone testing and the first signed release pending |
+| **M4: VacuGlide and hardening** | VacuGlide with phone safeguards and timed check-ins, chaos testing, five locales (`en`, `es`, `pt-BR`, `ja`, `zh-Hans`), palette contrast checks and release packaging | Complete. Version 0.1.6 ships as a signed APK. VacuGlide hardware cases remain on the phone checklist. |
 | **After v1** | On-device inference (Qualcomm and Tensor) in an isolated `:inference` process | Planned after v1 |
 
 ### v1 devices and providers
 
 - **Devices:** The Handy (Bluetooth GATT and Cloud API v3; several Handys supported), Intiface vibrators and strokers, The Handy among them (Buttplug over WebSocket), DG-LAB Coyote 3.0 (Bluetooth GATT), Autoblow Ultra (Autoblow cloud) and VacuGlide (Autoblow cloud, with phone safeguards).
 - **Model providers:** ChatGPT sign-in, OpenRouter and local-network servers (Ollama, `llama.cpp` and other OpenAI-compatible servers, added by address).
-- **Out of scope for v1:** video and funscripts, the pattern library, original Creative mode, controller leases and read-only watchers, the notification center, Labs and voice, accounts and remote access, the phone remote, desktop setup and model downloads, persona editing, Freestyle/preset modes and nearby-server scanning.
+- **Out of scope for v1:** video and funscripts, the pattern library, original Creative mode, controller leases and read-only watchers, the notification center, Labs and voice, accounts and remote access, the phone remote, desktop setup and model downloads, Freestyle/preset modes and nearby-server scanning.
 
 </details>
 

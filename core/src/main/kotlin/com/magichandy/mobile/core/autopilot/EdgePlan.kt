@@ -1,9 +1,20 @@
 // Ported from internal/chat/edge.go and internal/modes/edge.go at 1b80d72e.
 package com.magichandy.mobile.core.autopilot
 
-import com.magichandy.mobile.core.chat.*
-import com.magichandy.mobile.core.ports.*
-import kotlinx.serialization.json.*
+import com.magichandy.mobile.core.chat.accepts
+import com.magichandy.mobile.core.chat.modelObject
+import com.magichandy.mobile.core.chat.word
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.PlanningProvider
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextResult
+import com.magichandy.mobile.core.ports.TextRole
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 internal data class EdgePlan(val seconds: Int, val speed: Int, val gentle: Boolean)
 

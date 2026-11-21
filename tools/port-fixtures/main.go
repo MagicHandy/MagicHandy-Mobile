@@ -79,6 +79,7 @@ func main() {
 	e.tempo()
 	e.wire()
 	e.hosted()
+	e.personas()
 	e.localHistory()
 	e.content()
 	manifest, err := json.MarshalIndent(map[string]any{"format_version": 1, "source_sha": *source, "cases": e.cases}, "", "  ")

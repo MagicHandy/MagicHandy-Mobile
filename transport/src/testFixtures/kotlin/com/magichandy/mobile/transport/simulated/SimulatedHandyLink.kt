@@ -2,6 +2,7 @@
 package com.magichandy.mobile.transport.simulated
 
 import com.magichandy.mobile.transport.ble.BluetoothLink
+import com.magichandy.mobile.transport.ble.BluetoothWriteFenced
 import com.magichandy.mobile.transport.ble.GattProfile
 import com.magichandy.mobile.transport.handy.ProtoWriter
 import com.magichandy.mobile.transport.handy.fields
@@ -38,7 +39,8 @@ internal class SimulatedHandyLink(
         withResponse: Boolean,
         admitted: () -> Boolean,
     ) {
-        if (closed.get() || !admitted()) throw IOException("Simulated link retired")
+        if (closed.get()) throw IOException("Simulated link retired")
+        if (!admitted()) throw BluetoothWriteFenced()
         if (characteristic != GattProfile.Handy.write || !withResponse)
             throw IOException("Unexpected GATT operation")
         val envelope = fields(bytes)
@@ -51,7 +53,8 @@ internal class SimulatedHandyLink(
         val method =
             request.singleOrNull { it.number > 10 } ?: throw IOException("Missing RPC method")
         val body = fields(method.data ?: throw IOException("Invalid RPC body"))
-        if (!admitted() || closed.get()) throw IOException("Stale GATT generation")
+        if (closed.get()) throw IOException("Simulated link retired")
+        if (!admitted()) throw BluetoothWriteFenced()
         val accepted =
             when (method.number) {
                 715,

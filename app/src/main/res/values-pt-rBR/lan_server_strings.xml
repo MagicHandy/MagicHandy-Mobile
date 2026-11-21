@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="server_failure_model_unavailable">O modelo selecionado não está mais na lista. Verifique o servidor novamente e escolha um modelo disponível.</string>
+    <string name="server_failure_incomplete">O servidor foi encontrado, mas o modelo não concluiu o teste de resposta estruturada. Experimente outro modelo ou repita o teste.</string>
+</resources>

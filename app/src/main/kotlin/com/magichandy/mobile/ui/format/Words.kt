@@ -175,16 +175,20 @@ object Words {
                 FormReason.InvalidName -> R.string.form_invalid_name
                 FormReason.InvalidModel -> R.string.form_invalid_model
                 FormReason.Unsupported -> R.string.form_unsupported
+                FormReason.IncompleteModelReply -> R.string.server_failure_incomplete
                 FormReason.ConsentRequired -> R.string.form_consent_required
                 FormReason.Unreachable -> R.string.form_unreachable
                 FormReason.ProviderRefused -> R.string.form_provider_refused
                 FormReason.Duplicate -> R.string.form_duplicate
+                FormReason.AmbiguousDevice -> R.string.form_ambiguous_device
                 FormReason.ChooseDevice -> R.string.form_choose_device
                 FormReason.NotFound -> R.string.form_not_found
                 FormReason.RunInProgress -> R.string.form_run_in_progress
                 FormReason.ReconcileDevice -> R.string.form_reconcile_device
                 FormReason.Busy -> R.string.form_busy
                 FormReason.StorageUnavailable -> R.string.form_storage_unavailable
+                FormReason.TooLong -> R.string.form_too_long
+                FormReason.LimitReached -> R.string.form_limit_reached
             }
         )
 

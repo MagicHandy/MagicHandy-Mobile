@@ -2,15 +2,54 @@ package com.magichandy.mobile.platform
 
 import android.content.Context
 import androidx.room.Room
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.platform.storage.*
+import com.magichandy.mobile.core.api.Author
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.ChatEntry
+import com.magichandy.mobile.core.api.ChatId
+import com.magichandy.mobile.core.api.ChatSummary
+import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.ConnectionKind
+import com.magichandy.mobile.core.api.ConnectionStatus
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.EntryId
+import com.magichandy.mobile.core.api.ModelConnection
+import com.magichandy.mobile.core.api.Palette
+import com.magichandy.mobile.core.api.PersonaId
+import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.ports.DeviceRef
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.PreferenceField
+import com.magichandy.mobile.core.ports.RunId
+import com.magichandy.mobile.core.ports.RunIntent
+import com.magichandy.mobile.core.ports.RunJournal
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.SecretHandle
+import com.magichandy.mobile.core.ports.TilePresence
+import com.magichandy.mobile.platform.storage.AndroidVault
+import com.magichandy.mobile.platform.storage.AtomicBytes
+import com.magichandy.mobile.platform.storage.Document
+import com.magichandy.mobile.platform.storage.FileJournal
+import com.magichandy.mobile.platform.storage.Memory
+import com.magichandy.mobile.platform.storage.PlatformDatabase
+import com.magichandy.mobile.platform.storage.RoomStores
+import com.magichandy.mobile.platform.storage.RotatingDiagnostics
 import java.io.File
 import java.io.IOException
 import javax.crypto.spec.SecretKeySpec
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Instant
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -23,6 +62,65 @@ internal class StorageTest {
         get() = RuntimeEnvironment.getApplication()
 
     private val at = Instant.fromEpochMilliseconds(123)
+
+    @org.junit.Test
+    fun freshAcknowledgedButUnfinishedSetupSurvivesRoomReopen() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val db = Room.inMemoryDatabaseBuilder(context, PlatformDatabase::class.java).build()
+        try {
+            suspend fun reopen() = RoomStores(db, scope).also { it.awaitReady() }
+            val fresh = reopen()
+            assertFalse(fresh.settings.state.value.values.isSetupDone)
+            assertTrue(fresh.settings.patch(0, listOf(PreferenceField.AdultsOnly.edit(true))))
+            val incomplete = reopen()
+            assertTrue(incomplete.settings.state.value.values.adultsOnly)
+            assertFalse(incomplete.settings.state.value.values.isSetupDone)
+            assertTrue(incomplete.settings.patch(1, listOf(PreferenceField.SetupDone.edit(true))))
+            incomplete.chats.clearAll()
+            assertTrue(reopen().settings.state.value.values.isSetupDone)
+        } finally {
+            scope.cancel()
+            db.close()
+        }
+    }
+
+    @org.junit.Test
+    fun savingAModelForChatReplacesAnExistingDefaultAcrossRoomReopen() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val db = Room.inMemoryDatabaseBuilder(context, PlatformDatabase::class.java).build()
+        try {
+            suspend fun reopen() = RoomStores(db, scope).also { it.awaitReady() }
+            val first =
+                ModelConnection(
+                    ConnectionId("first"),
+                    "First",
+                    ProviderKind.OpenRouter,
+                    "fixture/first",
+                    "first",
+                    CapabilityLevel.Advanced,
+                    false,
+                    true,
+                    ConnectionStatus.Ready,
+                )
+            val second = first.copy(id = ConnectionId("second"), name = "Second")
+            val third = first.copy(id = ConnectionId("third"), name = "Third")
+            val stores = reopen()
+            stores.models.save(SavedModel(first))
+            stores.models.save(SavedModel(second))
+            assertEquals(first.id, stores.models.state.value.chat)
+            stores.models.save(SavedModel(third), selectForChat = true)
+            assertEquals(third.id, stores.models.state.value.chat)
+            val reloaded = reopen()
+            assertEquals(third.id, reloaded.models.state.value.chat)
+            assertEquals(
+                setOf(first.id, second.id, third.id),
+                reloaded.models.state.value.models.keys,
+            )
+        } finally {
+            scope.cancel()
+            db.close()
+        }
+    }
 
     @org.junit.Test
     fun savedLowlightLoadsAsOledBlackAndTheNextPatchPersistsTheCurrentName() = runBlocking {
@@ -318,6 +416,15 @@ internal class StorageTest {
         assertFalse(vault.replace(handle, null, Secret("old")))
         assertEquals(Secret("synthetic secret"), vault.get(handle))
         assertFalse(File(dir, "vault").readBytes().decodeToString().contains("synthetic"))
+        val unreadableHandle = SecretHandle("damaged")
+        file("damaged").replace(byteArrayOf(1, 2, 3))
+        val repairing = vault.prepareSignIn(unreadableHandle)
+        assertNull(repairing.original)
+        assertTrue(repairing.commit(Secret("new synthetic registration")))
+        assertEquals(Secret("new synthetic registration"), vault.get(unreadableHandle))
+        val obsolete = vault.prepareSignIn(unreadableHandle)
+        vault.remove(unreadableHandle)
+        assertFalse(obsolete.commit(Secret("late registration")))
         val removed = vault.takeForRemoval(handle)
         assertNull(vault.get(handle))
         removed.restoreIfMissing()

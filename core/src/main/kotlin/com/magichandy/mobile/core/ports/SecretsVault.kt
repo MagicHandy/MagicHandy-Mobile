@@ -12,6 +12,14 @@ public interface SecretsVault {
     /** Retrieve a credential, or null when the handle has no usable value. */
     public suspend fun get(handle: SecretHandle): Secret?
 
+    /**
+     * Capture this slot for a user-initiated sign-in. Concurrent removal invalidates the commit.
+     */
+    public suspend fun prepareSignIn(handle: SecretHandle): CredentialEdit {
+        val original = get(handle)
+        return CredentialEdit(original) { replacement -> replace(handle, original, replacement) }
+    }
+
     /** Atomically replace the entire credential, including refresh rotation. */
     public suspend fun put(handle: SecretHandle, value: Secret)
 
@@ -37,3 +45,21 @@ public interface SecretsVault {
 public fun interface ErasedCredential {
     public suspend fun restoreIfMissing()
 }
+
+/** A one-slot compare-and-set for a newly verified registration. */
+public class CredentialEdit(
+    public val original: Secret?,
+    public val commit: suspend (Secret) -> Boolean,
+)
+
+/** The stored value cannot be decrypted even after storage is available again. */
+public class UnusableCredential : java.io.IOException("Credential requires re-entry")
+
+/** A permanently unreadable row cannot identify a duplicate. Transient storage errors propagate. */
+public suspend fun SecretsVault.matches(handle: SecretHandle, candidate: Secret): Boolean =
+    try {
+        get(handle) == candidate
+    } catch (_: UnusableCredential) {
+        DiagnosticReporter.record(DiagnosticKind.StoreUnavailable)
+        false
+    }

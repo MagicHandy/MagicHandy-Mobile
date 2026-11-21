@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        app.signInTabs.attach(this)
         // Every palette is dark, so the system bars always use light icons.
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -53,6 +54,11 @@ class MainActivity : ComponentActivity() {
         app.host.visible = true
         app.refreshRadio()
         app.host.access(app.core)
+    }
+
+    override fun onDestroy() {
+        app.signInTabs.detach(this)
+        super.onDestroy()
     }
 
     override fun onStop() {

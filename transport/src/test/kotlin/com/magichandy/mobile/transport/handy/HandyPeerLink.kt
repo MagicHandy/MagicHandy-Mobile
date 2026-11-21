@@ -23,6 +23,7 @@ internal class HandyPeerLink : BluetoothLink {
     var setupDelayMillis = 0L
     var denyDiscovery = false
     var omitClockReply = false
+    var omitClockSetReply = false
     var clockMillis: Long? = null
     val playTimestamps = mutableListOf<Long?>()
     var failWrite = false
@@ -55,6 +56,7 @@ internal class HandyPeerLink : BluetoothLink {
         if (failWrite) throw IOException("synthetic write failure")
         methods += method
         if (method == 712 && omitClockReply) return
+        if (method == 709 && omitClockSetReply) return
         if (method == 863)
             playTimestamps +=
                 fields(requireNotNull(packet.single { it.number == 863 }.data))

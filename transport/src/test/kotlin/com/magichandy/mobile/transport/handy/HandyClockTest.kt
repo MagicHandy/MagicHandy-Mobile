@@ -62,7 +62,7 @@ internal class HandyClockTest {
                                             ?.jsonPrimitive
                                             ?.content
                                             ?.toLong()
-                                    "{}"
+                                    """{"result":"ok"}"""
                                 }
                                 else -> error("Unexpected in-process request")
                             }

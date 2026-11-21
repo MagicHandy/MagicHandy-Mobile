@@ -1,6 +1,9 @@
 package com.magichandy.mobile.transport.providers
 
+import com.magichandy.mobile.core.api.ProviderReplyFailure
+import com.magichandy.mobile.core.api.ProviderReplyFailure.Reason
 import com.magichandy.mobile.core.api.Secret
+import com.magichandy.mobile.core.ports.ModelRequest
 import com.magichandy.mobile.core.ports.TextMessage
 import com.magichandy.mobile.core.ports.TextResult
 import com.magichandy.mobile.core.ports.TextRole
@@ -15,10 +18,42 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.ResponseBody.Companion.toResponseBody
 
 internal class ResponsesProviderTest {
     private val messages = listOf(TextMessage(TextRole.User, "Hello"))
     private val delta = """data: {"type":"response.output_text.delta","delta":"Hello"}""" + "\n\n"
+
+    @Test
+    fun `a complete event-framed structured reply is accepted without usable media metadata`() =
+        runTest {
+            val raw = """{"reply":"Hello"}"""
+            val events =
+                "event: response.created\r\ndata: {\"type\":\"response.created\"}\r\n\r\n" +
+                    "event: response.output_text.delta\r\n" +
+                    """data: {"type":"response.output_text.delta","delta":"{\"reply\":\"Hello\"}"}""" +
+                    "\r\n\r\nevent: response.completed\r\n" +
+                    """data: {"type":"response.completed","response":{"status":"completed"}}""" +
+                    "\r\n\r\n"
+            val schema =
+                Json.parseToJsonElement(
+                        """{"type":"object","properties":{"reply":{"type":"string"}}}"""
+                    )
+                    .jsonObject
+            for (header in listOf(null, "text/plain", "application/octet-stream")) {
+                val http = MemoryHttp { request ->
+                    if (header == null)
+                        request.reply("").newBuilder().body(events.toResponseBody()).build()
+                    else request.reply(events, header)
+                }
+                val pieces = mutableListOf<String>()
+                val result =
+                    ResponsesProvider(http, { Secret("synthetic") })
+                        .complete(ModelRequest(messages, schema), pieces::add)
+                assertEquals(TextResult.Completed(raw), result)
+                assertEquals(listOf(raw), pieces)
+            }
+        }
 
     @Test
     fun `a text-only turn streams previews and commits only after terminal completion`() = runTest {
@@ -27,6 +62,7 @@ internal class ResponsesProviderTest {
         val http = MemoryHttp { req ->
             assertEquals("/v1/responses", req.url.encodedPath)
             assertEquals("Bearer synthetic", req.header("Authorization"))
+            assertTrue(requireNotNull(req.body).isOneShot())
             val json = Json.parseToJsonElement(req.payload()).jsonObject
             assertEquals(setOf("model", "input", "stream", "store", "reasoning"), json.keys)
             req.reply(delta + end, "text/event-stream")
@@ -35,6 +71,67 @@ internal class ResponsesProviderTest {
         val result = ResponsesProvider(http, { Secret("synthetic") }).stream(messages, pieces::add)
         assertEquals(listOf("Hello"), pieces)
         assertEquals(TextResult.Completed("Hello"), result)
+    }
+
+    @Test
+    fun `unlabelled data must be a complete Responses stream before it can commit`() = runTest {
+        val terminal =
+            """data: {"type":"response.completed","response":{"status":"completed"}}""" + "\n\n"
+        for ((body, expected) in
+            listOf(
+                "\uFEFF\n: connected\n\n" + delta + terminal to TextResult.Completed("Hello"),
+                delta to TextResult.Interrupted,
+                "<html>\n\n" + delta + terminal to
+                    TextResult.Failed(ProviderReplyFailure(Reason.UnexpectedResponse)),
+                """{"reply":"Hello"}""" to
+                    TextResult.Failed(ProviderReplyFailure(Reason.UnexpectedResponse)),
+            )) {
+            val http = MemoryHttp { req ->
+                req.reply("").newBuilder().body(body.toResponseBody()).build()
+            }
+            assertEquals(expected, ResponsesProvider(http, { Secret("test") }).stream(messages) {})
+        }
+    }
+
+    @Test
+    fun `HTTP and terminal provider failures retain a safe recovery category`() = runTest {
+        for ((status, code, reason) in
+            listOf(
+                Triple(401, "invalid_api_key", Reason.SignInRequired),
+                Triple(403, "subscription_sharing_user_not_eligible", Reason.PermissionDenied),
+                Triple(404, "model_not_found", Reason.ModelUnavailable),
+                Triple(429, "subscription_sharing_usage_limit_exceeded", Reason.UsageLimit),
+                Triple(503, "unavailable", Reason.ServiceUnavailable),
+            )) {
+            val http = MemoryHttp { req ->
+                req.reply("""{"error":{"code":"$code","message":"private upstream text"}}""")
+                    .newBuilder()
+                    .code(status)
+                    .build()
+            }
+            var invalidations = 0
+            val tokens =
+                object : AccessTokenSource {
+                    override suspend fun token() = Secret("fixture")
+
+                    override suspend fun rejected(token: Secret) {
+                        invalidations++
+                    }
+                }
+            assertEquals(
+                TextResult.Failed(ProviderReplyFailure(reason, status)),
+                ResponsesProvider(http, tokens).stream(messages) {},
+            )
+            assertEquals(if (status == 401) 1 else 0, invalidations)
+        }
+        val failure =
+            """data: {"type":"response.failed","response":{"error":{"code":"subscription_sharing_usage_limit_exceeded"}}}""" +
+                "\n\n"
+        val http = MemoryHttp { req -> req.reply(delta + failure, "text/plain") }
+        assertEquals(
+            TextResult.Failed(ProviderReplyFailure(Reason.UsageLimit)),
+            ResponsesProvider(http, { Secret("fixture") }).stream(messages) {},
+        )
     }
 
     @Test

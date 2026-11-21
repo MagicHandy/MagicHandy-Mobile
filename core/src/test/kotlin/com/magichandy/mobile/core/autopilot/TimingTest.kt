@@ -2,7 +2,9 @@ package com.magichandy.mobile.core.autopilot
 
 import com.magichandy.mobile.core.api.ChangeFrequency
 import kotlin.random.Random
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 internal class TimingTest {
     @Test

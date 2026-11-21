@@ -1,18 +1,65 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.chat.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.Author
+import com.magichandy.mobile.core.api.AutopilotStatus
+import com.magichandy.mobile.core.api.ChatEntry
+import com.magichandy.mobile.core.api.CommandReceipt
+import com.magichandy.mobile.core.api.ControlKind
+import com.magichandy.mobile.core.api.EntryId
+import com.magichandy.mobile.core.api.MagicHandyCore
+import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.api.MotionSource
+import com.magichandy.mobile.core.api.PersonaRef
+import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.ProviderReplyFailure
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.ValueChange
+import com.magichandy.mobile.core.chat.ChatContract
+import com.magichandy.mobile.core.chat.ConversationWindow
+import com.magichandy.mobile.core.chat.StandingWish
+import com.magichandy.mobile.core.chat.TurnAnswer
+import com.magichandy.mobile.core.chat.TurnContext
+import com.magichandy.mobile.core.chat.structuredTurn
+import com.magichandy.mobile.core.chat.valveAllowed
+import com.magichandy.mobile.core.chat.vibration
+import com.magichandy.mobile.core.chat.vibratorContext
 import com.magichandy.mobile.core.motion.EngineState
 import com.magichandy.mobile.core.motion.MotionEngine
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.StructuredProvider
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.speakingProvider
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Carries the original roster, stream and settings through generation, repair and optional retry.
  */
+internal sealed interface ProposalCompletion {
+    data class Completed(val entry: ChatEntry.Message) : ProposalCompletion
+
+    data object Refused : ProposalCompletion
+
+    data object Failed : ProposalCompletion
+
+    data class ProviderFailed(val error: ProviderReplyFailure) : ProposalCompletion
+}
+
 internal class ChatProposal(
     private val d: CoreDependencies,
     private val engine: MotionEngine,
@@ -26,21 +73,27 @@ internal class ChatProposal(
         model: SavedModel,
         history: List<TextMessage>,
         captured: EngineState,
+        persona: PersonaRef,
+        memoryOn: Boolean,
         active: () -> Boolean,
-        preview: (String) -> Unit,
-    ): ChatEntry.Message? {
+        openPreview: (admitted: () -> Boolean, reset: Boolean) -> (String) -> Unit,
+    ): ProposalCompletion {
         val state = ui.value
         var fallback: SavedModel? = null
-        fun current(): Boolean {
-            val now = engine.state.value
+        fun chatCurrent(): Boolean {
             val alternate = fallback
             return (alternate == null ||
                 d.settings.state.value.values.refusalFallback == alternate.info.id &&
                     d.models.state.value.models[alternate.info.id] == alternate &&
                     alternate.hasRoute(d.network.observe().value)) &&
-                (!state.settings.isMemoryOn || d.settings.state.value.values.memoryOn) &&
+                (!memoryOn || d.settings.state.value.values.memoryOn) &&
                 active() &&
-                now.epoch == captured.epoch &&
+                engine.epoch == captured.epoch &&
+                model == d.models.state.value.models[d.models.state.value.chat]
+        }
+        fun current(): Boolean {
+            val now = engine.state.value
+            return chatCurrent() &&
                 now.streamGeneration == captured.streamGeneration &&
                 now.score === captured.score &&
                 now.journal?.runId == captured.journal?.runId &&
@@ -48,7 +101,8 @@ internal class ChatProposal(
                 now.owners == captured.owners &&
                 state.settings.motionMode == ui.value.settings.motionMode &&
                 state.run.limits == ui.value.run.limits &&
-                model == d.models.state.value.models[d.models.state.value.chat]
+                state.devices.devices.map { it.id to it.membership } ==
+                    ui.value.devices.devices.map { it.id to it.membership }
         }
         val settings = state.settings
         val turn =
@@ -68,10 +122,11 @@ internal class ChatProposal(
                 standingHold = planner.isStanding,
                 envelope = devices.playback.planningEnvelope(captured.members),
                 memories =
-                    if (settings.isMemoryOn)
-                        d.chats.state.value.memory[settings.persona.id].orEmpty()
+                    if (memoryOn && d.settings.state.value.values.memoryOn)
+                        d.chats.state.value.memory[persona.id].orEmpty()
                     else emptyList(),
                 style = settings.style,
+                persona = persona,
                 recentRequests = recentRequests(state, history),
                 vibrator = state.vibratorContext(),
                 tempo = captured.tempo?.plan?.score,
@@ -81,19 +136,30 @@ internal class ChatProposal(
                 tempoLevel = state.run.commandedPace?.value ?: 0,
                 local = model.info.provider in localProviders,
             )
-        suspend fun ask(peer: StructuredProvider, m: SavedModel, t: TurnContext): TurnAnswer {
+        fun composeRequest(
+            m: SavedModel,
+            t: TurnContext,
+            fallbackOnly: Boolean = false,
+        ): ModelRequest? {
             val window = ConversationWindow.named(m.info.capability, m.contextTokens)
             val stored = state.chat.entries.count { it is ChatEntry.Message }
-            val req =
-                ChatContract.compose(
-                    t,
-                    history,
-                    window.contextTokens,
-                    (stored - history.size).coerceAtLeast(0),
-                ) ?: return TurnAnswer.Failed
-            return structuredTurn(peer, req, t, ::current, preview)
+            return ChatContract.compose(
+                t,
+                if (fallbackOnly) history.takeLast(1) else history,
+                window.contextTokens,
+                if (fallbackOnly) 0 else (stored - history.size).coerceAtLeast(0),
+            )
         }
-        var answer = ask(provider, model, turn)
+        val primaryRequest = composeRequest(model, turn) ?: return ProposalCompletion.Failed
+        var answer =
+            structuredTurn(
+                provider,
+                primaryRequest,
+                turn,
+                ::chatCurrent,
+                openPreview(::chatCurrent, false),
+                allowRepair = true,
+            )
         if (
             answer == TurnAnswer.Declined &&
                 current() &&
@@ -102,25 +168,52 @@ internal class ChatProposal(
             val selected = d.settings.state.value.values.refusalFallback
             val alternate =
                 d.models.state.value.models[selected]?.takeIf { it.info.provider in localProviders }
-                    ?: return null
+                    ?: return ProposalCompletion.Refused
             fallback = alternate
-            if (!current()) return null
-            val peer = d.provider(alternate) as? StructuredProvider ?: return null
-            answer =
-                ask(
-                    peer,
-                    alternate,
-                    turn.copy(
-                        local = true,
-                        level = alternate.info.capability,
-                        reasoning = alternate.info.isReasoningOn,
-                    ),
+            if (!current()) return ProposalCompletion.Failed
+            val peer =
+                d.speakingProvider(alternate, persona) as? StructuredProvider
+                    ?: return ProposalCompletion.Failed
+            val localContext =
+                turn.copy(
+                    local = true,
+                    level = alternate.info.capability,
+                    reasoning = alternate.info.isReasoningOn,
+                    memories = emptyList(),
+                    recentRequests = null,
                 )
+            val localRequest =
+                composeRequest(alternate, localContext, fallbackOnly = true)
+                    ?: return ProposalCompletion.Failed
+            if (!current()) return ProposalCompletion.Failed
+            val activeAttempt = AtomicBoolean(true)
+            val fallbackAdmitted = { activeAttempt.get() && chatCurrent() }
+            val fallbackPreview = openPreview(fallbackAdmitted, true)
+            answer =
+                whileAuthorized(alternate, activeAttempt) {
+                    structuredTurn(
+                        peer,
+                        localRequest,
+                        localContext,
+                        fallbackAdmitted,
+                        fallbackPreview,
+                        allowRepair = false,
+                    )
+                }
         }
-        val proposal = (answer as? TurnAnswer.Valid)?.proposal ?: return null
+        if (answer == TurnAnswer.Declined) return ProposalCompletion.Refused
+        if (answer is TurnAnswer.ProviderFailed)
+            return ProposalCompletion.ProviderFailed(answer.error)
+        val proposal = (answer as? TurnAnswer.Valid)?.proposal ?: return ProposalCompletion.Failed
         val receipt =
             withContext(d.dispatchers.session) {
-                if (!current()) return@withContext null
+                val controlsDevice =
+                    proposal.action != "none" ||
+                        proposal.hold != StandingWish.Preserve ||
+                        proposal.vibration != null ||
+                        proposal.tempo != null ||
+                        proposal.air != 0
+                if (!chatCurrent() || controlsDevice && !current()) return@withContext null
                 if (proposal.action == "stop") {
                     core.emergencyStop(StopSource.ModelReply)
                     return@withContext null
@@ -174,7 +267,41 @@ internal class ChatProposal(
                     CommandReceipt(changes).takeIf { changes.isNotEmpty() },
                 )
             }
-        return receipt
+        return receipt?.let(ProposalCompletion::Completed) ?: ProposalCompletion.Failed
+    }
+
+    /** Revoking the selected server cancels the call while it is receiving its response body. */
+    private suspend fun whileAuthorized(
+        model: SavedModel,
+        activeAttempt: AtomicBoolean,
+        ask: suspend () -> TurnAnswer,
+    ): TurnAnswer = coroutineScope {
+        val revoked =
+            async(start = CoroutineStart.UNDISPATCHED) {
+                combine(d.settings.state, d.models.state, d.network.observe()) {
+                        settings,
+                        models,
+                        network ->
+                        settings.values.refusalFallback != model.info.id ||
+                            models.models[model.info.id] != model ||
+                            !model.hasRoute(network)
+                    }
+                    .first { it }
+            }
+        val call = async { ask() }
+        try {
+            select {
+                revoked.onAwait {
+                    activeAttempt.set(false)
+                    TurnAnswer.Failed
+                }
+                call.onAwait { it }
+            }
+        } finally {
+            activeAttempt.set(false)
+            call.cancel()
+            revoked.cancel()
+        }
     }
 
     private fun recentRequests(state: AppState, history: List<TextMessage>): JsonArray? {

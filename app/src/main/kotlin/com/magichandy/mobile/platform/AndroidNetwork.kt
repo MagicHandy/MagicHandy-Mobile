@@ -1,12 +1,17 @@
 package com.magichandy.mobile.platform
 
 import android.content.Context
-import android.net.*
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.SystemClock
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.ports.Clock
+import com.magichandy.mobile.core.ports.NetworkMonitor
+import com.magichandy.mobile.core.ports.NetworkState
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 internal object AndroidClock : Clock {
     override fun elapsed() = SystemClock.elapsedRealtime().milliseconds

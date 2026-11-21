@@ -2,9 +2,25 @@
 package com.magichandy.mobile.core.chat
 
 import com.magichandy.mobile.core.api.MotionMode
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.core.score.*
-import kotlinx.serialization.json.*
+import com.magichandy.mobile.core.api.ProviderReplyFailure
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.StructuredProvider
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextResult
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.score.GestureScore
+import com.magichandy.mobile.core.score.LayeredScore
+import com.magichandy.mobile.core.score.SemanticScore
+import com.magichandy.mobile.core.score.TempoScore
+import com.magichandy.mobile.core.score.VibrationEnvelope
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 internal enum class StandingWish {
     Preserve,
@@ -28,6 +44,8 @@ internal sealed interface TurnAnswer {
     data object Declined : TurnAnswer
 
     data object Failed : TurnAnswer
+
+    data class ProviderFailed(val error: ProviderReplyFailure) : TurnAnswer
 }
 
 internal fun validateProposal(raw: String, c: TurnContext, request: ModelRequest): Proposal {
@@ -95,6 +113,7 @@ internal suspend fun structuredTurn(
     context: TurnContext,
     current: () -> Boolean,
     preview: (String) -> Unit = {},
+    allowRepair: Boolean = true,
 ): TurnAnswer {
     var input = request
     repeat(2) { attempt ->
@@ -103,11 +122,13 @@ internal suspend fun structuredTurn(
         when (
             val result =
                 provider.complete(input) { raw ->
-                    if (attempt == 0) reader.consume(raw).takeIf { it.isNotEmpty() }?.let(preview)
+                    if (attempt == 0 && current())
+                        reader.consume(raw).takeIf { it.isNotEmpty() }?.let(preview)
                 }
         ) {
             TextResult.Refused -> return TurnAnswer.Declined
             TextResult.Interrupted -> return TurnAnswer.Failed
+            is TextResult.Failed -> return TurnAnswer.ProviderFailed(result.error)
             is TextResult.Completed -> {
                 if (!current()) return TurnAnswer.Failed
                 try {
@@ -120,7 +141,8 @@ internal suspend fun structuredTurn(
                     /* JSON has a different type. */
                 }
                 if (
-                    attempt > 0 ||
+                    !allowRepair ||
+                        attempt > 0 ||
                         !result.text.trimStart().startsWith("{") ||
                         result.text.utf8Length() > 65536
                 )

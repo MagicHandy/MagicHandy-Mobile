@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.PersonaId
 
 /**
  * The app's routes (plan §14.2). Chat and Devices are the two destinations; everything else is a
@@ -61,6 +62,30 @@ sealed interface Route {
         override val key: String = "chatgpt"
     }
 
+    /**
+     * One step of first-run setup, 1 to 4 (boards V-Onboarding, V-SetupModel, V-SetupCompanion and
+     * V-SetupReady). The steps are routes, so Back walks back through them.
+     */
+    data class Setup(val step: Int) : Route {
+        override val key: String
+            get() = "setup:$step"
+    }
+
+    /** Choosing where Chat sends messages, outside setup, such as from Chat with no model. */
+    data object ChooseAi : Route {
+        override val key: String = "choose-ai"
+    }
+
+    data object Personas : Route {
+        override val key: String = "personas"
+    }
+
+    /** One persona's editor, or a new persona's when [persona] is null. */
+    data class PersonaEditor(val persona: PersonaId?) : Route {
+        override val key: String
+            get() = persona?.let { "persona:${it.value}" } ?: NEW_PERSONA
+    }
+
     companion object {
         private val simple =
             listOf(
@@ -72,8 +97,12 @@ sealed interface Route {
                     AddServer,
                     OpenRouterSetup,
                     ChatGptSetup,
+                    ChooseAi,
+                    Personas,
                 )
                 .associateBy { it.key }
+
+        private const val NEW_PERSONA = "persona-new"
 
         /** The route for [key], or null when it no longer exists. */
         fun fromKey(key: String): Route? =
@@ -84,6 +113,14 @@ sealed interface Route {
                         DeviceFamily.entries
                             .firstOrNull { it.name == key.removePrefix("add:") }
                             ?.let(::AddDevice)
+                    key.startsWith("setup:") ->
+                        key.removePrefix("setup:")
+                            .toIntOrNull()
+                            ?.takeIf { it in 1..4 }
+                            ?.let(::Setup)
+                    key == NEW_PERSONA -> PersonaEditor(null)
+                    key.startsWith("persona:") ->
+                        PersonaEditor(PersonaId(key.removePrefix("persona:")))
                     else -> null
                 }
     }
@@ -123,9 +160,28 @@ class AppNavigator(stack: List<Route>, sheets: List<SheetPage>) {
     val isAtDestination: Boolean
         get() = stack.size == 1
 
+    /** The route under the current one, or null at a destination. */
+    val previous: Route?
+        get() = stack.getOrNull(stack.size - 2)
+
     fun push(route: Route) {
         sheets = emptyList()
         stack = stack + route
+    }
+
+    /** Replaces the whole back stack, as when setup starts or ends. */
+    fun resetTo(routes: List<Route>) {
+        sheets = emptyList()
+        stack = routes
+    }
+
+    /** Pops back to the last [route] on the stack, if it's there. */
+    fun popTo(route: Route) {
+        val index = stack.lastIndexOf(route)
+        if (index >= 0) {
+            sheets = emptyList()
+            stack = stack.take(index + 1)
+        }
     }
 
     /** Pops one route. Returns false at a destination, so the system can handle Back. */

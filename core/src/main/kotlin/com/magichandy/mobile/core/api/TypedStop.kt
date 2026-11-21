@@ -1,5 +1,5 @@
 // Ported from internal/httpapi/chat.go at 9a4c36cf.
-package com.magichandy.mobile.core.chat
+package com.magichandy.mobile.core.api
 
 private val stopPhrases =
     setOf(
@@ -70,7 +70,11 @@ private val stopPhrases =
     )
 private val separators = Regex("[\\p{Z}\\p{P}\\p{S}\\s]+")
 
-internal fun isChatStopMessage(text: String): Boolean =
+/**
+ * Recognizes a direct Stop phrase in any supported language, independently of provider
+ * availability.
+ */
+public fun isChatStopMessage(text: String): Boolean =
     text
         .lowercase()
         .replace(separators, " ")

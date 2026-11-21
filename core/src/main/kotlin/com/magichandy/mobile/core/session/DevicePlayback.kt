@@ -26,15 +26,22 @@ import com.magichandy.mobile.core.motion.PlaybackStream
 import com.magichandy.mobile.core.motion.ScoreRequest
 import com.magichandy.mobile.core.motion.compileScore
 import com.magichandy.mobile.core.motion.travelRate
+import com.magichandy.mobile.core.ports.CoyoteControls
 import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.MotionBatch
 import com.magichandy.mobile.core.ports.RunIntent
 import com.magichandy.mobile.core.score.SemanticScore
+import com.magichandy.mobile.core.score.TempoScore
+import com.magichandy.mobile.core.score.TempoShape
+import com.magichandy.mobile.core.score.VibrationEnvelope
+import com.magichandy.mobile.core.score.VibrationMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /** Binds semantic targets to the admitted roster and owns its output timeline. */
@@ -60,7 +67,7 @@ internal class DevicePlayback(
             before.epoch != epoch ||
                 before.pausedPosition != null ||
                 !ui.value.firstRun.hasAcknowledgedAdultsOnly ||
-                ui.value.settings.motionMode == MotionMode.Off
+                isMotionOff()
         )
             return false
         val ids =
@@ -79,6 +86,7 @@ internal class DevicePlayback(
         val current = engine.state.value
         if (
             !admitted() ||
+                isMotionOff() ||
                 current.streamGeneration != before.streamGeneration ||
                 current.score !== before.score ||
                 current.epoch != epoch ||
@@ -96,19 +104,25 @@ internal class DevicePlayback(
 
     suspend fun applyVibration(
         epoch: Epoch,
-        envelope: com.magichandy.mobile.core.score.VibrationEnvelope,
+        envelope: VibrationEnvelope,
         source: MotionSource,
     ): Boolean {
         val s = engine.state.value
-        if (s.epoch != epoch || s.pausedPosition != null) return false
+        if (
+            s.epoch != epoch ||
+                s.pausedPosition != null ||
+                !ui.value.firstRun.hasAcknowledgedAdultsOnly ||
+                isMotionOff()
+        )
+            return false
         if (s.members.isNotEmpty())
             return s.members.any { s.owners[it]?.device?.family == DeviceFamily.Vibrator } &&
                 engine.vibration(epoch, envelope)
         if (
             envelope.mode in
                 setOf(
-                    com.magichandy.mobile.core.score.VibrationMode.Follow,
-                    com.magichandy.mobile.core.score.VibrationMode.Off,
+                    VibrationMode.Follow,
+                    VibrationMode.Off,
                 )
         )
             return true
@@ -134,7 +148,7 @@ internal class DevicePlayback(
 
     suspend fun applyTempo(
         epoch: Epoch,
-        score: com.magichandy.mobile.core.score.TempoScore?,
+        score: TempoScore?,
         air: Int,
         source: MotionSource,
     ): Boolean {
@@ -142,7 +156,8 @@ internal class DevicePlayback(
         if (
             epoch != s.epoch ||
                 s.pausedPosition != null ||
-                ui.value.settings.motionMode != MotionMode.Tempo
+                ui.value.settings.motionMode != MotionMode.Tempo ||
+                isMotionOff()
         )
             return false
         val rows =
@@ -161,11 +176,7 @@ internal class DevicePlayback(
         )
             return false
         if (s.members.isNotEmpty()) return engine.tempo(epoch, score, air, source)
-        if (
-            score == null ||
-                score.sections.all { it.shape == com.magichandy.mobile.core.score.TempoShape.Pause }
-        )
-            return true
+        if (score == null || score.sections.all { it.shape == TempoShape.Pause }) return true
         start(
             epoch,
             null,
@@ -185,10 +196,10 @@ internal class DevicePlayback(
         )
 
     /** The model sees the neutral coordinate range and the calibrated profile ceiling. */
-    fun planningEnvelope(members: Set<DeviceId>): kotlinx.serialization.json.JsonObject? {
+    fun planningEnvelope(members: Set<DeviceId>): JsonObject? {
         if (members.isEmpty()) return null
         val peak = kotlin.math.round(calibration(members).travelRate(100) * 10) / 10
-        return kotlinx.serialization.json.buildJsonObject {
+        return buildJsonObject {
             put("position_min_percent", 0)
             put("position_max_percent", 100)
             if (peak == peak.toInt().toDouble())
@@ -202,13 +213,13 @@ internal class DevicePlayback(
         test: DeviceId?,
         request: ScoreRequest? = null,
         only: Set<DeviceId>? = null,
-        vibration: com.magichandy.mobile.core.score.VibrationEnvelope? = null,
+        vibration: VibrationEnvelope? = null,
         automatic: Boolean = false,
-        tempo: com.magichandy.mobile.core.score.TempoScore? = null,
+        tempo: TempoScore? = null,
         tempoSource: MotionSource = MotionSource.You,
     ) {
         if (!ui.value.firstRun.hasAcknowledgedAdultsOnly) return
-        if (ui.value.settings.motionMode == MotionMode.Off && test == null) {
+        if (isMotionOff() && test == null) {
             refused(StartRefusal.MotionModeOff)
             return
         }
@@ -256,10 +267,7 @@ internal class DevicePlayback(
                     if (
                         !engine.tempo(
                             epoch,
-                            tempo
-                                ?: com.magichandy.mobile.core.score.TempoScore.steady(
-                                    if (test != null) 10 else 25
-                                ),
+                            tempo ?: TempoScore.steady(if (test != null) 10 else 25),
                             0,
                             tempoSource,
                         )
@@ -334,12 +342,18 @@ internal class DevicePlayback(
                             output = output(row, batch, target),
                         )
                 }
+            val leadRow = rows.singleOrNull { it.id == leadId }
+            val tempoLead = leadRow?.family == DeviceFamily.VacuGlide
+            val commandedPace =
+                if (tempoLead) (leadRow.output as? DeviceOutput.Tempo)?.tempo else batch.pace
             state.copy(
                 run =
                     state.run.copy(
                         phase = if (target.holding) RunPhase.Edging else RunPhase.Playing,
-                        source = target.source,
-                        commandedPace = batch.pace,
+                        source =
+                            if (tempoLead) engine.state.value.tempo?.source ?: target.source
+                            else target.source,
+                        commandedPace = commandedPace,
                         recentChanges = state.run.recordChanges(d.clock.now(), target, batch),
                     ),
                 devices = state.devices.copy(devices = rows),
@@ -348,7 +362,11 @@ internal class DevicePlayback(
         }
     }
 
-    private fun output(row: DeviceSummary, batch: MotionBatch, target: ManualTarget): DeviceOutput =
+    private fun output(
+        row: DeviceSummary,
+        batch: MotionBatch,
+        target: ManualTarget,
+    ): DeviceOutput? =
         when (val config = row.settings) {
             is DeviceSettings.Handy,
             is DeviceSettings.LinearActuator,
@@ -369,11 +387,11 @@ internal class DevicePlayback(
                         true,
                     )
             is DeviceSettings.Coyote ->
-                (engine.state.value.owners[row.id]
-                        as? com.magichandy.mobile.core.ports.CoyoteControls)
-                    ?.reported
-                    ?.value ?: DeviceOutput.Channels(0, 0)
-            is DeviceSettings.VacuGlide ->
-                engine.state.value.owners[row.id]?.feedback?.value ?: DeviceOutput.Tempo(batch.pace)
+                (engine.state.value.owners[row.id] as? CoyoteControls)?.reported?.value
+            is DeviceSettings.VacuGlide -> engine.state.value.owners[row.id]?.feedback?.value
         }
+
+    private fun isMotionOff(): Boolean =
+        ui.value.settings.motionMode == MotionMode.Off ||
+            d.settings.state.value.values.mode == MotionMode.Off
 }

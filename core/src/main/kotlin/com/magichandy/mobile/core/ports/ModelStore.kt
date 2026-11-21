@@ -30,6 +30,15 @@ public interface ModelStore {
     /** Upsert a connection. The first saved connection becomes the chat role. */
     public suspend fun save(model: SavedModel)
 
+    /**
+     * Upsert a connection and, when [selectForChat] is true, assign it to the chat role even if
+     * another connection is already selected.
+     */
+    public suspend fun save(model: SavedModel, selectForChat: Boolean) {
+        save(model)
+        if (selectForChat) bindChat(model.info.id)
+    }
+
     /** Remove a connection and all references to it. */
     public suspend fun remove(id: ConnectionId)
 

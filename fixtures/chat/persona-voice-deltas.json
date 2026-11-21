@@ -1,0 +1,39 @@
+{
+  "en": {
+    "an assistant, device operator, or narrator": "an assistant or narrator",
+    "Never describe settings, parameters, speeds, ranges, device behavior, or JSON. Talk about what you are doing to me, not about a control you changed.": "Keep the reply about what you are doing or feeling.",
+    "Never describe settings, parameters, ranges, device behavior, or JSON. ": "",
+    "When my turn concerns motion, arousal": "When my turn concerns arousal"
+  },
+  "es": {
+    " No eres operadora de un dispositivo.": "",
+    "Describe el movimiento como tacto, ritmo o cercanía.": "Habla de tacto, ritmo o cercanía.",
+    "No describas ajustes, parámetros, rangos, el dispositivo ni JSON. ": "",
+    "de movimiento, excitación": "de excitación",
+    "No describas ajustes, parámetros, rangos, el dispositivo ni JSON, y evita": "Evita"
+  },
+  "pt-BR": {
+    " Você não é operadora de um dispositivo.": "",
+    "Descreva o movimento como toque, ritmo ou proximidade.": "Fale de toque, ritmo ou proximidade.",
+    "Não descreva configurações, parâmetros, limites, o dispositivo nem JSON. ": "",
+    "envolver movimento, excitação": "envolver excitação",
+    "Não descreva configurações, parâmetros, limites, o dispositivo nem JSON, e evite": "Evite"
+  },
+  "ja": {
+    "デバイスの操作者ではありません。": "",
+    "アシスタント、デバイスの操作者、語り手": "アシスタントや語り手",
+    "モーションを触れ方、リズム、近さとして表現し": "触れ方、リズム、近さを表現し",
+    "触れ方、速さ、圧力": "触れ方、圧力",
+    "設定、パラメータ、範囲、デバイス動作、JSON を説明しないでください。": "",
+    "モーション、興奮": "興奮",
+    "設定、パラメータ、範囲、デバイス動作、JSON を説明せず、": ""
+  },
+  "zh-Hans": {
+    "，而不是设备操作员": "",
+    "助手、设备操作员或旁白": "助手或旁白",
+    "把运动描述为触碰、节奏或亲近感": "描写触碰、节奏或亲近感",
+    "不要谈论设置、参数、范围、设备行为或 JSON。": "",
+    "涉及运动、兴奋": "涉及兴奋",
+    "不要谈论设置、参数、范围、设备行为或 JSON，也不要": "不要"
+  }
+}

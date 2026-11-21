@@ -1,5 +1,6 @@
 package com.magichandy.mobile.core
 
+import com.magichandy.mobile.core.api.PersonaRef
 import com.magichandy.mobile.core.ports.ChatStore
 import com.magichandy.mobile.core.ports.Clock
 import com.magichandy.mobile.core.ports.DeviceDirectory
@@ -14,6 +15,7 @@ import com.magichandy.mobile.core.ports.SavedModel
 import com.magichandy.mobile.core.ports.SecretHandle
 import com.magichandy.mobile.core.ports.SecretsVault
 import com.magichandy.mobile.core.ports.SettingsStore
+import com.magichandy.mobile.core.ports.SimulatedSpeaker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 
@@ -75,4 +77,16 @@ public data class CoreDependencies(
     public val releases: com.magichandy.mobile.core.ports.ReleaseFeed? = null,
     /** Android API level supplied by the application, omitted on a plain JVM. */
     public val androidApi: Int? = null,
+    /** Await initial durable reads on platforms that load their stores asynchronously. */
+    public val awaitStorage: (suspend () -> Unit)? = null,
 )
+
+/** A captured name and register stay local to the debug model, including at Utility. */
+internal fun CoreDependencies.speakingProvider(
+    model: SavedModel,
+    persona: PersonaRef,
+): ModelProvider? =
+    when (val peer = provider(model)) {
+        is SimulatedSpeaker -> peer.speakingAs(persona.name, persona.personality.explicitness)
+        else -> peer
+    }

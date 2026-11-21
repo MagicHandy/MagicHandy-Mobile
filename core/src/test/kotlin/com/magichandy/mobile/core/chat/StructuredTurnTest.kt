@@ -1,11 +1,27 @@
 package com.magichandy.mobile.core.chat
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import com.magichandy.mobile.core.score.*
-import kotlin.test.*
+import com.magichandy.mobile.core.api.AppLanguage
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.ports.ModelRequest
+import com.magichandy.mobile.core.ports.StructuredProvider
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextResult
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.score.LayeredScore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFails
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 

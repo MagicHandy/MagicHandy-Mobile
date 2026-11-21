@@ -3,7 +3,9 @@ package com.magichandy.mobile.transport.http
 import com.magichandy.mobile.core.api.UpdateCheck
 import com.magichandy.mobile.core.ports.ReleaseFeed
 import java.io.IOException
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Request
 
 /** Reads the mobile repository's public stable release. Never downloads or installs an APK. */
@@ -22,7 +24,9 @@ public class MobileReleases(private val http: okhttp3.Call.Factory) : ReleaseFee
                     release["tag_name"]?.jsonPrimitive?.content
                         ?: return@exchange UpdateCheck.Failed
                 val next = version(tag) ?: return@exchange UpdateCheck.Failed
-                val current = version(installed) ?: return@exchange UpdateCheck.Failed
+                val current =
+                    version(installed.removeSuffix("-device-test"))
+                        ?: return@exchange UpdateCheck.Failed
                 val diff = next.zip(current).firstOrNull { (a, b) -> a != b }
                 if (diff != null && diff.first > diff.second) UpdateCheck.Available(tag)
                 else UpdateCheck.UpToDate

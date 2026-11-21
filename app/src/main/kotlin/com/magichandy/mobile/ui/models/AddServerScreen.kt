@@ -44,7 +44,6 @@ import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.ButtonKind
 import com.magichandy.mobile.ui.components.DotTone
 import com.magichandy.mobile.ui.components.Hint
-import com.magichandy.mobile.ui.components.PageHeader
 import com.magichandy.mobile.ui.components.PushDown
 import com.magichandy.mobile.ui.components.Segment
 import com.magichandy.mobile.ui.components.Segmented
@@ -62,18 +61,14 @@ fun AddServerScreen(
     submit: suspend (form: FormIntent) -> FormResult,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    origin: ProviderOrigin = ProviderOrigin.Models,
+    onSaved: () -> Unit = onBack,
 ) {
-    val check = state.models.serverCheck
-    var address by rememberSaveable {
-        mutableStateOf((check as? ServerCheck.Found)?.address.orEmpty())
-    }
+    val lastCheck = state.models.serverCheck
+    var address by rememberSaveable { mutableStateOf(lastCheck.checkedAddress.orEmpty()) }
+    val check = serverCheckForAddress(lastCheck, address)
     Page(modifier) {
-        PageHeader(
-            title = stringResource(R.string.add_server_title),
-            backDescription = stringResource(R.string.back_to_models),
-            onBack = onBack,
-            breadcrumb = stringResource(R.string.models_title),
-        )
+        ProviderHeader(stringResource(R.string.add_server_title), origin, onBack)
         Text(
             stringResource(R.string.add_server_lead),
             style = MagicHandyTheme.type.small,
@@ -101,7 +96,7 @@ fun AddServerScreen(
             )
         }
         when (check) {
-            is ServerCheck.Found -> FoundServer(check, onIntent, submit, onBack)
+            is ServerCheck.Found -> FoundServer(check, origin, onIntent, submit, onSaved)
             is ServerCheck.Failed -> Hint(failureText(check.cause))
             ServerCheck.Idle,
             is ServerCheck.Checking -> Unit
@@ -109,17 +104,41 @@ fun AddServerScreen(
     }
 }
 
+private val ServerCheck.checkedAddress: String?
+    get() =
+        when (this) {
+            ServerCheck.Idle -> null
+            is ServerCheck.Checking -> address
+            is ServerCheck.Failed -> address
+            is ServerCheck.Found -> address
+        }
+
+/** An asynchronous discovery result belongs only to the address the person checked. */
+internal fun serverCheckForAddress(check: ServerCheck, address: String): ServerCheck =
+    if (check.checkedAddress?.trim() == address.trim()) check else ServerCheck.Idle
+
+internal fun serverSaveIntent(
+    name: String,
+    address: String,
+    model: String,
+    capability: CapabilityLevel,
+    origin: ProviderOrigin,
+): UserIntent.SaveServer =
+    UserIntent.SaveServer(name, address, model, capability, selectForChat = origin.selectsForChat)
+
 @Composable
 private fun ColumnScope.FoundServer(
     found: ServerCheck.Found,
+    origin: ProviderOrigin,
     onIntent: (UserIntent) -> Unit,
     submit: suspend (form: FormIntent) -> FormResult,
-    onBack: () -> Unit,
+    onSaved: () -> Unit,
 ) {
     // The page closes once the server answered its test turn and was saved.
     val submission = rememberFormSubmission(submit)
     val colors = MagicHandyTheme.colors
-    var capability by rememberSaveable(found.selectedModel) { mutableStateOf(found.suggested) }
+    var capability by
+        rememberSaveable(found.address, found.selectedModel) { mutableStateOf(found.suggested) }
     // One line of text, so a long server type and the warning wrap together like a sentence.
     val warning =
         if (found.isEncrypted) null
@@ -138,7 +157,10 @@ private fun ColumnScope.FoundServer(
         },
     )
     Text(stringResource(R.string.add_server_model), style = MagicHandyTheme.type.small)
-    ModelPicker(found.models, found.selectedModel) { onIntent(UserIntent.SelectServerModel(it)) }
+    ModelPicker(found.models, found.selectedModel) {
+        submission.edited()
+        onIntent(UserIntent.SelectServerModel(it))
+    }
     Text(stringResource(R.string.add_server_capability), style = MagicHandyTheme.type.small)
     val suggested = stringResource(R.string.add_server_suggested)
     Segmented(
@@ -151,7 +173,10 @@ private fun ColumnScope.FoundServer(
                 )
             },
         selected = capability,
-        onSelect = { capability = it },
+        onSelect = {
+            capability = it
+            submission.edited()
+        },
         minHeight = MagicHandyTheme.dimens.noteSegment,
     )
     val needed = stringResource(R.string.context_tokens, found.contextNeeded / TOKENS_PER_K)
@@ -178,6 +203,7 @@ private fun ColumnScope.FoundServer(
     found.repliedIn?.let {
         StatusLabel(DotTone.Ok, stringResource(R.string.add_server_ready, Words.seconds(it)))
     }
+    if (submission.refusal == null) found.testFailure?.let { Hint(failureText(it)) }
     val name =
         stringResource(R.string.add_server_name, Words.provider(found.provider), found.address)
     PushDown()
@@ -188,7 +214,10 @@ private fun ColumnScope.FoundServer(
     ) {
         AppButton(
             stringResource(R.string.add_server_test_again),
-            { onIntent(UserIntent.CheckServer(found.address)) },
+            {
+                submission.edited()
+                onIntent(UserIntent.SelectServerModel(found.selectedModel))
+            },
             modifier = Modifier.weight(1f),
         )
         AppButton(
@@ -197,8 +226,8 @@ private fun ColumnScope.FoundServer(
             ),
             {
                 submission.send(
-                    UserIntent.SaveServer(name, found.address, found.selectedModel, capability),
-                    onBack,
+                    serverSaveIntent(name, found.address, found.selectedModel, capability, origin),
+                    onSaved,
                 )
             },
             kind = ButtonKind.Primary,
@@ -271,6 +300,9 @@ private fun failureText(cause: ServerCheckFailure): String =
             ServerCheckFailure.NotAModelServer -> R.string.server_failure_not_model_server
             ServerCheckFailure.NoModels -> R.string.server_failure_no_models
             ServerCheckFailure.NotPrivateAddress -> R.string.server_failure_not_private
+            ServerCheckFailure.ModelUnavailable -> R.string.server_failure_model_unavailable
+            ServerCheckFailure.ProviderRefused -> R.string.form_provider_refused
+            ServerCheckFailure.IncompleteReply -> R.string.server_failure_incomplete
         }
     )
 

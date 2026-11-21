@@ -1,14 +1,40 @@
 // Ported from internal/transport/intiface_motion.go at 1b80d72e.
 package com.magichandy.mobile.transport.intiface
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.Limits
+import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.BridgeSelectionRequired
+import com.magichandy.mobile.core.ports.Clock
+import com.magichandy.mobile.core.ports.DeviceRef
+import com.magichandy.mobile.core.ports.DeviceTransport
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.DiagnosticReporter
+import com.magichandy.mobile.core.ports.LinearPoint
+import com.magichandy.mobile.core.ports.LinearSampling
+import com.magichandy.mobile.core.ports.LinkedStart
+import com.magichandy.mobile.core.ports.MotionBatch
+import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.SavedDevice
+import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.WriteResult
 import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 
 /** Delivers the engine's neutral endpoints to exactly one selected v3 LinearCmd feature. */
 public class IntifaceLinear
@@ -35,7 +61,12 @@ private constructor(
 
     private data class Segment(val start: Long, val end: Long, val value: Double)
 
-    private class Run(val generation: Long, val fence: OutputFence, val scope: CoroutineScope) {
+    private class Run(
+        val generation: Long,
+        val fence: OutputFence,
+        val reversed: Boolean,
+        val scope: CoroutineScope,
+    ) {
         val queue = ArrayDeque<Segment>()
         var anchor: LinearPoint? = null
         var tail: LinearPoint? = null
@@ -61,7 +92,8 @@ private constructor(
     override val linkedStart: LinkedStart = LinkedStart { offset, fence ->
         synchronized(wire) {
             val r = run
-            if (r == null || !r.anchored || !current(r) || !fence.isCurrent()) WriteResult.Stale
+            if (!fence.isCurrent()) WriteResult.Stale
+            else if (r == null || !r.anchored || !current(r)) WriteResult.Uncertain
             else {
                 start(r, offset)
                 WriteResult.Accepted
@@ -74,13 +106,16 @@ private constructor(
     override suspend fun write(batch: MotionBatch, fence: OutputFence): WriteResult {
         val r =
             synchronized(wire) {
-                if (!fence.isCurrent() || !lease.session.usable(lease)) return WriteResult.Stale
+                if (!fence.isCurrent()) return WriteResult.Stale
+                if (!lease.session.usable(lease))
+                    return if (fence.isCurrent()) WriteResult.Uncertain else WriteResult.Stale
                 if (batch.isFirst) {
                     if (run != null) return WriteResult.Uncertain
                     run =
                         Run(
                             lease.generation,
                             fence,
+                            reversed(),
                             CoroutineScope(
                                 scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job])
                             ),
@@ -91,20 +126,40 @@ private constructor(
                     !current(active) ||
                         active.fence.epoch != fence.epoch ||
                         active.fence.streamGeneration != fence.streamGeneration
-                )
-                    return WriteResult.Stale
+                ) {
+                    return if (fence.isCurrent()) WriteResult.Uncertain else WriteResult.Stale
+                }
                 active
             }
         return try {
             synchronized(wire) {
-                if (!current(r)) return WriteResult.Stale
-                append(r, batch.linearPoints, reversed())
+                if (!current(r)) {
+                    if (batch.isFirst) discardUnsent(r)
+                    return if (fence.isCurrent()) WriteResult.Uncertain else WriteResult.Stale
+                }
+                append(r, batch.linearPoints, r.reversed)
             }
             if (batch.isFirst) anchor(r, batch.linearPoints.first(), batch.deferPlay)
             WriteResult.Accepted
-        } catch (e: IOException) {
+        } catch (_: FencedBridgeRequest) {
+            if (!fence.isCurrent()) {
+                synchronized(wire) { if (batch.isFirst) discardUnsent(r) }
+                DiagnosticReporter.record(DiagnosticKind.WriteFenced)
+                WriteResult.Stale
+            } else {
+                fail(r)
+                WriteResult.Uncertain
+            }
+        } catch (_: IOException) {
             fail(r)
             WriteResult.Uncertain
+        }
+    }
+
+    private fun discardUnsent(r: Run) {
+        if (run === r) {
+            r.scope.cancel()
+            run = null
         }
     }
 
@@ -157,45 +212,51 @@ private constructor(
         val physical =
             (window.strokeLow.value +
                 value * (window.strokeHigh.value - window.strokeLow.value) / 100.0) / 100.0
-        val data =
-            kotlinx.serialization.json.buildJsonObject {
-                put("DeviceIndex", feature.index)
-                putJsonArray("Vectors") {
-                    addJsonObject {
-                        put("Index", feature.choice.actuatorIndex)
-                        put("Duration", millis)
-                        put("Position", physical)
-                    }
+        val data = buildJsonObject {
+            put("DeviceIndex", feature.index)
+            putJsonArray("Vectors") {
+                addJsonObject {
+                    put("Index", feature.choice.actuatorIndex)
+                    put("Duration", millis)
+                    put("Position", physical)
                 }
             }
+        }
         return lease.socket.begin("LinearCmd", data = data, allowed = { current(r) })
     }
 
     private suspend fun pace(r: Run) {
         try {
             while (true) {
-                val wait =
+                val deadline =
                     synchronized(wire) {
                         if (!current(r)) return
-                        val elapsed =
-                            (clock.elapsed() - requireNotNull(r.origin)).inWholeMilliseconds
-                        while (r.queue.firstOrNull()?.let { it.end <= elapsed } == true) r.queue
-                            .removeFirst()
+                        val origin = requireNotNull(r.origin)
+                        val elapsed = clock.elapsed() - origin
+                        while (
+                            r.queue.firstOrNull()?.let { it.end.milliseconds <= elapsed } == true
+                        ) r.queue.removeFirst()
                         val s = r.queue.firstOrNull()
                         when {
-                            s == null && elapsed < r.covering -> r.covering - elapsed
+                            s == null && elapsed < r.covering.milliseconds ->
+                                origin + r.covering.milliseconds
                             s == null -> throw Starved()
-                            s.start > elapsed -> s.start - elapsed
+                            s.start.milliseconds > elapsed -> origin + s.start.milliseconds
                             else -> {
                                 sendSegment(r, s, elapsed)
                                 r.covering = s.end
                                 r.queue.removeFirst()
-                                s.end - elapsed
+                                origin + s.end.milliseconds
                             }
                         }
                     }
-                delay(wait.milliseconds)
+                // Preparing and dispatching a request consumes part of its remaining interval.
+                // A later append starts at or beyond this segment's end and cannot move it earlier.
+                delay(deadline - clock.elapsed())
             }
+        } catch (_: FencedBridgeRequest) {
+            if (!r.fence.isCurrent()) DiagnosticReporter.record(DiagnosticKind.WriteFenced)
+            else fail(r, DiagnosticKind.TransportWriteFailed)
         } catch (failure: IOException) {
             fail(
                 r,
@@ -205,10 +266,13 @@ private constructor(
         }
     }
 
-    private fun sendSegment(r: Run, s: Segment, at: Long) {
-        val late = at - s.start
-        val remaining = s.end - at
-        if (late > 100 || late > (s.end - s.start) / 4 || remaining < feature.gap) throw Starved()
+    private fun sendSegment(r: Run, s: Segment, at: Duration) {
+        val late = at - s.start.milliseconds
+        val duration = s.end - s.start
+        // The bridge accepts whole milliseconds. Round the remaining time up at the wire boundary.
+        val remaining = duration - late.inWholeMilliseconds
+        if (late > 100.milliseconds || late > duration.milliseconds / 4 || remaining < feature.gap)
+            throw Starved()
         if (r.pending >= 8) throw IOException("Linear acknowledgement window full")
         val ticket = move(r, s.value, remaining)
         r.pending++

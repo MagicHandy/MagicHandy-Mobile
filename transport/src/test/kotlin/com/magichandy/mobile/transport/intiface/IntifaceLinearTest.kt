@@ -1,22 +1,66 @@
 package com.magichandy.mobile.transport.intiface
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import kotlin.test.*
-import kotlinx.coroutines.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.DeviceStatus
+import com.magichandy.mobile.core.api.FormResult
+import com.magichandy.mobile.core.api.Limits
+import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.StopOutcome
+import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.createMagicHandyCore
+import com.magichandy.mobile.core.ports.BridgeSelectionRequired
+import com.magichandy.mobile.core.ports.Clock
+import com.magichandy.mobile.core.ports.DeviceConfiguration
+import com.magichandy.mobile.core.ports.DeviceDirectory
+import com.magichandy.mobile.core.ports.DeviceTransport
+import com.magichandy.mobile.core.ports.DiagnosticKind
+import com.magichandy.mobile.core.ports.Epoch
+import com.magichandy.mobile.core.ports.LinearPoint
+import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.ports.WriteResult
+import com.magichandy.mobile.core.ports.confirmIdleForConnection
+import com.magichandy.mobile.transport.simulated.simulatedDependencies
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.withTimeout
 
 internal class IntifaceLinearTest {
     // Borrow a short-lived test lease through the public transport seam. No Android or radio.
     private suspend fun DeviceTransport.withFence(block: suspend (OutputFence) -> Unit) {
+        var entered = 0
         val probe =
             object : DeviceTransport by this {
-                override suspend fun stop(fence: OutputFence): StopEvidence {
+                override suspend fun establishIdle(fence: OutputFence): StopEvidence {
+                    entered++
                     block(fence)
                     return StopEvidence.Acknowledged
                 }
             }
         probe.confirmIdleForConnection()
+        assertEquals(1, entered)
     }
 
     @Test
@@ -39,6 +83,110 @@ internal class IntifaceLinearTest {
                 p.copies = 2
                 assertFailsWith<BridgeSelectionRequired> { p.linear(saved) }
                 assertEquals(3, p.names.count { it == "RequestServerInfo" })
+            }
+        }
+
+    @Test
+    fun `a new discovery and owner can use the same origin before its dead lease is released`() =
+        runBlocking {
+            BridgePeer().use { p ->
+                val target = p.find().first()
+                val old = p.linear(target)
+                requireNotNull(p.socket).close(1000, "fixture reconnect")
+                withTimeout(2000) { p.lost.await() }
+                assertEquals(target, p.find().first())
+                val replacement = p.linear(target)
+                val connections = p.names.count { it == "RequestServerInfo" }
+                old.close()
+                assertTrue(replacement.checkConnection())
+                assertEquals(connections, p.names.count { it == "RequestServerInfo" })
+                assertFalse(p.names.contains("LinearCmd"))
+                replacement.close()
+            }
+        }
+
+    @Test
+    fun `a device catalog can exceed an ordinary reply while remaining bounded`() = runBlocking {
+        BridgePeer().use { p ->
+            p.index = 1000
+            p.copies = 100
+            p.descriptor = "Synthetic position feature. ".repeat(26)
+            assertEquals(101, p.find().size)
+            p.descriptor = "Synthetic position feature. ".repeat(105)
+            assertFailsWith<java.io.IOException> { p.find() }
+        }
+    }
+
+    @Test
+    fun `a reassigned vibrator index cannot receive a targeted zero from the old lease`() =
+        runBlocking {
+            BridgePeer().use { p ->
+                val target = p.find().single { it.family == DeviceFamily.Vibrator }
+                val owner =
+                    IntifaceVibrator.connect(p.hub, p.row(target), { Percent(50) }) {
+                        p.lost.complete(Unit)
+                    }
+                val before = p.scalars.size
+                requireNotNull(p.socket).send("""[{"DeviceRemoved":{"Id":0,"DeviceIndex":22}}]""")
+                withTimeout(2000) { p.lost.await() }
+                owner.confirmIdleForConnection()
+                assertEquals(before, p.scalars.size)
+                assertTrue("StopAllDevices" in p.names)
+                owner.close()
+            }
+        }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `dispatch work does not push the next command past its advertised timing gap`() =
+        runBlocking {
+            val scheduler = TestCoroutineScheduler()
+            val output = CoroutineScope(SupervisorJob() + StandardTestDispatcher(scheduler))
+            var busyMillis = 0L
+            var dispatching = false
+            val clock =
+                object : Clock {
+                    override fun elapsed() = (scheduler.currentTime + busyMillis).milliseconds
+
+                    override fun now() =
+                        Instant.fromEpochMilliseconds(elapsed().inWholeMilliseconds)
+                }
+            BridgePeer().use { peer ->
+                peer.gap = 100
+                val owner =
+                    peer.linear(
+                        outputScope = output,
+                        playbackClock = clock,
+                        liveLimits = {
+                            if (dispatching) busyMillis += 16
+                            peer.bounds
+                        },
+                    )
+                try {
+                    owner.withFence { fence ->
+                        val points = (0..8).map { i -> LinearPoint(i * 110L, i * 10.0) }
+                        assertEquals(
+                            WriteResult.Accepted,
+                            owner.write(peer.batch(points, defer = true), fence),
+                        )
+                        peer.next()
+                        dispatching = true
+                        assertEquals(
+                            WriteResult.Accepted,
+                            requireNotNull(owner.linkedStart).play(0, fence),
+                        )
+                        repeat(6) {
+                            scheduler.runCurrent()
+                            assertEquals(110L, peer.next().millis)
+                            scheduler.advanceTimeBy(110 - 16L)
+                        }
+                        assertFalse(peer.lost.isCompleted)
+                        owner.stop(fence)
+                    }
+                } finally {
+                    owner.close()
+                    output.cancel()
+                }
             }
         }
 
@@ -126,47 +274,78 @@ internal class IntifaceLinearTest {
         }
 
     @Test
-    fun `movement acks are asynchronous capped at eight and failed ping or dead peer signals loss`() =
-        runBlocking {
-            BridgePeer().use { p ->
-                val l = p.linear()
-                l.withFence { f ->
-                    val points = (0..20).map { LinearPoint(it * 60L, 50.0) }
-                    assertEquals(WriteResult.Accepted, l.write(p.batch(points, defer = true), f))
-                    p.respond = false
-                    requireNotNull(l.linkedStart).play(0, f)
-                    withTimeout(2000) { p.lost.await() }
-                    assertEquals(9, p.names.count { it == "LinearCmd" })
-                    assertEquals("StopDeviceCmd", p.names.last())
-                }
-                l.close()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `the ninth unacknowledged movement stops the bridge`() = runBlocking {
+        val scheduler = TestCoroutineScheduler()
+        val output = CoroutineScope(SupervisorJob() + StandardTestDispatcher(scheduler))
+        val clock =
+            object : Clock {
+                override fun elapsed() = scheduler.currentTime.milliseconds
+
+                override fun now() = Instant.fromEpochMilliseconds(scheduler.currentTime)
             }
-            for (kill in listOf(false, true)) BridgePeer().use { p ->
-                p.ping = 300
-                val owner = p.linear()
-                owner.withFence { f ->
+        BridgePeer().use { peer ->
+            val owner = peer.linear(outputScope = output, playbackClock = clock)
+            try {
+                owner.withFence { fence ->
+                    val points = (0..20).map { LinearPoint(it * 60L, 50.0) }
                     assertEquals(
                         WriteResult.Accepted,
-                        owner.write(
-                            p.batch(
-                                listOf(
-                                    LinearPoint(0, 30.0),
-                                    LinearPoint(500, 75.0),
-                                    LinearPoint(1000, 30.0),
-                                )
-                            ),
-                            f,
-                        ),
+                        owner.write(peer.batch(points, defer = true), fence),
                     )
-                    if (kill) p.kill() else p.refusePing = true
-                    withTimeout(2200) { p.lost.await() }
-                    val n = p.names.count { it == "LinearCmd" }
-                    delay(550)
-                    assertEquals(n, p.names.count { it == "LinearCmd" })
+                    peer.next() // Consume the acknowledged startup anchor.
+                    peer.respond = false
+                    requireNotNull(owner.linkedStart).play(0, fence)
+                    repeat(8) {
+                        scheduler.runCurrent()
+                        peer.next() // Each submission reaches the loopback socket before the next
+                        // tick.
+                        scheduler.advanceTimeBy(60)
+                    }
+                    withTimeout(2000) {
+                        while (!peer.lost.isCompleted) {
+                            scheduler.runCurrent()
+                            delay(1)
+                        }
+                    }
+                    assertEquals(9, peer.names.count { it == "LinearCmd" })
+                    assertEquals("StopDeviceCmd", peer.names.last())
                 }
+            } finally {
                 owner.close()
+                output.cancel()
             }
         }
+    }
+
+    @Test
+    fun `a failed ping or dead peer signals loss and fences later movements`() = runBlocking {
+        for (kill in listOf(false, true)) BridgePeer().use { p ->
+            p.ping = 300
+            val owner = p.linear()
+            owner.withFence { f ->
+                assertEquals(
+                    WriteResult.Accepted,
+                    owner.write(
+                        p.batch(
+                            listOf(
+                                LinearPoint(0, 30.0),
+                                LinearPoint(500, 75.0),
+                                LinearPoint(1000, 30.0),
+                            )
+                        ),
+                        f,
+                    ),
+                )
+                if (kill) p.kill() else p.refusePing = true
+                withTimeout(2200) { p.lost.await() }
+                val n = p.names.count { it == "LinearCmd" }
+                delay(550)
+                assertEquals(n, p.names.count { it == "LinearCmd" })
+            }
+            owner.close()
+        }
+    }
 
     @Test
     fun `Stop during the startup anchor cannot start the pending generation`() = runBlocking {
@@ -190,7 +369,7 @@ internal class IntifaceLinearTest {
     @Test
     fun `a direct Stop reaches a live discovery-only socket before selection`() = runBlocking {
         BridgePeer().use { p ->
-            val d = com.magichandy.mobile.transport.simulated.simulatedDependencies(p.scope)
+            val d = simulatedDependencies(p.scope)
             val directory =
                 object : DeviceDirectory by d.devices {
                     override fun stopOpenBridges(epoch: Epoch) = p.hub.emergencyStop(epoch)
@@ -201,7 +380,7 @@ internal class IntifaceLinearTest {
                                 p.hub.targets(address)
                         }
                 }
-            val core = com.magichandy.mobile.core.createMagicHandyCore(d.copy(devices = directory))
+            val core = createMagicHandyCore(d.copy(devices = directory))
             core.dispatch(UserIntent.AcknowledgeAdultsOnly)
             withTimeout(2000) { core.state.first { it.firstRun.hasAcknowledgedAdultsOnly } }
             p.holdList = true
@@ -247,9 +426,8 @@ internal class IntifaceLinearTest {
     fun `a killed bridge stops a public run and its unconfirmed device can be checked locally`() =
         runBlocking {
             BridgePeer().use { p ->
-                val d = com.magichandy.mobile.transport.simulated.simulatedDependencies(p.scope)
-                val losses =
-                    kotlinx.coroutines.flow.MutableSharedFlow<DeviceId>(extraBufferCapacity = 8)
+                val d = simulatedDependencies(p.scope)
+                val losses = MutableSharedFlow<DeviceId>(extraBufferCapacity = 8)
                 var connected: IntifaceLinear? = null
                 val directory =
                     object : DeviceDirectory by d.devices {
@@ -284,8 +462,7 @@ internal class IntifaceLinearTest {
 
                         override fun stopOpenBridges(epoch: Epoch) = p.hub.emergencyStop(epoch)
                     }
-                val core =
-                    com.magichandy.mobile.core.createMagicHandyCore(d.copy(devices = directory))
+                val core = createMagicHandyCore(d.copy(devices = directory))
                 suspend fun state(matches: (AppState) -> Boolean) =
                     withTimeout(5000) { core.state.first(matches) }
                 core.dispatch(UserIntent.AcknowledgeAdultsOnly)
@@ -330,6 +507,10 @@ internal class IntifaceLinearTest {
                 }
                 p.axisType = "Rotate"
                 assertTrue(p.find().none { it.family != DeviceFamily.Vibrator })
+                p.axisType = null
+                assertTrue(p.find().none { it.family != DeviceFamily.Vibrator })
+                p.axisType = "Linear"
+                assertEquals(DeviceFamily.Handy, p.find().first().family)
                 assertFalse(
                     p.names.any {
                         it in setOf("LinearCmd", "ScalarCmd", "StopDeviceCmd", "StopAllDevices")
@@ -352,4 +533,49 @@ internal class IntifaceLinearTest {
                 l.close()
             }
         }
+
+    @Test
+    fun `mounting stays fixed on subsequent appends in the same stream`() = runBlocking {
+        BridgePeer().use { p ->
+            p.reverse = false
+            val linear = p.linear()
+            linear.withFence { fence ->
+                val first =
+                    p.batch(listOf(LinearPoint(0, 20.0), LinearPoint(700, 30.0)), defer = true)
+                assertEquals(WriteResult.Accepted, linear.write(first, fence))
+                p.next()
+                p.reverse = true
+                val next = p.batch(listOf(LinearPoint(1400, 30.0)), first = false)
+                assertEquals(WriteResult.Accepted, linear.write(next, fence))
+                assertEquals(
+                    WriteResult.Accepted,
+                    requireNotNull(linear.linkedStart).play(0, fence),
+                )
+                val a = p.next()
+                val b = p.next()
+                assertEquals(0.3, a.position, 0.0001)
+                assertEquals(0.3, b.position, 0.0001)
+                linear.stop(fence)
+            }
+            linear.close()
+        }
+    }
+
+    @Test
+    fun `a denied linear submission emits no command and keeps the bridge usable`() = runBlocking {
+        BridgePeer().use { peer ->
+            val socket = ButtplugSocket({}, {})
+            try {
+                socket.open(okhttp3.OkHttpClient(), peer.address)
+                socket.identify()
+                assertFailsWith<FencedBridgeRequest> {
+                    socket.begin("LinearCmd", allowed = { false })
+                }
+                assertTrue(socket.features().isNotEmpty())
+                assertTrue("LinearCmd" !in peer.names)
+            } finally {
+                socket.close()
+            }
+        }
+    }
 }

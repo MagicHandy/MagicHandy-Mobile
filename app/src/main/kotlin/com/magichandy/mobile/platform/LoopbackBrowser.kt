@@ -1,38 +1,37 @@
 // Ported from internal/openaiauth/oauth.go. The Android browser owns the sign-in UI.
 package com.magichandy.mobile.platform
 
-import android.content.Context
-import android.content.Intent
-import androidx.browser.customtabs.CustomTabsIntent
-import androidx.core.net.toUri
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.ports.BrowserLauncher
-import java.io.*
-import java.net.*
+import com.magichandy.mobile.core.ports.signInWindow
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.Duration.Companion.minutes
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 internal class LoopbackBrowser(
     private val scope: CoroutineScope,
-    private val launch: (Secret) -> Unit,
+    private val awaitForeground: suspend () -> Unit,
+    private val returnMessage: () -> String,
+    private val show: (Secret, () -> Unit) -> Unit,
 ) : BrowserLauncher {
-    constructor(
-        context: Context,
-        scope: CoroutineScope,
-    ) : this(
-        scope,
-        { authorization ->
-            CustomTabsIntent.Builder()
-                .build()
-                .apply { intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                .launchUrl(context, authorization.reveal().toUri())
-        },
-    )
-
     private class Lease(val socket: ServerSocket) {
         val peer = AtomicReference<Socket?>()
+        val received = AtomicBoolean()
         val uri = "http://127.0.0.1:" + socket.localPort + "/auth/callback"
 
         fun close() {
@@ -44,18 +43,20 @@ internal class LoopbackBrowser(
     private val pending = AtomicReference<Lease?>()
     private var expiry: Job? = null
     override val redirectUri: String
+        @Synchronized
         get() {
             close()
             val lease =
                 Lease(ServerSocket(0, 1, InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1))))
             pending.set(lease)
             expiry = scope.launch {
-                delay(2.minutes)
+                delay(signInWindow)
                 if (pending.compareAndSet(lease, null)) lease.close()
             }
             return lease.uri
         }
 
+    @Synchronized
     override fun close() {
         expiry?.cancel()
         pending.getAndSet(null)?.close()
@@ -64,25 +65,30 @@ internal class LoopbackBrowser(
     override suspend fun openAndAwait(authorization: Secret): Secret? {
         val lease = pending.get() ?: return null
         val state = authorization.reveal().toHttpUrlOrNull()?.queryParameter("state") ?: return null
-        return try {
-            withContext(Dispatchers.Main.immediate) { launch(authorization) }
-            suspendCancellableCoroutine { cont ->
-                cont.invokeOnCancellation { lease.close() }
-                scope.launch(Dispatchers.IO) {
-                    val result =
-                        try {
-                            receive(lease, state)
-                        } catch (_: IOException) {
-                            null
-                        }
-                    if (cont.isActive) cont.resumeWith(Result.success(result))
+        val callback =
+            try {
+                withContext(Dispatchers.Main.immediate) {
+                    show(authorization) { if (!lease.received.get()) lease.close() }
                 }
+                suspendCancellableCoroutine<Secret?> { cont ->
+                    cont.invokeOnCancellation { lease.close() }
+                    scope.launch(Dispatchers.IO) {
+                        val result =
+                            try {
+                                receive(lease, state)
+                            } catch (_: IOException) {
+                                null
+                            }
+                        if (cont.isActive) cont.resumeWith(Result.success(result))
+                    }
+                }
+            } catch (_: android.content.ActivityNotFoundException) {
+                null
+            } finally {
+                close()
             }
-        } catch (_: android.content.ActivityNotFoundException) {
-            null
-        } finally {
-            close()
-        }
+        if (callback != null) awaitForeground()
+        return callback
     }
 
     private fun receive(lease: Lease, state: String): Secret? {
@@ -120,18 +126,25 @@ internal class LoopbackBrowser(
                         path.startsWith("/auth/callback?") &&
                         url?.encodedPath == "/auth/callback" &&
                         url.queryParameterValues("state") == listOf(state)
-                val body = if (valid) "Return to MagicHandy." else "Invalid request."
+                if (valid) lease.received.set(true)
+                val body = (if (valid) returnMessage() else "Invalid request.").encodeToByteArray()
                 val status = if (valid) "200 OK" else "400 Bad Request"
-                s.getOutputStream()
-                    .write(
+                try {
+                    val output = s.getOutputStream()
+                    output.write(
                         ("HTTP/1.1 " +
                                 status +
-                                "\r\nContent-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: " +
-                                body.length +
-                                "\r\n\r\n" +
-                                body)
+                                "\r\nContent-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nConnection: close\r\nContent-Length: " +
+                                body.size +
+                                "\r\n\r\n")
                             .encodeToByteArray()
                     )
+                    output.write(body)
+                    output.flush()
+                } catch (failure: IOException) {
+                    // A browser can close the connection before reading this courtesy response.
+                    if (!valid) throw failure
+                }
                 if (valid) return Secret(requireNotNull(url).toString())
             }
         }

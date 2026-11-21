@@ -2,6 +2,7 @@
 package com.magichandy.mobile.core.motion
 
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.MotionSource
 import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.ports.Clock
@@ -10,9 +11,13 @@ import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.MotionBatch
 import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.OutputSlice
 import com.magichandy.mobile.core.ports.RunIntent
 import com.magichandy.mobile.core.ports.RunJournal
+import com.magichandy.mobile.core.ports.TimedDevice
 import com.magichandy.mobile.core.ports.WriteResult
+import com.magichandy.mobile.core.score.TempoScore
+import com.magichandy.mobile.core.score.VibrationEnvelope
 import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -32,6 +37,7 @@ internal class MotionEngine(
     private val stopIo: CoroutineDispatcher,
     private val clock: Clock,
     private val record: (DiagnosticKind) -> Unit,
+    private val hostRunning: () -> Boolean = { true },
 ) {
     private val current = MutableStateFlow(EngineState())
     private val stops = StopDelivery(scope, stopDispatcher, stopIo, clock, record, current)
@@ -204,22 +210,25 @@ internal class MotionEngine(
     suspend fun startBuffered(
         stream: PlaybackStream,
         owner: DeviceTransport,
-        origin: kotlin.time.Duration,
+        origin: Duration,
     ): WriteResult =
         admittedWrite(stream, owner) { fence ->
             requireNotNull(owner.linkedStart)
-                .play((clock.elapsed() - origin).inWholeMilliseconds.coerceAtLeast(0), fence)
+                .playAligned(
+                    { (clock.elapsed() - origin).inWholeMilliseconds.coerceAtLeast(0) },
+                    fence,
+                )
         }
 
     suspend fun output(
         stream: PlaybackStream,
-        owner: com.magichandy.mobile.core.ports.TimedDevice,
-        slice: com.magichandy.mobile.core.ports.OutputSlice,
+        owner: TimedDevice,
+        slice: OutputSlice,
     ): WriteResult = admittedWrite(stream, owner) { fence -> owner.output(slice, fence) }
 
     fun vibration(
         expected: Epoch,
-        envelope: com.magichandy.mobile.core.score.VibrationEnvelope,
+        envelope: VibrationEnvelope,
     ): Boolean {
         while (true) {
             val s = current.value
@@ -236,9 +245,9 @@ internal class MotionEngine(
 
     fun tempo(
         expected: Epoch,
-        score: com.magichandy.mobile.core.score.TempoScore?,
+        score: TempoScore?,
         steps: Int,
-        source: com.magichandy.mobile.core.api.MotionSource,
+        source: MotionSource,
     ): Boolean {
         require(steps in -2..2)
         while (true) {
@@ -253,10 +262,15 @@ internal class MotionEngine(
         owner: DeviceTransport,
         operation: suspend (OutputFence) -> WriteResult,
     ): WriteResult {
+        if (!hostRunning()) {
+            stop(StopSource.ServiceLost, stream = stream)
+            return WriteResult.Stale
+        }
         val fence =
             OutputFence(stream.epoch, stream.generation) {
                 val s = current.value
-                s.plays(stream) &&
+                hostRunning() &&
+                    s.plays(stream) &&
                     owner.device.id in s.members &&
                     s.owners[owner.device.id] === owner
             }
@@ -273,7 +287,10 @@ internal class MotionEngine(
                 break
         }
         try {
-            if (!fence.isCurrent()) return WriteResult.Stale
+            if (!fence.isCurrent()) {
+                if (!hostRunning()) stop(StopSource.ServiceLost, stream = stream)
+                return WriteResult.Stale
+            }
             val result =
                 try {
                     operation(fence)
@@ -286,8 +303,11 @@ internal class MotionEngine(
             if (
                 result == WriteResult.Uncertain ||
                     (result == WriteResult.Accepted && !fence.isCurrent())
-            )
+            ) {
                 recover(owner)
+            } else if (result == WriteResult.Stale && !hostRunning()) {
+                stop(StopSource.ServiceLost, stream = stream)
+            }
             return result
         } catch (cancelled: CancellationException) {
             recover(owner)
@@ -315,6 +335,7 @@ internal class MotionEngine(
         retire: DeviceTransport? = null,
         disconnecting: DeviceTransport? = null,
         stream: PlaybackStream? = null,
+        lostDevice: String? = null,
     ) {
         while (true) {
             val old = current.value
@@ -339,6 +360,7 @@ internal class MotionEngine(
                     isolated,
                     clock.elapsed(),
                     clock.now(),
+                    lostDevice,
                 )
             if (!current.compareAndSet(old, stopped)) continue
             stopped.pending.values
@@ -350,15 +372,21 @@ internal class MotionEngine(
         }
     }
 
-    fun reconcile(expected: Epoch, id: DeviceId, interrupted: Boolean): Boolean {
+    fun reconcile(
+        expected: Epoch,
+        id: DeviceId,
+        interrupted: Boolean,
+        awaitsReturn: Boolean = false,
+    ): Boolean {
         while (true) {
             val old = current.value
             if (expected != old.epoch || id in old.reconciled || old.members.isNotEmpty())
                 return false
             val latest = old.evidence?.outcomes?.firstOrNull { it.device == id }
-            if (latest?.outcome == StopOutcome.Confirmed) return false
+            if (latest?.outcome == StopOutcome.Confirmed && !awaitsReturn) return false
             if (
                 !interrupted &&
+                    !awaitsReturn &&
                     old.receipt?.outcomes.orEmpty().none {
                         it.device == id && it.outcome != StopOutcome.Confirmed
                     }

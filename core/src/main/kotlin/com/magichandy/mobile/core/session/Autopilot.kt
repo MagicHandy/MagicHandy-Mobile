@@ -1,17 +1,58 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.autopilot.*
-import com.magichandy.mobile.core.chat.*
-import com.magichandy.mobile.core.motion.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.Author
+import com.magichandy.mobile.core.api.AutopilotStatus
+import com.magichandy.mobile.core.api.BackendNotice
+import com.magichandy.mobile.core.api.Banner
+import com.magichandy.mobile.core.api.ChatEntry
+import com.magichandy.mobile.core.api.ChatId
+import com.magichandy.mobile.core.api.ChatSummary
+import com.magichandy.mobile.core.api.CheckIns
+import com.magichandy.mobile.core.api.ConnectionStatus
+import com.magichandy.mobile.core.api.EntryId
+import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.api.MotionSource
+import com.magichandy.mobile.core.api.PersonaRef
+import com.magichandy.mobile.core.api.ReplyState
+import com.magichandy.mobile.core.api.StartRefusal
+import com.magichandy.mobile.core.autopilot.Decision
+import com.magichandy.mobile.core.autopilot.PlanFacts
+import com.magichandy.mobile.core.autopilot.Timing
+import com.magichandy.mobile.core.autopilot.decide
+import com.magichandy.mobile.core.chat.TurnContext
+import com.magichandy.mobile.core.chat.valveAllowed
+import com.magichandy.mobile.core.chat.vibration
+import com.magichandy.mobile.core.chat.vibratorContext
+import com.magichandy.mobile.core.motion.MotionEngine
+import com.magichandy.mobile.core.motion.WorkKind
+import com.magichandy.mobile.core.ports.Epoch
+import com.magichandy.mobile.core.ports.PlanningProvider
+import com.magichandy.mobile.core.ports.RunIntent
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.TextMessage
+import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.ports.activePersona
+import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.speakingProvider
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /** All scheduling state belongs to the session dispatcher. Planning jobs never write transports. */
 internal class Autopilot(
@@ -58,7 +99,7 @@ internal class Autopilot(
             worker?.isActive == true ||
                 epoch != engine.epoch ||
                 !ui.value.firstRun.hasAcknowledgedAdultsOnly ||
-                ui.value.settings.motionMode == MotionMode.Off
+                isMotionOff()
         )
             return
         if (
@@ -78,7 +119,11 @@ internal class Autopilot(
             devices.refused(StartRefusal.ServiceUnavailable)
             return
         }
-        if (epoch != engine.epoch || !safety.autopilot(epoch, true)) return
+        if (epoch != engine.epoch || isMotionOff() || !safety.autopilot(epoch, true)) return
+        if (epoch != engine.epoch || isMotionOff()) {
+            safety.autopilot(epoch, false)
+            return
+        }
         owner = epoch
         paused = false
         standing = false
@@ -86,10 +131,14 @@ internal class Autopilot(
         lastChange = origin
         holds = 0
         speeds.clear()
-        worker =
+        val launched =
             engine.launchWork(epoch, WorkKind.Planner, d.dispatchers.session) {
                 revision.collectLatest { serial ->
                     when {
+                        owner != epoch || engine.epoch != epoch || isMotionOff() -> {
+                            reset()
+                            cancel()
+                        }
                         paused || engine.state.value.pausedPosition != null ->
                             status(AutopilotStatus.Paused)
                         !reachable() -> status(AutopilotStatus.Held)
@@ -100,6 +149,11 @@ internal class Autopilot(
                     }
                 }
             }
+        if (!launched.isActive) {
+            reset()
+            return
+        }
+        worker = launched
     }
 
     fun pause(on: Boolean) {
@@ -159,11 +213,17 @@ internal class Autopilot(
         return m.info.status == ConnectionStatus.Ready && m.hasRoute(network)
     }
 
+    private fun isMotionOff(): Boolean =
+        ui.value.settings.motionMode == MotionMode.Off ||
+            d.settings.state.value.values.mode == MotionMode.Off
+
     private fun current(epoch: Epoch, serial: Long) =
         owner == epoch &&
+            worker?.isActive == true &&
             engine.epoch == epoch &&
             revision.value == serial &&
             !paused &&
+            !isMotionOff() &&
             engine.state.value.pausedPosition == null
 
     private suspend fun drive(epoch: Epoch, serial: Long) = coroutineScope {
@@ -173,19 +233,28 @@ internal class Autopilot(
             else null
         try {
             var deadline = d.clock.elapsed()
+            var retryDelay = 2.seconds
             while (current(epoch, serial)) {
                 if (standing) {
                     awaitCancellation()
                 }
-                val clock = launch { countdown(deadline) }
+                val clock = launch { countdown(epoch, deadline) }
                 val previous = engine.state.value.score
                 val step = decision("plan")
-                if (!current(epoch, serial)) break
+                if (!current(epoch, serial)) {
+                    clock.cancel()
+                    break
+                }
                 if (step == null) {
                     clock.cancel()
                     status(AutopilotStatus.Held)
-                    break
+                    delay(retryDelay)
+                    retryDelay = minOf(30.seconds, retryDelay * 2)
+                    continue
                 }
+                if (ui.value.autopilot.status == AutopilotStatus.Held)
+                    status(AutopilotStatus.Active)
+                retryDelay = 2.seconds
                 clock.join()
                 if (!current(epoch, serial)) break
                 if (previous !== engine.state.value.score) continue
@@ -202,11 +271,12 @@ internal class Autopilot(
         }
     }
 
-    private suspend fun countdown(deadline: Duration) {
-        while (true) {
+    private suspend fun countdown(epoch: Epoch, deadline: Duration) {
+        while (owner == epoch && engine.epoch == epoch && !isMotionOff()) {
             val now = d.clock.elapsed()
             val left = (deadline - now).coerceAtLeast(Duration.ZERO)
             ui.update { s ->
+                if (owner != epoch || engine.epoch != epoch || isMotionOff()) return@update s
                 s.copy(
                     autopilot =
                         s.autopilot.copy(
@@ -230,8 +300,10 @@ internal class Autopilot(
         var next = "normal"
         while (current(epoch, serial)) {
             delay(timing.speech(next))
+            if (ui.value.autopilot.status == AutopilotStatus.Held) continue
             val type = if (ui.value.autopilot.checkIns == CheckIns.Talk) "talk" else "speech"
-            val step = decision(type) ?: continue
+            val persona = d.settings.state.value.activePersona
+            val step = decision(type, persona) ?: continue
             if (!current(epoch, serial)) return
             if (type == "speech" && !apply(epoch, serial, step)) continue
             next = step.next
@@ -239,9 +311,7 @@ internal class Autopilot(
             val chat =
                 ui.value.chat.chatId
                     ?: ChatId(java.util.UUID.randomUUID().toString()).also {
-                        d.chats.create(
-                            ChatSummary(it, "Autopilot", defaultPersona.name, d.clock.now())
-                        )
+                        d.chats.create(ChatSummary(it, "Autopilot", persona.name, d.clock.now()))
                     }
             val entry =
                 ChatEntry.Message(
@@ -250,12 +320,14 @@ internal class Autopilot(
                     Author.Persona,
                     text,
                     null,
+                    speaker = persona.name,
                 )
-            d.chats.append(chat, entry, defaultPersona.id, emptyList()) { current(epoch, serial) }
+            d.chats.append(chat, entry, persona.id, emptyList()) { current(epoch, serial) }
         }
     }
 
     private suspend fun apply(epoch: Epoch, serial: Long, step: Decision): Boolean {
+        if (!current(epoch, serial)) return false
         if (step.tempo != null || step.air != 0)
             return devices.playback.applyTempo(epoch, step.tempo, step.air, MotionSource.Autopilot)
         val score = step.score
@@ -281,9 +353,13 @@ internal class Autopilot(
         return true
     }
 
-    private suspend fun decision(purpose: String): Decision? {
+    private suspend fun decision(
+        purpose: String,
+        persona: PersonaRef = d.settings.state.value.activePersona,
+    ): Decision? {
         val m = model() ?: return null
-        val p = d.provider(m) as? PlanningProvider ?: return null
+        val peer = if (purpose == "plan") d.provider(m) else d.speakingProvider(m, persona)
+        val p = peer as? PlanningProvider ?: return null
         val state = ui.value
         val preferences = state.settings
         val e = engine.state.value
@@ -311,9 +387,10 @@ internal class Autopilot(
                 airBalance = e.airBalance,
                 tempoLevel = state.run.commandedPace?.value ?: 0,
                 style = preferences.style,
+                persona = persona,
                 memories =
                     if (shared && preferences.isMemoryOn)
-                        d.chats.state.value.memory[preferences.persona.id].orEmpty()
+                        d.chats.state.value.memory[persona.id].orEmpty()
                     else emptyList(),
             )
         val now = d.clock.elapsed()

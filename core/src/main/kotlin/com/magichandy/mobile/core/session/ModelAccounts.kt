@@ -11,10 +11,12 @@ import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.ModelConnection
 import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.SignInFailure
+import com.magichandy.mobile.core.api.SignInStage
 import com.magichandy.mobile.core.api.SignInState
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.matches
 import java.io.IOException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +33,7 @@ internal class ModelAccounts(
 ) {
     private var signIn: Job? = null
 
-    fun startSignIn() {
+    fun startSignIn(selectForChat: Boolean = false) {
         val action = d.signIn ?: return unavailable()
         signIn?.cancel()
         setSignIn(SignInState.WaitingForBrowser)
@@ -42,11 +44,11 @@ internal class ModelAccounts(
                         action.signIn()
                     } catch (_: IOException) {
                         record(DiagnosticKind.AccountUnavailable)
-                        SignInFailure.NetworkError
+                        SignInState.Failed(SignInFailure.NetworkError)
                     }
                 if (!isActive) return@launch
                 if (failure != null) {
-                    setSignIn(SignInState.Failed(failure))
+                    setSignIn(failure)
                     return@launch
                 }
                 val info =
@@ -62,11 +64,24 @@ internal class ModelAccounts(
                         ConnectionStatus.Ready,
                     )
                 try {
-                    d.models.save(SavedModel(info, d.signInCredential))
-                    setSignIn(SignInState.Idle)
+                    d.models.save(SavedModel(info, d.signInCredential), selectForChat)
+                    ui.update { state ->
+                        state.copy(
+                            models =
+                                state.models.copy(
+                                    signIn = SignInState.Idle,
+                                    completedSignIns = state.models.completedSignIns + 1,
+                                )
+                        )
+                    }
                 } catch (_: IOException) {
                     storeFailed()
-                    setSignIn(SignInState.Failed(SignInFailure.NetworkError))
+                    setSignIn(
+                        SignInState.Failed(
+                            SignInFailure.StorageUnavailable,
+                            SignInStage.SavingConnection,
+                        )
+                    )
                 }
             }
     }
@@ -86,7 +101,7 @@ internal class ModelAccounts(
             if (
                 saved.info.provider == ProviderKind.OpenRouter &&
                     saved.info.model == name &&
-                    saved.credential?.let { d.vault.get(it) } == intent.apiKey
+                    saved.credential?.let { d.vault.matches(it, intent.apiKey) } == true
             )
                 return reject(FormReason.Duplicate)
         }
@@ -106,7 +121,9 @@ internal class ModelAccounts(
             )
         d.vault.put(handle, intent.apiKey)
         try {
-            d.models.save(SavedModel(info, handle))
+            val saved = SavedModel(info, handle)
+            if (intent.selectForChat) d.models.save(saved, selectForChat = true)
+            else d.models.save(saved)
         } finally {
             if (id !in d.models.state.value.models) d.vault.remove(handle)
         }
@@ -115,6 +132,10 @@ internal class ModelAccounts(
 
     private fun setSignIn(value: SignInState) {
         ui.update { it.copy(models = it.models.copy(signIn = value)) }
+    }
+
+    fun cancelPendingSignIn() {
+        if (signIn?.isActive == true) cancelSignIn()
     }
 
     fun cancelSignIn() {

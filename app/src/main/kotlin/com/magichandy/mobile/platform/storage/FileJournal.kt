@@ -1,7 +1,9 @@
 package com.magichandy.mobile.platform.storage
 
 import com.magichandy.mobile.core.api.DeviceId
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.ports.RunId
+import com.magichandy.mobile.core.ports.RunJournal
+import com.magichandy.mobile.core.ports.RunJournalStore
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -63,6 +65,15 @@ internal class FileJournal(
             replace(record)
             true
         }
+    }
+
+    override suspend fun retainStops(record: RunJournal): Boolean = access {
+        val old = existing()
+        if (record.version != 1 || old != null && old.runId != record.runId) return@access false
+        val next =
+            old?.copy(devices = (old.devices + record.devices).distinctBy { it.id }) ?: record
+        if (old != next) replace(next)
+        true
     }
 
     override suspend fun reconcile(runId: RunId, confirmed: Set<DeviceId>) {

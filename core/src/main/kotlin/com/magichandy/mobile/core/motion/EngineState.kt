@@ -11,9 +11,11 @@ import com.magichandy.mobile.core.ports.DeviceRef
 import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.OutputFence
+import com.magichandy.mobile.core.ports.RunId
 import com.magichandy.mobile.core.ports.RunIntent
 import com.magichandy.mobile.core.ports.RunJournal
 import com.magichandy.mobile.core.ports.StopEvidence
+import com.magichandy.mobile.core.score.TempoScore
 import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlinx.coroutines.Job
@@ -27,9 +29,10 @@ internal enum class WorkKind {
 internal data class StopTarget(
     val device: DeviceRef,
     val timeout: Duration,
+    val onConfirmed: (() -> Unit)? = null,
     val send: suspend (OutputFence) -> StopEvidence,
 ) {
-    constructor(owner: DeviceTransport) : this(owner.device, owner.stopTimeout, owner::stop)
+    constructor(owner: DeviceTransport) : this(owner.device, owner.stopTimeout, send = owner::stop)
 }
 
 internal class StopAttempt(
@@ -41,6 +44,8 @@ internal class StopAttempt(
 
 /** Captured by the output job before its first write. Pause fences only this output stream. */
 internal data class PlaybackStream(val epoch: Epoch, val generation: Long)
+
+internal data class EndedRun(val id: RunId, val at: Instant, val lostDevice: String?)
 
 internal data class EngineState(
     val epoch: Epoch = Epoch(0),
@@ -54,7 +59,7 @@ internal data class EngineState(
     val score: ScoreRequest? = null,
     val vibration: VibrationLane? = null,
     val tempo: TempoLane? = null,
-    val previousTempo: com.magichandy.mobile.core.score.TempoScore? = null,
+    val previousTempo: TempoScore? = null,
     val air: AirAdjustment? = null,
     val airBalance: Int = 0,
     val pausedAt: Duration? = null,
@@ -67,6 +72,7 @@ internal data class EngineState(
     val receipt: StopReceipt? = null,
     val evidence: StopReceipt? = null,
     val publishesEvidence: Boolean = false,
+    val endedRun: EndedRun? = null,
 ) {
     fun plays(stream: PlaybackStream): Boolean =
         epoch == stream.epoch &&
@@ -105,6 +111,7 @@ internal fun EngineState.stopped(
     isolated: Boolean,
     elapsed: Duration,
     at: Instant,
+    lostDevice: String? = null,
 ): EngineState {
     val pending = pending.toMutableMap()
     for ((id, target) in targets) {
@@ -117,8 +124,34 @@ internal fun EngineState.stopped(
             pending[id] = StopAttempt(next, target, elapsed, !isolated)
     }
     val evidence = nextReceipt(source, targets, isolated, at)
+    val previousRecord = record ?: journal
+    val roster =
+        (previousRecord?.devices.orEmpty() +
+                evidence.outcomes
+                    .filter { it.outcome != StopOutcome.Confirmed }
+                    .map {
+                        DeviceRef(it.device, it.name, it.family, it.connection)
+                    } +
+                targets.values.map { it.device })
+            .distinctBy { it.id }
+    val recoveryRecord =
+        when {
+            previousRecord != null -> previousRecord.copy(devices = roster)
+            roster.isEmpty() -> null
+            else ->
+                RunJournal(
+                    RunId("stop-$at-${evidence.episodeId}"),
+                    roster,
+                    RunIntent.Stop,
+                    false,
+                    at,
+                )
+        }
     return copy(
         epoch = next,
+        endedRun =
+            if (members.isNotEmpty() && journal != null) EndedRun(journal.runId, at, lostDevice)
+            else endedRun,
         members = emptySet(),
         pausedPosition = null,
         edgeRequested = false,
@@ -134,7 +167,7 @@ internal fun EngineState.stopped(
             if (retire != null && owners[retire.device.id] === retire)
                 retired + (retire.device.id to retire)
             else retired,
-        journal = record ?: journal,
+        journal = recoveryRecord,
         reconciled = reconciled - targets.keys,
         confirmed =
             if (record != null && record.runId != journal?.runId) emptySet()
@@ -142,8 +175,8 @@ internal fun EngineState.stopped(
         work = if (isolated) work else emptyMap(),
         pending = pending,
         evidence = evidence,
-        publishesEvidence = source != null,
-        receipt = if (source != null) evidence else receipt,
+        publishesEvidence = source != null || record != null && receipt != null,
+        receipt = if (source != null || record != null && receipt != null) evidence else receipt,
     )
 }
 
@@ -209,6 +242,8 @@ internal fun EngineState.resuming(
     )
 }
 
+private val receiptSequence = java.util.concurrent.atomic.AtomicLong()
+
 internal fun EngineState.nextReceipt(
     source: StopSource?,
     targets: Map<DeviceId, StopTarget>,
@@ -232,6 +267,7 @@ internal fun EngineState.nextReceipt(
         outcomes.values.sortedBy { it.outcome },
         (!isolated && WorkKind.Planner in work.values) || receipt?.didTurnOffAutopilot == true,
         (!isolated && WorkKind.Turn in work.values) || receipt?.didCancelReply == true,
+        receiptSequence.incrementAndGet(),
     )
 }
 

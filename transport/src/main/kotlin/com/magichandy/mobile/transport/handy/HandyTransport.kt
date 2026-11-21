@@ -2,11 +2,14 @@
 package com.magichandy.mobile.transport.handy
 
 import com.magichandy.mobile.core.api.Percent
+import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.BufferedPlaybackTiming
 import com.magichandy.mobile.core.ports.DeviceRef
 import com.magichandy.mobile.core.ports.DeviceTransport
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.DiagnosticReporter
 import com.magichandy.mobile.core.ports.Epoch
+import com.magichandy.mobile.core.ports.LinkedStart
 import com.magichandy.mobile.core.ports.MotionBatch
 import com.magichandy.mobile.core.ports.OutputFence
 import com.magichandy.mobile.core.ports.SliderReading
@@ -21,12 +24,31 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal interface HandyWire {
+    val bufferedTiming: BufferedPlaybackTiming?
+        get() = null
+
+    val latency: Duration?
+        get() = null
+
     val maxPoints: Int
     val stopTimeout: Duration
 
     suspend fun command(command: HandyCommand, allowed: () -> Boolean): WriteResult
 
+    /** A logical append may need several MTU-sized RPCs before its new tail is accepted. */
+    suspend fun measureAppend(send: suspend () -> WriteResult): WriteResult = send()
+
+    suspend fun playAligned(offsetMillis: () -> Int?, allowed: () -> Boolean): WriteResult {
+        if (!allowed()) return WriteResult.Stale
+        return command(HandyCommand.Play(offsetMillis() ?: return WriteResult.Uncertain), allowed)
+    }
+
     suspend fun stop(allowed: () -> Boolean): StopEvidence
+
+    suspend fun establishIdle(allowed: () -> Boolean): StopEvidence = stop(allowed)
+
+    suspend fun checkConnection(allowed: () -> Boolean): Boolean =
+        command(HandyCommand.State, allowed) == WriteResult.Accepted
 
     suspend fun readPosition(allowed: () -> Boolean): SliderReading? = null
 }
@@ -34,13 +56,17 @@ internal interface HandyWire {
 internal class HandyTransport(
     override val device: DeviceRef,
     private val wire: HandyWire,
-    initiallyStopped: Boolean = false,
     private val readMounting: () -> Boolean = { false },
 ) : DeviceTransport {
     override val checkConnection: suspend () -> Boolean = {
-        !retired.value &&
-            wire.command(HandyCommand.State) { !retired.value } == WriteResult.Accepted
+        !retired.value && wire.checkConnection { !retired.value }
     }
+
+    override val measuredLatency: Duration?
+        get() = wire.latency
+
+    override val bufferedTiming: BufferedPlaybackTiming?
+        get() = wire.bufferedTiming
 
     override val stopTimeout
         get() = wire.stopTimeout
@@ -54,21 +80,41 @@ internal class HandyTransport(
     private var reversed = false
     private var tail = -1L
     private var lastTime = -1L
-    private val idle = MutableStateFlow(initiallyStopped)
     private var prepared: Pair<Epoch, Long>? = null
     override val linkedStart =
-        com.magichandy.mobile.core.ports.LinkedStart { offset, fence ->
-            motion.withLock {
-                if (
-                    !fence.isCurrent() ||
-                        retired.value ||
-                        epoch != fence.epoch ||
-                        streamGeneration != fence.streamGeneration
-                )
-                    WriteResult.Stale
-                else if (offset !in 0..lastTime || offset > Int.MAX_VALUE) WriteResult.Uncertain
-                else wire.command(HandyCommand.Play(offset.toInt()), fence::isCurrent)
-            }
+        object : LinkedStart {
+            override suspend fun play(offsetMillis: Long, fence: OutputFence) =
+                playAligned({ offsetMillis }, fence)
+
+            override suspend fun playAligned(offsetMillis: () -> Long, fence: OutputFence) =
+                motion.withLock {
+                    if (
+                        !fence.isCurrent() ||
+                            retired.value ||
+                            epoch != fence.epoch ||
+                            streamGeneration != fence.streamGeneration
+                    )
+                        return@withLock WriteResult.Stale
+                    val result =
+                        try {
+                            wire.playAligned(
+                                {
+                                    offsetMillis()
+                                        .takeIf { it in 0..lastTime && it <= Int.MAX_VALUE }
+                                        ?.toInt()
+                                },
+                                fence::isCurrent,
+                            )
+                        } catch (cancelled: CancellationException) {
+                            retired.value = true
+                            throw cancelled
+                        } catch (_: IOException) {
+                            DiagnosticReporter.record(DiagnosticKind.TransportWriteFailed)
+                            WriteResult.Uncertain
+                        }
+                    if (result == WriteResult.Uncertain) retired.value = true
+                    result
+                }
         }
     override val startupPosition: StartupPosition =
         object : StartupPosition {
@@ -77,43 +123,58 @@ internal class HandyTransport(
 
             override suspend fun halt(fence: OutputFence): StopEvidence {
                 if (!fence.isCurrent())
-                    return StopEvidence.Unconfirmed(
-                        com.magichandy.mobile.core.api.UnconfirmedCause.WriteFailed
-                    )
+                    return StopEvidence.Unconfirmed(UnconfirmedCause.WriteFailed)
                 val token = fence.epoch to fence.streamGeneration
                 if (prepared != token) {
                     this@HandyTransport.reversed = readMounting()
                     prepared = token
                 }
-                return if (idle.value) StopEvidence.Acknowledged else stop(fence)
+                // A physical button or another client can move the Handy between starts.
+                return stop(fence)
             }
 
             override suspend fun read(fence: OutputFence) = wire.readPosition(fence::isCurrent)
 
             override suspend fun position(batch: MotionBatch, fence: OutputFence): WriteResult =
                 motion.withLock {
-                    if (!fence.isCurrent()) return@withLock WriteResult.Stale
-                    idle.value = false
-                    val writer = BatchWriter(wire, fence)
-                    val range =
-                        HandyCommand.Stroke(
-                            batch.limits.strokeLow.value.toDouble(),
-                            batch.limits.strokeHigh.value.toDouble(),
-                        )
-                    writer.send(range)?.let {
-                        return@withLock it
+                    if (!fence.isCurrent() || retired.value) return@withLock WriteResult.Stale
+                    val result =
+                        try {
+                            sendPosition(batch, fence)
+                        } catch (cancelled: CancellationException) {
+                            retired.value = true
+                            throw cancelled
+                        } catch (_: IOException) {
+                            DiagnosticReporter.record(DiagnosticKind.TransportWriteFailed)
+                            WriteResult.Uncertain
+                        }
+                    if (result == WriteResult.Uncertain) {
+                        retired.value = true
                     }
-                    stream = stream % maximumWireValue + 1
-                    writer.send(HandyCommand.Setup(stream))?.let {
-                        return@withLock it
-                    }
-                    tail = -1
-                    append(writer, batch)?.let {
-                        return@withLock it
-                    }
-                    writer.send(HandyCommand.Play(0)) ?: WriteResult.Accepted
+                    result
                 }
         }
+
+    private suspend fun sendPosition(batch: MotionBatch, fence: OutputFence): WriteResult {
+        val writer = BatchWriter(wire, fence)
+        val range =
+            HandyCommand.Stroke(
+                batch.limits.strokeLow.value.toDouble(),
+                batch.limits.strokeHigh.value.toDouble(),
+            )
+        writer.send(range)?.let {
+            return it
+        }
+        stream = stream % maximumWireValue + 1
+        writer.send(HandyCommand.Setup(stream))?.let {
+            return it
+        }
+        tail = -1
+        append(writer, batch)?.let {
+            return it
+        }
+        return writer.send(HandyCommand.Play(0)) ?: WriteResult.Accepted
+    }
 
     override suspend fun write(batch: MotionBatch, fence: OutputFence): WriteResult {
         if (!fence.isCurrent() || retired.value) return WriteResult.Stale
@@ -130,7 +191,9 @@ internal class HandyTransport(
                     DiagnosticReporter.record(DiagnosticKind.TransportWriteFailed)
                     WriteResult.Uncertain
                 }
-            if (result == WriteResult.Uncertain) retired.value = true
+            if (result == WriteResult.Uncertain) {
+                retired.value = true
+            }
             result
         }
     }
@@ -147,7 +210,6 @@ internal class HandyTransport(
             return WriteResult.Uncertain
 
         val writer = BatchWriter(wire, fence)
-        idle.value = false
         val low = batch.limits.strokeLow.value.toDouble()
         val high = batch.limits.strokeHigh.value.toDouble()
         if (batch.isFirst || stroke?.low != low || stroke?.high != high) {
@@ -178,6 +240,12 @@ internal class HandyTransport(
     }
 
     private suspend fun append(writer: BatchWriter, batch: MotionBatch): WriteResult? {
+        return wire
+            .measureAppend { sendPoints(writer, batch) }
+            .takeUnless { it == WriteResult.Accepted }
+    }
+
+    private suspend fun sendPoints(writer: BatchWriter, batch: MotionBatch): WriteResult {
         for (offset in batch.frames.indices step wire.maxPoints) {
             val slice =
                 batch.frames.subList(offset, minOf(batch.frames.size, offset + wire.maxPoints))
@@ -185,23 +253,30 @@ internal class HandyTransport(
                 if (reversed) slice.map { it.copy(position = Percent(100 - it.position.value)) }
                 else slice
             val newTail = tail + frames.size
-            writer.send(HandyCommand.Add(frames, newTail, tail < 0))?.let {
-                return it
-            }
+            writer
+                .send(HandyCommand.Add(frames, newTail, tail < 0, refilling = !batch.isFirst))
+                ?.let {
+                    return it
+                }
             tail = newTail
             lastTime = frames.last().timeMillis
         }
-        return null
+        return WriteResult.Accepted
     }
 
-    override suspend fun stop(fence: OutputFence): StopEvidence =
-        wire.stop(fence::isCurrent).also { idle.value = it == StopEvidence.Acknowledged }
+    override suspend fun stop(fence: OutputFence): StopEvidence = wire.stop(fence::isCurrent)
+
+    override suspend fun establishIdle(fence: OutputFence): StopEvidence =
+        wire.establishIdle(fence::isCurrent)
 }
 
 private const val maximumWireValue = 0xffff_ffffL
 
 /** Fence every command in a batch. A stale suffix after a submitted mutation requires recovery. */
-private class BatchWriter(private val wire: HandyWire, private val fence: OutputFence) {
+private class BatchWriter(
+    private val wire: HandyWire,
+    private val fence: OutputFence,
+) {
     private var sent = false
 
     suspend fun send(command: HandyCommand): WriteResult? {

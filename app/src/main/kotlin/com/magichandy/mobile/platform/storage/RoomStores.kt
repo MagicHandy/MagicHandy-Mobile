@@ -1,13 +1,49 @@
 package com.magichandy.mobile.platform.storage
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
+import com.magichandy.mobile.core.api.ChatEntry
+import com.magichandy.mobile.core.api.ChatId
+import com.magichandy.mobile.core.api.ChatSummary
+import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.ConnectionStatus
+import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.FormResult
+import com.magichandy.mobile.core.api.PersonaId
+import com.magichandy.mobile.core.api.PersonaRef
+import com.magichandy.mobile.core.ports.ChatArchive
+import com.magichandy.mobile.core.ports.ChatStore
+import com.magichandy.mobile.core.ports.DeviceRecords
+import com.magichandy.mobile.core.ports.ModelCatalog
+import com.magichandy.mobile.core.ports.ModelStore
+import com.magichandy.mobile.core.ports.PersonaChange
+import com.magichandy.mobile.core.ports.PreferenceEdit
+import com.magichandy.mobile.core.ports.SavedChat
+import com.magichandy.mobile.core.ports.SavedDevice
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.SettingsDocument
+import com.magichandy.mobile.core.ports.SettingsStore
+import com.magichandy.mobile.core.ports.after
+import com.magichandy.mobile.core.ports.builtInPersona
+import com.magichandy.mobile.core.ports.newMemories
+import com.magichandy.mobile.core.ports.personaNameOrder
+import com.magichandy.mobile.core.ports.withFields
+import com.magichandy.mobile.core.ports.withPersonaEdit
 import java.io.IOException
 import java.util.concurrent.Callable
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 private val codec = Json {
@@ -32,7 +68,7 @@ internal class RoomStores(
         scope.async(io) {
             owner.withLock {
                 try {
-                    prefs.value = load("settings", SettingsDocument())
+                    prefs.value = loadSettingsWithPersonas()
                     catalog.value = load("models", ModelCatalog())
                     deviceRows.value = load("devices", emptyList())
                     page = dao.headers().firstOrNull()?.let { ChatId(it.id) }
@@ -74,9 +110,62 @@ internal class RoomStores(
 
     private class Denied : RuntimeException()
 
+    private fun loadSettingsWithPersonas(): SettingsDocument =
+        load("settings", SettingsDocument())
+            .copy(
+                customPersonas =
+                    dao.personas()
+                        .map {
+                            PersonaRef(
+                                PersonaId(it.id),
+                                it.name,
+                                "",
+                                codec.decodeFromString(it.personality),
+                            )
+                        }
+                        .sortedWith(personaNameOrder)
+            )
+
     val settings =
         object : SettingsStore {
             override val state = prefs.asStateFlow()
+
+            override suspend fun editPersonas(
+                edit: (SettingsDocument) -> PersonaChange
+            ): FormResult = serialized {
+                var deleted: PersonaId? = null
+                val next = transaction {
+                    val old = loadSettingsWithPersonas()
+                    when (val change = edit(old)) {
+                        is PersonaChange.Rejected ->
+                            return@transaction null to FormResult.Rejected(change.reason)
+                        is PersonaChange.Edit -> {
+                            change.save?.let { row ->
+                                dao.savePersona(
+                                    PersonaRow(
+                                        row.id.value,
+                                        row.name,
+                                        codec.encodeToString(row.personality),
+                                    )
+                                )
+                            }
+                            change.delete?.let {
+                                dao.deletePersona(it.value)
+                                dao.forget(it.value)
+                                deleted = it
+                            }
+                            val saved = old.withPersonaEdit(change)
+                            if (change.fields.isNotEmpty()) put("settings", saved)
+                            saved to FormResult.Accepted
+                        }
+                    }
+                }
+                next.first?.let { prefs.value = it }
+                deleted?.let {
+                    archive.value = archive.value.copy(memory = archive.value.memory - it)
+                }
+                next.second
+            }
 
             override suspend fun patch(baseRevision: Long, edits: List<PreferenceEdit>): Boolean =
                 serialized {
@@ -89,15 +178,9 @@ internal class RoomStores(
                             )
                                 return@transaction null
                             if (edits.isEmpty()) return@transaction old
-                            val r = old.revision + 1
-                            SettingsDocument(
-                                    r,
-                                    edits.fold(old.values) { s, e -> e.apply(s) },
-                                    old.changedAt + edits.associate { it.field to r },
-                                )
-                                .also { put("settings", it) }
+                            old.withFields(edits).also { put("settings", it) }
                         } ?: return@serialized false
-                    prefs.value = next
+                    prefs.value = next.copy(customPersonas = prefs.value.customPersonas)
                     true
                 }
         }
@@ -110,14 +193,26 @@ internal class RoomStores(
         }
     }
 
+    suspend fun requireChatGptSignIn() = modelsEdit { catalog ->
+        val id = ConnectionId("chatgpt")
+        val row = catalog.models[id] ?: return@modelsEdit catalog
+        catalog.copy(
+            models =
+                catalog.models +
+                    (id to row.copy(info = row.info.copy(status = ConnectionStatus.NeedsSignIn)))
+        )
+    }
+
     val models =
         object : ModelStore {
             override val state = catalog.asStateFlow()
 
-            override suspend fun save(model: SavedModel) = modelsEdit {
+            override suspend fun save(model: SavedModel) = save(model, selectForChat = false)
+
+            override suspend fun save(model: SavedModel, selectForChat: Boolean) = modelsEdit {
                 it.copy(
                     models = it.models + (model.info.id to model),
-                    chat = it.chat ?: model.info.id,
+                    chat = if (selectForChat) model.info.id else it.chat ?: model.info.id,
                 )
             }
 
@@ -154,6 +249,11 @@ internal class RoomStores(
                 if (list.none { it.ref.id == row.ref.id }) list + row
                 else list.map { if (it.ref.id == row.ref.id) row else it }
             }
+
+            override suspend fun update(id: DeviceId, transform: (SavedDevice) -> SavedDevice) =
+                deviceEdit { rows ->
+                    rows.map { if (it.ref.id == id) transform(it) else it }
+                }
 
             override suspend fun remove(id: DeviceId) = deviceEdit { list ->
                 list.filterNot { it.ref.id == id }
@@ -266,16 +366,19 @@ internal class RoomStores(
                                     existing.payload == row.payload
                             }
                             val summary =
-                                codec
-                                    .decodeFromString<ChatSummary>(head.payload)
-                                    .copy(lastActivity = entry.at)
+                                codec.decodeFromString<ChatSummary>(head.payload).let {
+                                    it.after(entry)
+                                }
                             dao.update(
                                 head.copy(
                                     payload = codec.encodeToString(summary),
                                     activity = entry.at.toEpochMilliseconds(),
                                 )
                             )
-                            if (memories.isNotEmpty()) {
+                            if (
+                                memories.isNotEmpty() &&
+                                    (persona == builtInPersona.id || dao.hasPersona(persona.value))
+                            ) {
                                 added = newMemories(dao.memoryFor(persona.value), memories)
                                 dao.remember(added.map { Memory(persona.value, it) })
                             }

@@ -27,6 +27,8 @@ class StopTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        (application as CoreOwner).core.emergencyStop(StopSource.QuickSettingsTile)
+        val owner = application as CoreOwner
+        owner.core.emergencyStop(StopSource.QuickSettingsTile)
+        if (!owner.host.isRunning) StopDeliveryService.retain(this)
     }
 }

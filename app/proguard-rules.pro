@@ -3,4 +3,4 @@
 -keep,allowoptimization class com.magichandy.mobile.platform.storage.PlatformDatabase_Impl { public <init>(); }
 
 # kotlinx.serialization's consumer rules retain companion accessors. The stores call generated serializers
-# directly. checkReleaseContents verifies a representative serializer in the minimized DEX.
+# directly. checkReleaseContents verifies the stored models, journal, chat and persona serializers in DEX.

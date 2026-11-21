@@ -34,11 +34,18 @@ public enum class MotionStyle {
     Intense,
 }
 
-/** A built-in persona preset. */
+/**
+ * A persona: the built-in MagicHandy, or one the person made (plan §12, decided on 2026-11-20).
+ *
+ * @property personality what the person chose. The built-in persona starts at Utility and Neutral.
+ * @property isBuiltIn true for MagicHandy, which keeps its name and can't be deleted.
+ */
 public data class PersonaRef(
     public val id: PersonaId,
     public val name: String,
     public val summary: String,
+    public val personality: Personality = Personality(),
+    public val isBuiltIn: Boolean = false,
 )
 
 /** App-wide preferences, kept with the revisioned settings. */

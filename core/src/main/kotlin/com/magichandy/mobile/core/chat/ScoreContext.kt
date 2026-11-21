@@ -1,7 +1,16 @@
 package com.magichandy.mobile.core.chat
 
-import com.magichandy.mobile.core.score.*
-import kotlinx.serialization.json.*
+import com.magichandy.mobile.core.score.GestureScore
+import com.magichandy.mobile.core.score.LayeredScore
+import com.magichandy.mobile.core.score.SemanticScore
+import com.magichandy.mobile.core.score.toJson
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 
 internal fun SemanticScore.context(template: JsonObject): JsonObject =
     when (this) {

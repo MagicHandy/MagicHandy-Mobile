@@ -17,6 +17,8 @@ public data class StopReceipt(
     public val outcomes: List<DeviceStopOutcome>,
     public val didTurnOffAutopilot: Boolean,
     public val didCancelReply: Boolean,
+    /** Identifies this Stop independently of its press count and changing evidence. */
+    public val episodeId: Long = 0,
 ) {
     /** True when there was nothing to stop: "No connected device to stop." */
     public val isNoDevice: Boolean
@@ -71,7 +73,7 @@ public enum class UnconfirmedCause {
 /**
  * A run that a cold start found unresolved in the journal. Motion and Autopilot stay off.
  *
- * @property stoppedAt the last time the journal recorded the run as live.
+ * @property stoppedAt the time of the last journaled safety state, including a pending idle Stop.
  * @property outcomes the recovery Stop's outcome per device, uncertain first.
  */
 public data class InterruptedRun(

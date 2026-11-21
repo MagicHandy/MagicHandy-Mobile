@@ -1,8 +1,14 @@
 package com.magichandy.mobile.core.chat
 
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.score.*
-import kotlinx.serialization.json.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceSettings
+import com.magichandy.mobile.core.api.RunMembership
+import com.magichandy.mobile.core.score.TempoScore
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 
 internal fun AppState.valveAllowed(): Boolean {
     val rows =

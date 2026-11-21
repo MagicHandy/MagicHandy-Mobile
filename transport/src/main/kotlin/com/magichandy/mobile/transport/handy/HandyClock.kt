@@ -113,7 +113,7 @@ private fun timestamp(element: JsonElement): Long? {
         ?.let {
             return it
         }
-    for (key in listOf("result", "data", "state")) element[key]
+    for (key in listOf("result", "data", "state")) (element[key] as? JsonObject)
         ?.let { timestamp(it) }
         ?.let {
             return it

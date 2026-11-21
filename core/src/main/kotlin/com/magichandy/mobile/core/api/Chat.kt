@@ -24,6 +24,15 @@ public data class ChatState(
     public val sendBlockedBy: SendBlock?,
 )
 
+/** The largest ordinary chat message the core can accept, in UTF-16 code units. */
+public const val maximumMessageLength: Int = 16000
+
+/** True when an ordinary turn can be submitted or the text is a direct Stop. */
+public fun ChatState.canSendMessage(text: String): Boolean =
+    text.length <= maximumMessageLength &&
+        text.isNotBlank() &&
+        (isChatStopMessage(text) || sendBlockedBy == null && reply !is ReplyState.Streaming)
+
 /** Why the composer can't send. */
 public enum class SendBlock {
     NoChatModel,
@@ -44,6 +53,8 @@ public sealed interface ChatEntry {
         public val author: Author,
         public val text: String,
         public val receipt: CommandReceipt?,
+        /** The persona's name when it wrote this; null for your messages and older entries. */
+        public val speaker: String? = null,
     ) : ChatEntry
 
     /** Motion stopped during this chat. [lostDevice] names the device whose loss caused it. */
@@ -86,11 +97,20 @@ public enum class ControlKind {
 public sealed interface ReplyState {
     public data object Idle : ReplyState
 
-    /** The text so far. Nothing is saved or acted on until the reply completes and validates. */
-    public data class Streaming(public val text: String) : ReplyState
+    /**
+     * The text so far. Nothing is saved or acted on until the reply completes and validates.
+     *
+     * @property speaker the persona name captured when this turn started, or null when omitted.
+     */
+    public data class Streaming(public val text: String, public val speaker: String? = null) :
+        ReplyState
 
     /** The reply was discarded. Your message stays, and [UserIntent.SendAgain] resends it. */
-    public data class Interrupted(public val cause: InterruptCause) : ReplyState
+    public data class Interrupted(
+        public val cause: InterruptCause,
+        /** Provider-specific recovery information when supplied by the selected connection. */
+        public val providerFailure: ProviderReplyFailure? = null,
+    ) : ReplyState
 }
 
 /** Why a reply was discarded. */
@@ -99,6 +119,10 @@ public enum class InterruptCause {
     ConnectionLost,
     AppInBackground,
     ProviderError,
+    /**
+     * The provider explicitly declined this turn. The user may choose an alternative and resend.
+     */
+    ProviderRefused,
 }
 
 /** A saved chat in the chat list. */

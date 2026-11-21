@@ -1,10 +1,25 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.CoreDependencies
-import com.magichandy.mobile.core.api.*
-import com.magichandy.mobile.core.ports.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.CapabilityLevel
+import com.magichandy.mobile.core.api.ConnectionId
+import com.magichandy.mobile.core.api.ConnectionStatus
+import com.magichandy.mobile.core.api.FormReason
+import com.magichandy.mobile.core.api.FormResult
+import com.magichandy.mobile.core.api.ModelConnection
+import com.magichandy.mobile.core.api.ServerCheck
+import com.magichandy.mobile.core.api.ServerCheckFailure
+import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.ports.SavedModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal class ServerSetup(
     private val d: CoreDependencies,
@@ -64,15 +79,27 @@ internal class ServerSetup(
                 null
             } ?: return reject(FormReason.Unreachable)
         if (token != generation) return reject(FormReason.Busy)
-        val outcome = assessment.check
+        val outcome =
+            if (assessment.refused && assessment.check is ServerCheck.Failed)
+                ServerCheck.Failed(intent.address, ServerCheckFailure.ProviderRefused)
+            else assessment.check
         publish(outcome)
         if (assessment.refused) return reject(FormReason.ProviderRefused)
-        if (outcome is ServerCheck.Failed)
+        val failure =
+            when (outcome) {
+                is ServerCheck.Failed -> outcome.cause
+                is ServerCheck.Found -> outcome.testFailure
+                else -> null
+            }
+        if (failure != null)
             return reject(
-                when (outcome.cause) {
+                when (failure) {
                     ServerCheckFailure.InvalidAddress,
                     ServerCheckFailure.NotPrivateAddress -> FormReason.InvalidAddress
-                    ServerCheckFailure.NoModels -> FormReason.InvalidModel
+                    ServerCheckFailure.NoModels,
+                    ServerCheckFailure.ModelUnavailable -> FormReason.InvalidModel
+                    ServerCheckFailure.ProviderRefused -> FormReason.ProviderRefused
+                    ServerCheckFailure.IncompleteReply -> FormReason.IncompleteModelReply
                     ServerCheckFailure.NotAModelServer,
                     ServerCheckFailure.Unreachable -> FormReason.Unreachable
                 }
@@ -100,13 +127,14 @@ internal class ServerSetup(
                 outcome.isEncrypted,
                 ConnectionStatus.Ready,
             )
-        d.models.save(
+        val saved =
             SavedModel(
                 info,
                 address = outcome.address,
                 contextTokens = outcome.contextAllowed ?: outcome.contextNeeded,
             )
-        )
+        if (intent.selectForChat) d.models.save(saved, selectForChat = true)
+        else d.models.save(saved)
         return FormResult.Accepted
     }
 

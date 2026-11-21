@@ -10,17 +10,28 @@ import com.magichandy.mobile.core.api.ChatId
 import com.magichandy.mobile.core.api.ChatSummary
 import com.magichandy.mobile.core.api.EntryId
 import com.magichandy.mobile.core.api.InterruptCause
+import com.magichandy.mobile.core.api.PersonaRef
+import com.magichandy.mobile.core.api.ProviderReplyFailure
 import com.magichandy.mobile.core.api.ReplyState
+import com.magichandy.mobile.core.api.maximumMessageLength
 import com.magichandy.mobile.core.chat.ConversationWindow
+import com.magichandy.mobile.core.chat.requestedMemory
+import com.magichandy.mobile.core.motion.EndedRun
+import com.magichandy.mobile.core.motion.EngineState
 import com.magichandy.mobile.core.motion.MotionEngine
 import com.magichandy.mobile.core.motion.WorkKind
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.DiagnosticReporter
 import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.ModelProvider
+import com.magichandy.mobile.core.ports.SavedModel
+import com.magichandy.mobile.core.ports.StructuredProvider
 import com.magichandy.mobile.core.ports.TextMessage
 import com.magichandy.mobile.core.ports.TextResult
 import com.magichandy.mobile.core.ports.TextRole
+import com.magichandy.mobile.core.ports.activePersona
+import com.magichandy.mobile.core.ports.builtInPersona
+import com.magichandy.mobile.core.speakingProvider
 import java.io.IOException
 import java.util.UUID
 import kotlin.time.Duration
@@ -32,6 +43,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal class ChatTurns(
@@ -47,6 +59,7 @@ internal class ChatTurns(
         val epoch: Epoch,
         val message: String,
         val memoryOn: Boolean,
+        val persona: PersonaRef,
     ) : TurnState
 
     private class Committing(val turn: Turn, val replyId: EntryId) : TurnState
@@ -54,10 +67,13 @@ internal class ChatTurns(
     private val active = MutableStateFlow<TurnState?>(null)
     private var job: Job? = null
 
-    suspend fun newChat(title: String = ""): ChatId {
+    suspend fun newChat(
+        title: String = "",
+        persona: PersonaRef = d.settings.state.value.activePersona,
+    ): ChatId {
         interrupt(InterruptCause.MotionStopped)
         val id = ChatId(UUID.randomUUID().toString())
-        d.chats.create(ChatSummary(id, title, defaultPersona.name, d.clock.now()))
+        d.chats.create(ChatSummary(id, title, persona.name, d.clock.now()))
         open(id)
         return id
     }
@@ -93,7 +109,7 @@ internal class ChatTurns(
                     s.chat.copy(
                         chatId = chat?.summary?.id,
                         title = chat?.summary?.title.orEmpty(),
-                        entries = chat?.messages.orEmpty(),
+                        entries = chat?.messages.orEmpty().withHistoricalSpeakers(),
                         reply =
                             if (
                                 completed != null &&
@@ -109,10 +125,18 @@ internal class ChatTurns(
                     ),
                 settings =
                     s.settings.copy(
-                        memoryEntries = archive.memory[defaultPersona.id].orEmpty().size,
-                        memories = archive.memory[defaultPersona.id].orEmpty().asReversed(),
+                        memoryEntries = archive.memory[s.settings.persona.id].orEmpty().size,
+                        memories = archive.memory[s.settings.persona.id].orEmpty().asReversed(),
                     ),
             )
+        }
+    }
+
+    fun recordStop(end: EndedRun) {
+        val chat = ui.value.chat.chatId ?: return
+        val entry = ChatEntry.MotionStopped(EntryId("stop-" + end.id.value), end.at, end.lostDevice)
+        d.scope.launch(d.dispatchers.io) {
+            d.chats.append(chat, entry, builtInPersona.id, emptyList()) { true }
         }
     }
 
@@ -139,21 +163,23 @@ internal class ChatTurns(
             return
         val catalog = d.models.state.value
         val model = catalog.models[catalog.chat] ?: return
+        val settings = d.settings.state.value
+        val persona = settings.activePersona
         val provider =
-            d.provider(model)
+            d.speakingProvider(model, persona)
                 ?: run {
                     ui.update { it.copy(backendNotice = BackendNotice.FeatureUnavailable) }
                     return
                 }
         val message = messageText(text, retry) ?: return
-        val chat = ui.value.chat.chatId ?: newChat(message.take(48))
+        val chat = ui.value.chat.chatId ?: newChat(message.take(48), persona)
         d.chats.loadPage(chat)
         if (engine.epoch != expected) return
         if (!retry && !saveUserMessage(chat, message)) return
-        val turn = Turn(chat, expected, message, ui.value.settings.isMemoryOn)
+        val turn = Turn(chat, expected, message, settings.values.memoryOn, persona)
         val authority = engine.state.value
         active.value = turn
-        ui.update { it.copy(chat = it.chat.copy(reply = ReplyState.Streaming(""))) }
+        ui.update { it.copy(chat = it.chat.copy(reply = ReplyState.Streaming("", persona.name))) }
         if (engine.epoch != expected) {
             interrupt(InterruptCause.MotionStopped)
             return
@@ -175,12 +201,12 @@ internal class ChatTurns(
                     .lastOrNull { it.author == Author.You }
                     ?.text
             } else text?.trim()
-        return message?.takeIf { it.isNotBlank() && it.length <= 16000 }
+        return message?.takeIf { it.isNotBlank() && it.length <= maximumMessageLength }
     }
 
     private suspend fun saveUserMessage(chat: ChatId, message: String): Boolean {
         val entry = ChatEntry.Message(entryId(), d.clock.now(), Author.You, message, null)
-        if (!d.chats.append(chat, entry, defaultPersona.id, emptyList()) { true }) return false
+        if (!d.chats.append(chat, entry, builtInPersona.id, emptyList()) { true }) return false
         showArchive()
         return true
     }
@@ -215,38 +241,79 @@ internal class ChatTurns(
         turn: Turn,
         provider: ModelProvider,
         history: List<TextMessage>,
-        model: com.magichandy.mobile.core.ports.SavedModel,
-        authority: com.magichandy.mobile.core.motion.EngineState,
+        model: SavedModel,
+        authority: EngineState,
     ) {
         try {
+            val previewLock = Any()
             val buffer = StringBuilder()
             var lastUpdate = -Duration.INFINITE
-            val preview: (String) -> Unit = { delta ->
-                buffer.append(delta)
-                val now = d.clock.elapsed()
-                if (now - lastUpdate >= 34.milliseconds && valid(turn)) {
-                    val preview = buffer.toString()
-                    ui.update {
-                        if (valid(turn))
-                            it.copy(chat = it.chat.copy(reply = ReplyState.Streaming(preview)))
-                        else it
+            var generation = 0
+            fun publish(expected: Int, text: String, admitted: () -> Boolean) {
+                synchronized(previewLock) {
+                    if (generation != expected) return
+                    ui.update { state ->
+                        if (valid(turn) && admitted())
+                            state.copy(
+                                chat =
+                                    state.chat.copy(
+                                        reply = ReplyState.Streaming(text, turn.persona.name)
+                                    )
+                            )
+                        else state
                     }
-                    lastUpdate = now
                 }
             }
-            if (provider is com.magichandy.mobile.core.ports.StructuredProvider) {
+            fun openPreview(admitted: () -> Boolean, reset: Boolean): (String) -> Unit {
+                val expected =
+                    synchronized(previewLock) {
+                        if (reset) {
+                            buffer.setLength(0)
+                            lastUpdate = -Duration.INFINITE
+                            ++generation
+                        } else generation
+                    }
+                if (reset) publish(expected, "", admitted)
+                return { delta ->
+                    if (delta.isNotEmpty()) {
+                        val snapshot =
+                            synchronized(previewLock) {
+                                if (generation != expected || !valid(turn) || !admitted()) null
+                                else {
+                                    buffer.append(delta)
+                                    val now = d.clock.elapsed()
+                                    if (now - lastUpdate >= 34.milliseconds) {
+                                        lastUpdate = now
+                                        buffer.toString()
+                                    } else null
+                                }
+                            }
+                        if (snapshot != null) publish(expected, snapshot, admitted)
+                    }
+                }
+            }
+            if (provider is StructuredProvider) {
                 val reply =
                     proposals.complete(
                         provider,
                         model,
                         history,
                         authority,
+                        turn.persona,
+                        turn.memoryOn,
                         { valid(turn) },
-                        preview,
+                        ::openPreview,
                     )
-                if (reply != null && valid(turn)) commitReply(turn, reply)
-                else markInterrupted(turn, InterruptCause.ProviderError)
-            } else finish(turn, provider.stream(history, preview))
+                when (reply) {
+                    is ProposalCompletion.Completed ->
+                        if (valid(turn)) commitReply(turn, reply.entry)
+                    ProposalCompletion.Refused ->
+                        markInterrupted(turn, InterruptCause.ProviderRefused)
+                    ProposalCompletion.Failed -> markInterrupted(turn, InterruptCause.ProviderError)
+                    is ProposalCompletion.ProviderFailed ->
+                        markInterrupted(turn, InterruptCause.ProviderError, reply.error)
+                }
+            } else finish(turn, provider.stream(history, openPreview({ true }, reset = false)))
         } catch (cancelled: CancellationException) {
             markInterrupted(turn, InterruptCause.MotionStopped)
             throw cancelled
@@ -269,7 +336,11 @@ internal class ChatTurns(
             return
         }
         if (result !is TextResult.Completed || result.text.isBlank()) {
-            markInterrupted(turn, InterruptCause.ProviderError)
+            markInterrupted(
+                turn,
+                InterruptCause.ProviderError,
+                (result as? TextResult.Failed)?.error,
+            )
             return
         }
         val reply = ChatEntry.Message(entryId(), d.clock.now(), Author.Persona, result.text, null)
@@ -285,9 +356,14 @@ internal class ChatTurns(
                 try {
                     val memory =
                         if (turn.memoryOn && d.settings.state.value.values.memoryOn)
-                            com.magichandy.mobile.core.chat.requestedMemory(turn.message)
+                            requestedMemory(turn.message)
                         else emptyList()
-                    d.chats.append(turn.chat, reply, defaultPersona.id, memory) {
+                    d.chats.append(
+                        turn.chat,
+                        reply.copy(speaker = turn.persona.name),
+                        turn.persona.id,
+                        memory,
+                    ) {
                         if (!claimed)
                             claimed =
                                 valid(turn) &&
@@ -327,9 +403,15 @@ internal class ChatTurns(
         }
     }
 
-    private fun markInterrupted(turn: Turn, cause: InterruptCause) {
+    private fun markInterrupted(
+        turn: Turn,
+        cause: InterruptCause,
+        providerFailure: ProviderReplyFailure? = null,
+    ) {
         if (active.compareAndSet(turn, null))
-            ui.update { it.copy(chat = it.chat.copy(reply = ReplyState.Interrupted(cause))) }
+            ui.update {
+                it.copy(chat = it.chat.copy(reply = ReplyState.Interrupted(cause, providerFailure)))
+            }
     }
 
     private fun entryId() = EntryId(UUID.randomUUID().toString())

@@ -30,7 +30,7 @@ internal fun CoyoteStrength(
 ) {
     val limits = device.settings as? DeviceSettings.Coyote ?: return
     val reported = device.output as? DeviceOutput.Channels
-    val canStep = reported != null && phase != RunPhase.Paused
+    val canStep = reported != null && !reported.isAwaitingReport && phase != RunPhase.Paused
     Card(caption = stringResource(R.string.live_coyote_caption, device.name)) {
         val channels =
             listOf(
@@ -53,7 +53,7 @@ internal fun CoyoteStrength(
         }
         val note =
             when {
-                reported == null -> R.string.live_coyote_waiting
+                reported == null || reported.isAwaitingReport -> R.string.live_coyote_waiting
                 phase == RunPhase.Paused -> R.string.live_coyote_paused
                 limits.maxStrengthA == 0 && limits.maxStrengthB == 0 ->
                     R.string.live_coyote_no_limits
