@@ -8,7 +8,7 @@ The public APK uses the package ID `com.magichandy.mobile` and appears as **Magi
 
 Run `./gradlew :app:assembleDeviceTest :app:checkDeviceTestContents`. The installable APK is `app/build/outputs/apk/deviceTest/app-deviceTest.apk`. It uses the production core, is minified, and is signed with this workstation’s Android development key. Its app ID is `com.magichandy.mobile.devicetest` and its launcher name is **MagicHandy Test**. It has its own storage and can be installed alongside the public app. Use the same workstation key for subsequent test updates.
 
-Install 0.1.7 over the existing MagicHandy Test app. It preserves saved devices and the signed-in account. The Handy now connects over Bluetooth, and a single Original Handy receives the owner's accepted point density over Bluetooth as well as Cloud. [Bluetooth review](reviews/2026-11-24-handy-bluetooth-verification.md) · [Phone checks](backend/device-checklist.md#verify-handy-bluetooth-on-the-phone)
+Install 0.1.8 over the existing MagicHandy Test app. It preserves saved devices and the signed-in account. It adds voice input in Chat, whose speech model downloads apart from the voice test's, and Settings › Voice › Advanced shows the hidden settings. [Voice design](voice-design.md) · [Voice test](voice-test.md#a-test-session)
 
 The release script builds the minified APK, checks its packaged contents, verifies its signature with Android SDK `apksigner verify --print-certs`, and writes the APK and its SHA-256 checksum. Publishing is a separate owner action.
 
@@ -50,7 +50,7 @@ build/releases/<versionName>/SHA256SUMS
 
 Compare the printed signer certificate fingerprint with the owner’s recorded fingerprint. The checksum file uses lowercase SHA-256 hex, two spaces and the APK basename. The checksum identifies the published bytes. The signature identifies the Android signing key.
 
-`:app:checkReleaseContents` checks the Room implementation’s reflection name and a generated settings serializer against the R8 mapping and DEX, plus the packaged prompt resource and Go numerics licence. Room migration and Kotlin serialization also run under JVM tests. The UI owner performs the signed-APK install and upgrade check after merge.
+`:app:checkReleaseContents` checks the Room implementation’s reflection name and a generated settings serializer against the R8 mapping and DEX, plus the packaged prompt resource and Go numerics licence. For voice input it checks that the native libraries are there for `arm64-v8a` only, without sherpa-onnx's unused C and C++ APIs, that sherpa-onnx's recognizer and speech detector classes keep their names in DEX, and that the sherpa-onnx and ONNX Runtime licences are packaged. Room migration and Kotlin serialization also run under JVM tests. The UI owner performs the signed-APK install and upgrade check after merge.
 
 ## Exercise the pipeline with a disposable key
 
