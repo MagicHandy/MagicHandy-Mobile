@@ -16,6 +16,10 @@ import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.IntifaceChoice
 import com.magichandy.mobile.core.api.Palette
 import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.ScanResult
+import com.magichandy.mobile.core.api.ScanResultId
+import com.magichandy.mobile.core.api.ScanResultStatus
+import com.magichandy.mobile.core.api.ScanState
 import com.magichandy.mobile.core.api.ServerCheck
 import com.magichandy.mobile.core.api.ServerCheckFailure
 import com.magichandy.mobile.ui.AppContent
@@ -306,6 +310,30 @@ private fun AddHandy(@PreviewParameter(PaletteProvider::class) palette: Palette)
             onDone = {},
         )
     }
+
+/** V-AddHandy after a nearby Handy couldn't be verified: the row offers Retry. */
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun AddHandyRetry(@PreviewParameter(PaletteProvider::class) palette: Palette) {
+    val failed = ScanResult(ScanResultId("near"), "The Handy", -48, ScanResultStatus.Failed)
+    val state =
+        SampleStates.playing.let {
+            it.copy(
+                devices =
+                    it.devices.copy(scan = ScanState.Scanning(DeviceFamily.Handy, listOf(failed)))
+            )
+        }
+    InFrame(palette) {
+        AddDeviceScreen(
+            DeviceFamily.Handy,
+            state,
+            onIntent = {},
+            calls = CoreCalls.None,
+            onBack = {},
+            onDone = {},
+        )
+    }
+}
 
 @Preview(widthDp = 390, heightDp = 844)
 @Composable

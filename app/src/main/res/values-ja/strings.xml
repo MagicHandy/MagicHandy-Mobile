@@ -196,6 +196,7 @@
     <string name="add_handy_bluetooth_desc">停止が最も速く、インターネットなしで使えます。スマートフォンを数メートル以内に置いてください。</string>
     <string name="add_handy_cloud">Handy Cloud</string>
     <string name="add_handy_cloud_desc">インターネットと、Handy アプリの接続キーが必要です。</string>
+    <string name="add_handy_recommended">おすすめ</string>
     <string name="add_nearby">付近 · 選んでいる間は順番が変わりません</string>
     <string name="add_scanning">付近のデバイスを探しています…</string>
     <string name="add_verifying">確認中…</string>

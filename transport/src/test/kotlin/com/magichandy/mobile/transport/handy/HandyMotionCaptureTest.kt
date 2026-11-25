@@ -199,8 +199,9 @@ internal class HandyMotionCaptureTest {
         val points = packets.flatMap { it.points }.map { it.jsonArray }
         fun time(point: JsonArray) = point[0].jsonPrimitive.long
         fun position(point: JsonArray) = point[1].jsonPrimitive.int
-        // Desktop alpha.89 at 25% on the Original Handy, measured before the retarget.
-        assertEquals(if (route == "cloud") 56 else 149, points.count { time(it) < 12000 })
+        // The Original Handy's sparse fit at 25%, measured before the retarget. Desktop alpha.89
+        // sends 56 over Cloud and its precise 149 over Bluetooth; Android sends 56 on both.
+        assertEquals(56, points.count { time(it) < 12000 })
         assertTrue(points.zipWithNext().all { (a, b) -> time(a) < time(b) })
         assertTrue(points.all { position(it) in 0..100 })
         assertTrue(time(points.last()) > stop - play.getValue("at_ms").jsonPrimitive.long)

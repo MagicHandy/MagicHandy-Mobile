@@ -13,6 +13,14 @@ On November 21, 2026, the owner tested MagicHandy Test 0.1.6 with ChatGPT on a p
 | Network and models | Check airplane mode, Wi-Fi to cellular, a LAN without internet, a model-only outage and return of the same device while Wi-Fi remains connected. Complete the owner-authorized Custom Tab sign-in and token rotation. Verify the provider accepts the loopback callback on the phone. |
 | Storage and performance | Check Android Keystore persistence and behaviour after a key becomes unusable. Inspect backup and restore on the supported Android versions. Kill the process between journal arming and the first command. Verify Stop-only recovery and the local-check flow. Measure cold startup, sustained memory, trim response and screen-off scheduling jitter. |
 
+## Verify Handy Bluetooth on the phone
+
+Install the update with the Bluetooth fix. Make sure the Handy is safe to put in idle and that only this phone is controlling it. Open **Devices**, add The Handy, and choose **Bluetooth on this phone**. Tap **Connect** on the Handy in the Nearby list. It should show **Verified** within a few seconds, and the device should stay idle. If it shows **Couldn't verify**, tap **Retry** once. Record the app version, Android version, Handy firmware version and the result of each attempt.
+
+Once connected, start manual motion at a low speed, press **Stop** and check that the receipt confirms Stop for the Handy. Then disconnect it from its device page.
+
+To judge motion quality, compare Bluetooth with Handy Cloud on the same Handy, speed and stroke window: manual Start at 25%, then steady full sweeps from chat at 25%, then a repeating two-short/one-full phrase. Use one connection at a time and Stop between runs. Note whether any stutter is continuous, only at turns, or only when a new pattern arrives. A single Original Handy now gets the same sparse fit on both routes. Also note how each run starts: over Bluetooth the Handy moves to the first point at its own speed, while Cloud eases in.
+
 ## Verify Handy Cloud on a second phone
 
 Install the current MagicHandy Test update. With the Handy on Wi-Fi and safe to put in idle, open **Devices**. Tap **Connect** on an existing Handy Cloud entry. On a fresh install, add a Handy Cloud device and enter its connection key in the app. The row should show **Connected** and the device should stay idle. In device details, **Check connection** should keep the row connected without starting playback.

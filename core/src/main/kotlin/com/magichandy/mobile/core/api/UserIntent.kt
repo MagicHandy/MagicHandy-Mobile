@@ -137,7 +137,10 @@ public sealed interface UserIntent {
     /** Ends the active discovery session. */
     public data object StopScan : UserIntent
 
-    /** Connects to a scan result and verifies it before it can play. */
+    /**
+     * Connects to a scan result and verifies it before it can play. A result that couldn't be
+     * verified can be chosen again.
+     */
     public data class ConnectScanResult(public val result: ScanResultId, public val name: String) :
         UserIntent
 

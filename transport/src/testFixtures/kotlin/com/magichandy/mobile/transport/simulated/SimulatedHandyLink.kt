@@ -90,11 +90,13 @@ internal class SimulatedHandyLink(
                     uint(1, 3)
                     message(4) {
                         uint(1, id)
-                        if (accepted)
+                        if (!accepted) message(2) { uint(1, 1) }
+                        // Like firmware, answer RPC 715, which has no result type, with a blank
+                        // response.
+                        else if (method.number != 715)
                             message(method.number) {
                                 if (method.number == 712) uint(1, clockMillis() and 0xffff_ffffL)
                             }
-                        else message(2) { uint(1, 1) }
                     }
                 }
                 .bytes()

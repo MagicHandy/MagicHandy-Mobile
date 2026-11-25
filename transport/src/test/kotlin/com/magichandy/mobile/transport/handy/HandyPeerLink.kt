@@ -71,7 +71,10 @@ internal class HandyPeerLink : BluetoothLink {
                     uint(1, 3)
                     message(4) {
                         uint(1, id + replyIdDelta)
-                        message(method) { if (method == 712) clockMillis?.let { uint(1, it) } }
+                        // Firmware answers RPC 715, which has no result type, with a blank
+                        // response.
+                        if (method != 715)
+                            message(method) { if (method == 712) clockMillis?.let { uint(1, it) } }
                     }
                 }
                 .bytes()

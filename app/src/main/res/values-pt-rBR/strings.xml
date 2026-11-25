@@ -196,6 +196,7 @@
     <string name="add_handy_bluetooth_desc">A parada mais rápida, e funciona sem internet. Mantenha o celular a poucos metros.</string>
     <string name="add_handy_cloud">Handy Cloud</string>
     <string name="add_handy_cloud_desc">Precisa de internet e da chave de conexão do app da Handy.</string>
+    <string name="add_handy_recommended">Recomendado</string>
     <string name="add_nearby">Por perto · a ordem não muda enquanto você escolhe</string>
     <string name="add_scanning">Procurando dispositivos por perto…</string>
     <string name="add_verifying">Verificando…</string>

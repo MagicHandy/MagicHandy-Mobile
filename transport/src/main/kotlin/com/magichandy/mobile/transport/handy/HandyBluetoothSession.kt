@@ -101,7 +101,8 @@ private constructor(private val wire: BluetoothWire, owner: DeviceTransport) :
                     val limit =
                         minOf(bounded(2.seconds) { opened.requestMtu(517) } - 3, profile.maxBytes)
                     if (limit < 48) throw IOException("Handy MTU too small")
-                    val characteristics = bounded(2.seconds) { opened.discover(profile.service) }
+                    // Android discovers an unpaired device's whole GATT table on every connection.
+                    val characteristics = bounded(5.seconds) { opened.discover(profile.service) }
                     if (!characteristics.containsAll(listOf(profile.write, profile.notify)))
                         throw IOException("Handy characteristics missing")
                     val events = bounded(2.seconds) { opened.notifications(profile.notify) }
@@ -285,8 +286,7 @@ private class BluetoothWire(
                     return WriteResult.Uncertain
                 throw IOException("Handy acknowledgement timed out")
             }
-            if (!valid() || response.rejected || response.method != command.method)
-                return WriteResult.Uncertain
+            if (!valid() || !response.acknowledges(command)) return WriteResult.Uncertain
             received(response)
             return WriteResult.Accepted
         } catch (failure: IOException) {

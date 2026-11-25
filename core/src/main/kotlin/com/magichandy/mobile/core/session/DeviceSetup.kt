@@ -239,9 +239,14 @@ internal class DeviceSetup(
     suspend fun select(intent: UserIntent.ConnectScanResult) {
         val cfg = config ?: return
         val state = ui.value.devices.scan as? ScanState.Scanning ?: return
+        // A result that couldn't be verified can be tried again from the same list.
         if (
             selection?.isActive == true ||
-                state.results.none { it.id == intent.result && it.status == ScanResultStatus.Found }
+                state.results.none {
+                    it.id == intent.result &&
+                        (it.status == ScanResultStatus.Found ||
+                            it.status == ScanResultStatus.Failed)
+                }
         )
             return
         val address = cfg.address(intent.result) ?: return
@@ -264,11 +269,15 @@ internal class DeviceSetup(
                 )
         }
         status(ScanResultStatus.Verifying)
+        // Scanning competes with connecting for the radio. The chosen list stays on screen.
+        discovery?.cancel()
         devices.connect(saved.ref.id)
         selection =
             d.scope.launch(d.dispatchers.session) {
+                // Covers every Bluetooth connection attempt, so a slow success can't show as
+                // failed.
                 val row =
-                    withTimeoutOrNull(30.seconds) {
+                    withTimeoutOrNull(60.seconds) {
                         ui.map { s -> s.devices.devices.firstOrNull { it.id == saved.ref.id } }
                             .first { it?.status != DeviceStatus.Connecting }
                     }

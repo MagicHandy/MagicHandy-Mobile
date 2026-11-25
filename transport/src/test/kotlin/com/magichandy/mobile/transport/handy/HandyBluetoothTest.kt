@@ -246,19 +246,22 @@ internal class HandyBluetoothTest {
         }
 
     @Test
-    fun `connect and orderly teardown both send only correlated RPC 715`() = runTest {
-        val link = HandyPeerLink()
-        val session =
-            HandyBluetoothSession.connect(
-                device,
-                ScanResultId("one"),
-                BluetoothConnector { _, _, _ -> link },
-                backgroundScope,
-            )
-        assertEquals(StopEvidence.Acknowledged, session.disconnect())
-        assertEquals(listOf(715, 715), link.methods)
-        assertTrue(link.retired)
-    }
+    fun `connect and orderly teardown send only RPC 715 and accept its blank firmware reply`() =
+        runTest {
+            // HandyPeerLink answers RPC 715 with a blank response, as firmware does. Requiring a
+            // 715 result failed every real connection with "Couldn't verify".
+            val link = HandyPeerLink()
+            val session =
+                HandyBluetoothSession.connect(
+                    device,
+                    ScanResultId("one"),
+                    BluetoothConnector { _, _, _ -> link },
+                    backgroundScope,
+                )
+            assertEquals(StopEvidence.Acknowledged, session.disconnect())
+            assertEquals(listOf(715, 715), link.methods)
+            assertTrue(link.retired)
+        }
 
     @Test
     fun `a wrong response id or a successful GATT write alone leaves Stop unconfirmed`() = runTest {

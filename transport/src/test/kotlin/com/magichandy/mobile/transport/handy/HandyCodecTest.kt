@@ -6,6 +6,8 @@ import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
@@ -86,7 +88,48 @@ internal class HandyCodecTest {
         assertEquals(null, decodeReply(packet(4)))
         assertEquals(null, decodeReply(packet(5)))
         assertEquals(715, decodeReply(packet(3))?.method)
-        assertEquals(null, decodeReply(packet(3, secondMethod = true))?.method)
+        val ambiguous = requireNotNull(decodeReply(packet(3, secondMethod = true)))
+        assertEquals(null, ambiguous.method)
+        assertFalse(ambiguous.acknowledges(HandyCommand.StopCurrentMode))
+        assertFalse(ambiguous.acknowledges(HandyCommand.HspStop))
+    }
+
+    @Test
+    fun `the firmware's blank reply to RPC 715 acknowledges Stop`() {
+        // RpcMessage { type: RESPONSE, response: { id: 1 } }. RPC 715 has no result type, so
+        // this is the firmware's whole reply (handy_rpc.proto at 2398008c).
+        val reply = requireNotNull(decodeReply("080322020801".hexToByteArray()))
+        assertEquals(1L, reply.id)
+        assertTrue(reply.isBlank)
+        assertTrue(reply.acknowledges(HandyCommand.StopCurrentMode))
+    }
+
+    @Test
+    fun `an error or another method's result never acknowledges a command`() {
+        fun response(block: ProtoWriter.() -> Unit) =
+            requireNotNull(
+                decodeReply(
+                    ProtoWriter()
+                        .apply {
+                            uint(1, 3)
+                            message(4) {
+                                uint(1, 7)
+                                block()
+                            }
+                        }
+                        .bytes()
+                )
+            )
+        // The firmware's wrong-mode error carries a code and no result.
+        val error = response { message(2) { uint(1, 100004) } }
+        assertTrue(error.isBlank)
+        assertFalse(error.acknowledges(HandyCommand.StopCurrentMode))
+        val clock = response { message(712) { uint(1, 5) } }
+        assertFalse(clock.isBlank)
+        assertFalse(clock.acknowledges(HandyCommand.StopCurrentMode))
+        assertTrue(clock.acknowledges(HandyCommand.ClockGet))
+        // Metadata outside the result range leaves the reply blank.
+        assertTrue(response { message(12) {} }.acknowledges(HandyCommand.StopCurrentMode))
     }
 
     @Test

@@ -112,7 +112,8 @@ internal class AndroidGattLink(
         queue.complete("mtu", status, java.nio.ByteBuffer.allocate(4).putInt(mtu).array())
 
     override suspend fun discover(service: String): Set<String> {
-        queue.execute("discover", 3.seconds) { gatt().discoverServices() }
+        // Unpaired devices have no GATT cache, so discovery reads the whole table every time.
+        queue.execute("discover", 5.seconds) { gatt().discoverServices() }
         return gatt()
             .getService(UUID.fromString(service))
             ?.characteristics

@@ -3,6 +3,7 @@ package com.magichandy.mobile.transport.simulated
 import com.magichandy.mobile.core.api.BridgeDiscovery
 import com.magichandy.mobile.core.api.CapabilityLevel
 import com.magichandy.mobile.core.api.DeviceFamily
+import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.FormReason
 import com.magichandy.mobile.core.api.IntifaceChoice
@@ -21,7 +22,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 
 internal class SetupTest {
@@ -135,4 +140,82 @@ internal class SetupTest {
             assertNull(f.d.vault.get(requireNotNull(model.credential)))
             f.scope.cancel()
         }
+
+    /** Keeps discovery open like a real radio scan, and can refuse the first connections. */
+    private class HandyRadio(base: DeviceDirectory) : DeviceDirectory by base {
+        var scanning = false
+        var refusals = 0
+        private val directory = base
+        private val records = requireNotNull(base.configuration)
+
+        override val configuration =
+            object : DeviceConfiguration by records {
+                override fun scan(family: DeviceFamily) = flow {
+                    scanning = true
+                    try {
+                        emitAll(records.scan(family))
+                        awaitCancellation()
+                    } finally {
+                        scanning = false
+                    }
+                }
+            }
+
+        override suspend fun connect(device: DeviceId, ownerScope: CoroutineScope) =
+            if (refusals-- > 0) throw IOException("Synthetic GATT status 133")
+            else directory.connect(device, ownerScope)
+    }
+
+    @Test
+    fun `a Bluetooth Handy verifies on the firmware's blank Stop reply and discovery ends first`() =
+        runTest {
+            lateinit var radio: HandyRadio
+            val f =
+                DebugFixture(this) {
+                    radio = HandyRadio(it.devices)
+                    it.copy(devices = radio)
+                }
+            f.onboard()
+            f.send(UserIntent.StartScan(DeviceFamily.Handy))
+            assertTrue(radio.scanning)
+            val hit = assertIs<ScanState.Scanning>(f.core.state.value.devices.scan).results.single()
+            f.send(UserIntent.ConnectScanResult(hit.id, "Bedroom Handy"))
+            assertTrue(!radio.scanning)
+            assertEquals(
+                ScanResultStatus.Verified,
+                assertIs<ScanState.Scanning>(f.core.state.value.devices.scan)
+                    .results
+                    .single()
+                    .status,
+            )
+            val row = f.core.state.value.devices.devices.single { it.name == "Bedroom Handy" }
+            assertEquals(DeviceStatus.Connected, row.status)
+            assertEquals(0, f.devices.output.value.getValue(row.id).batches)
+            f.scope.cancel()
+        }
+
+    @Test
+    fun `a scan result that couldn't be verified can be retried from the same list`() = runTest {
+        lateinit var radio: HandyRadio
+        val f =
+            DebugFixture(this) {
+                radio = HandyRadio(it.devices).apply { refusals = 1 }
+                it.copy(devices = radio)
+            }
+        f.onboard()
+        f.send(UserIntent.StartScan(DeviceFamily.Handy))
+        val hit = assertIs<ScanState.Scanning>(f.core.state.value.devices.scan).results.single()
+        fun status() =
+            assertIs<ScanState.Scanning>(f.core.state.value.devices.scan).results.single().status
+        f.send(UserIntent.ConnectScanResult(hit.id, "Bedroom Handy"))
+        assertEquals(ScanResultStatus.Failed, status())
+        f.send(UserIntent.ConnectScanResult(hit.id, "Bedroom Handy"))
+        assertEquals(ScanResultStatus.Verified, status())
+        assertEquals(
+            DeviceStatus.Connected,
+            f.core.state.value.devices.devices.single { it.name == "Bedroom Handy" }.status,
+        )
+        assertEquals(1, f.devices.saved.count { it.ref.name == "Bedroom Handy" })
+        f.scope.cancel()
+    }
 }

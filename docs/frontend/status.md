@@ -1,9 +1,9 @@
 # Frontend status
 
-- **Date:** 2026-11-20
+- **Date:** 2026-11-24
 - **Scope:** the Compose UI in `:app` (`com.magichandy.mobile.ui`). The backend's status is in `docs/backend/status.md`.
 
-In debug builds, the v1 UI runs on the Pixel 10 emulator (API 37) against the real core (M0–M4), with simulated devices, a canned model, and the real foreground service and notification. `./gradlew check` passes ktfmt formatting, Android Lint (with warnings treated as errors), the debug and release builds, the release contents check and **855 JVM tests**: 298 in `:core`, 170 in `:transport` and 387 in `:app`, which include 268 palette contrast checks and the 80 preview screenshots.
+In debug builds, the v1 UI runs on the Pixel 10 emulator (API 37) against the real core (M0–M4), with simulated devices, a canned model, and the real foreground service and notification. `./gradlew check` passes ktfmt formatting, Android Lint (with warnings treated as errors), the debug and release builds, the release contents check and **959 JVM tests**: 305 in `:core`, 244 in `:transport` and 410 in `:app`, which include 268 palette contrast checks and the 82 preview screenshots. Version 0.1.6 is the first public release (2026-11-21).
 
 The [2026-11-19 review](../reviews/2026-11-19-ui-fidelity-and-implementation-review.md) compared every screen with its board and triaged Gemini's implementation review. Its fixes and its two open decisions are settled: forms wait for the core, and the motor test stays at 1.5 seconds (plan §12).
 
@@ -27,9 +27,9 @@ The [2026-11-19 review](../reviews/2026-11-19-ui-fidelity-and-implementation-rev
 | Wiring | `MagicHandyApp` owns one core, its process scope and the Android host; `MainActivity` hosts only the UI. The core's direct calls (finding Intiface devices, form submission, the diagnostics report, Coyote controls and the refusal fallback) reach screens through `CoreCalls`. A tap on the ongoing notification opens Live above Chat on the normal back stack. |
 | System access | App settings, Devices and the device pages read notification and battery access from the core's snapshot. App settings asks Android to add the Stop tile (Android 13 and later; before that it explains how) and shows Added from the tile's own report. Share diagnostics writes the redacted report to the app's cache and opens the share sheet. |
 | Accessibility | Every touch target is at least 48 dp. Rows, buttons and the Stop row reflow at 200% font scale without breaking words or hiding Stop. TalkBack hears a streaming reply a sentence at a time, never a sentence still being written, while the Stop receipt stays assertive. |
-| Device and model controls | Boards V-CoyotePage, V-CoyoteLive, V-AddVibrator, V-RefusalFallback and V-AddHandyIntiface. The Coyote's page sets its channel limits while it's disconnected, and Live steps a playing Coyote's channels within them. The Intiface picker finds vibrators or strokers at an address and connects the one picked, with the bridge's Stop caveat first for strokers. A generic stroker's page has Reverse direction and no model. Test motion's wording fits each device; the Coyote has Check alone, since a test at zero strength couldn't be felt. |
+| Device and model controls | Boards V-CoyotePage, V-CoyoteLive, V-AddVibrator, V-RefusalFallback and V-AddHandyIntiface. The Coyote's page sets its channel limits while it's disconnected, and Live steps a playing Coyote's channels within them. The Intiface picker finds vibrators or strokers at an address and connects the one picked, with the bridge's Stop caveat first for strokers. A generic stroker's page has Reverse direction and no model. Test motion's wording fits each device; the Coyote has Check alone, since a test at zero strength couldn't be felt. Adding The Handy labels Handy Cloud **Recommended**. Choosing a nearby device ends the scan and keeps the list, and a device that couldn't be verified says so in its row and offers Retry. |
 | Boundaries | `UiBoundaryTest` (ArchUnit, in `:app`) fails the build if the UI depends on `:transport` or on anything in `:core` outside `core.api`. |
-| Previews and screenshots | Every screen's main states in Steel Azure and OLED black, plus Chat, the Stop receipt and a persona's editor at 200% font scale, in the debug source set. `PreviewScreenshotTest` draws all 80 on Robolectric and compares each with its recorded image in `app/src/test/screenshots`. `check` fails on any change bigger than stray anti-aliasing. The debug `SampleStateActivity` renders the real UI over the same sample states. |
+| Previews and screenshots | Every screen's main states in Steel Azure and OLED black, plus Chat, the Stop receipt and a persona's editor at 200% font scale, in the debug source set. `PreviewScreenshotTest` draws all 82 on Robolectric and compares each with its recorded image in `app/src/test/screenshots`. `check` fails on any change bigger than stray anti-aliasing. The debug `SampleStateActivity` renders the real UI over the same sample states. |
 
 ## Checked on the emulator
 
@@ -57,7 +57,8 @@ Earlier checks (2026-11-19 and the morning of 2026-11-20) covered every board si
 | Item | Who |
 |---|---|
 | Phone acceptance on real devices and accounts ([checklist](../backend/device-checklist.md)) | Owner, with the release build |
-| Create the release keystore and publish a signed release ([release guide](../release.md)) | Owner |
+| Compare Bluetooth and Cloud motion on the same Handy ([checklist](../backend/device-checklist.md#verify-handy-bluetooth-on-the-phone)) | Owner, with 0.1.7 |
+| Planned: read the slider over Bluetooth so runs ease in, as on Cloud ([plan §11](../../android-architecture-plan.md#11-milestones-and-exit-criteria)) | Backend, then owner |
 | Check TalkBack's sentence-by-sentence reading with TalkBack on a phone (the splitting is unit-tested) | Owner, with phone acceptance |
 | Check that a ChatGPT sign-in, an OpenRouter key and a LAN server each move setup on to Your companion (only the simulated model was available here) | Owner, with phone acceptance |
 
@@ -67,6 +68,7 @@ Earlier checks (2026-11-19 and the morning of 2026-11-20) covered every board si
 - An acknowledgement from Intiface Central alone shows as unconfirmed (system design §2), whereas V-StopReceipt and V-ConnectionLost show it as stopped.
 - While typing, the chat header also gives way so more of the transcript stays visible above the keyboard.
 - Device pages include a Disconnect button, and Devices adds "leads" to the lead device's status.
+- Adding The Handy labels Handy Cloud "Recommended", which V-AddHandy doesn't show. The board has no failed verification; here the row says "Couldn't verify" and offers Retry.
 - The palette control is 42 dp tall rather than about 36, to keep 48 dp touch targets, and moves under its label when the names don't fit beside it.
 - The VacuGlide motor-test note says "for a moment" because the board's three seconds doesn't match the core's 1.5 seconds.
 - Before you start, as setup's first step, has the setup header and Continue in place of Start chatting; V-Onboarding still draws the one-page first run.

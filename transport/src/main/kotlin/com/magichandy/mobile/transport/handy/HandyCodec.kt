@@ -131,7 +131,19 @@ internal data class RpcReply(
     val rejected: Boolean,
     val deviceTimeMillis: Long? = null,
     val playback: HandyPlaybackReport? = null,
-)
+    /** The response carries no result at all, which is valid for firmware RPC. */
+    val isBlank: Boolean = false,
+) {
+    /**
+     * Whether this correlated reply accepts [command]: it carries no error, and either the
+     * command's own result or no result. Firmware answers a request without a result type, such as
+     * RPC 715, with a blank response (handy_rpc.proto: "not all requests will have a result, and
+     * just return a blank response"). A result for another method, or more than one result, never
+     * acknowledges a command.
+     */
+    fun acknowledges(command: HandyCommand): Boolean =
+        !rejected && (isBlank || method == command.method)
+}
 
 internal data class HandyPlaybackReport(val stream: Long, val state: HandyPlayback)
 
@@ -180,7 +192,8 @@ internal fun decodeReply(
     val id = reply.lastOrNull { it.number == 1 }?.value ?: 0
     if (id !in 0..0xffff_ffffL) throw IOException("Invalid Handy response ID")
     // The public Response oneof starts at 300. Metadata outside it cannot acknowledge a method.
-    val method = reply.singleOrNull { it.number >= 300 && it.data != null }
+    val results = reply.filter { it.number >= 300 && it.data != null }
+    val method = results.singleOrNull()
     val deviceTime =
         if (method?.number == HandyCommand.ClockGet.method)
             fields(requireNotNull(method.data))
@@ -194,5 +207,6 @@ internal fun decodeReply(
         reply.any { it.number == 2 && it.data != null },
         deviceTime,
         playbackReport(method),
+        isBlank = results.isEmpty(),
     )
 }

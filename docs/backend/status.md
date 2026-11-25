@@ -1,5 +1,11 @@
 # Backend status
 
+## Handy Bluetooth verification fix, 2026-11-24
+
+In 0.1.6, every Bluetooth connection to a real Handy ended in **Couldn't verify**. Readiness required RPC 715's reply to carry a 715 result, but the manufacturer schema gives RPC 715 no result type, so firmware answers it blank. A correlated reply without an error now acknowledges a command when its result is that command's or absent. The same rule had also marked every Bluetooth emergency Stop and disconnect Stop unconfirmed. Both simulated firmware peers now reply blank, as firmware does, and reproduce the failure under the old rule. Choosing a scan result ends discovery, service discovery gets five seconds, and a result that couldn't be verified offers Retry. No Bluetooth hardware was connected; the phone check is in the [device checklist](device-checklist.md#verify-handy-bluetooth-on-the-phone). [Diagnosis and desktop comparison](../reviews/2026-11-24-handy-bluetooth-verification.md)
+
+The owner then confirmed that Bluetooth connects and moves the Handy, with motion quality below expectations. A single Original Handy over Bluetooth was still receiving the precise fit (149 points in 12 seconds of full sweeps at 25%), which stuttered on that hardware in the owner's October comparison. It now gets the sparse fit the owner accepted over Cloud (56 points). Bluetooth runs still start without the slider read Cloud uses to ease in; that read is a planned addition (plan §11, After v1). These changes ship in 0.1.7. [Motion comparison](../reviews/2026-11-24-handy-bluetooth-verification.md#motion-over-bluetooth)
+
 ## First public release
 
 The owner completed physical testing with ChatGPT on a Pixel 10 Pro XL and accepted the performance of 0.1.6 for release on November 21, 2026. The device checklist tracks broader testing across firmware, providers and phones. [Phone acceptance record](device-checklist.md)

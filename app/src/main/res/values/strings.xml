@@ -213,6 +213,7 @@
     <string name="add_handy_bluetooth_desc">Fastest Stop, and it works without internet. Keep the phone within a few metres.</string>
     <string name="add_handy_cloud">Handy Cloud</string>
     <string name="add_handy_cloud_desc">Needs internet and the connection key from the Handy app.</string>
+    <string name="add_handy_recommended">Recommended</string>
     <string name="add_handy_intiface">Intiface Central</string>
     <string name="add_handy_intiface_desc">Through Intiface Central on this phone or your network. Its Stop can\'t be confirmed.</string>
     <string name="add_nearby">Nearby · order stays put while you choose</string>

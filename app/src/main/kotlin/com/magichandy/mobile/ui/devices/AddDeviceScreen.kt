@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -204,6 +206,7 @@ internal fun ColumnScope.AddHandy(
                 isSelected = method == option,
                 isFirst = index == 0,
                 onSelect = { method = option },
+                isRecommended = option.isRecommended,
             )
         }
     }
@@ -223,17 +226,25 @@ internal fun ColumnScope.AddHandy(
     }
 }
 
-/** The ways to reach The Handy (board V-AddHandy; Intiface Central from V-AddHandyIntiface). */
+/**
+ * The ways to reach The Handy (board V-AddHandy; Intiface Central from V-AddHandyIntiface). Handy
+ * Cloud is labelled as recommended.
+ */
 private enum class HandyMethod(
     @param:StringRes val title: Int,
     @param:StringRes val description: Int,
+    val isRecommended: Boolean = false,
 ) {
     Bluetooth(R.string.add_handy_bluetooth, R.string.add_handy_bluetooth_desc),
-    Cloud(R.string.add_handy_cloud, R.string.add_handy_cloud_desc),
+    Cloud(R.string.add_handy_cloud, R.string.add_handy_cloud_desc, isRecommended = true),
     Intiface(R.string.add_handy_intiface, R.string.add_handy_intiface_desc),
 }
 
-/** A radio row inside the method card; the selected one is raised (board V-AddHandy). */
+/**
+ * A radio row inside the method card; the selected one is raised (board V-AddHandy). A recommended
+ * option says so beside its title, or under it when the text is large.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MethodOption(
     title: String,
@@ -241,6 +252,7 @@ private fun MethodOption(
     isSelected: Boolean,
     isFirst: Boolean,
     onSelect: () -> Unit,
+    isRecommended: Boolean = false,
 ) {
     val colors = MagicHandyTheme.colors
     Row(
@@ -256,7 +268,18 @@ private fun MethodOption(
     ) {
         RadioMark(isSelected)
         Column(Modifier.padding(start = MagicHandyTheme.dimens.roomy).weight(1f)) {
-            Text(title, style = MagicHandyTheme.type.bodyStrong)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(MagicHandyTheme.dimens.s),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, style = MagicHandyTheme.type.bodyStrong)
+                if (isRecommended)
+                    Text(
+                        stringResource(R.string.add_handy_recommended),
+                        style = MagicHandyTheme.type.caption,
+                        color = colors.accent,
+                    )
+            }
             Text(description, style = MagicHandyTheme.type.small, color = colors.textSecondary)
         }
     }

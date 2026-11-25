@@ -74,12 +74,21 @@ internal class HandySamplingPolicyTest {
             56,
             "430921598646f099b3e5bc5c07b18920cdbf7840a36f57f4242a7c73944f87bb",
         )
+        // A single Original Handy plays the same sparse fit over Bluetooth as over Cloud. Desktop
+        // alpha.89 sends its precise fit over Bluetooth (149 points, the linked case below).
+        verify(
+            HandyModel.Original,
+            listOf(ble),
+            null,
+            36,
+            "8b61202436c0f15b2fd3273bdf90108ed3952e1761232a8f4d41fa0bf35d2fa3",
+        )
         verify(
             HandyModel.Original,
             listOf(ble),
             full,
-            149,
-            "2446f47105ea36369f9e92c540640f2fa0d6a84a8c3efb6a7d9d2a5f77c2f301",
+            56,
+            "430921598646f099b3e5bc5c07b18920cdbf7840a36f57f4242a7c73944f87bb",
         )
         verify(
             HandyModel.Original,

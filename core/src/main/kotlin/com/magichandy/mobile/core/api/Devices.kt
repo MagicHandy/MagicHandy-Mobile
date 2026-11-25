@@ -212,7 +212,10 @@ public enum class AfterLossBehaviour {
 public sealed interface ScanState {
     public data object Idle : ScanState
 
-    /** [results] keep their order while you choose. */
+    /**
+     * [results] keep their order while you choose. Discovery ends when one is chosen, and the list
+     * stays.
+     */
     public data class Scanning(
         public val family: DeviceFamily,
         public val results: List<ScanResult>,

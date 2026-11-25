@@ -196,6 +196,7 @@
     <string name="add_handy_bluetooth_desc">停止最快，而且无需联网。请让手机保持在几米之内。</string>
     <string name="add_handy_cloud">Handy 云端</string>
     <string name="add_handy_cloud_desc">需要联网，以及 Handy 应用中的连接密钥。</string>
+    <string name="add_handy_recommended">推荐</string>
     <string name="add_nearby">附近 · 选择期间顺序保持不变</string>
     <string name="add_scanning">正在查找附近的设备…</string>
     <string name="add_verifying">正在验证…</string>

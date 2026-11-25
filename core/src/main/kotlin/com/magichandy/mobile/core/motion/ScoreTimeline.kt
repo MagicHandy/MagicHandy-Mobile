@@ -41,13 +41,18 @@ internal class ScoreTimeline(
 
     private fun section(at: Long) = sections.lastOrNull { it.start <= at } ?: sections.first()
 
+    /**
+     * A single Original Handy gets the sparse fit the owner preferred on hardware (desktop's Cloud
+     * acceptance, 2026-10-24): denser fits stuttered. The Handy's own HSP player plays the points
+     * on either route, so Bluetooth uses it too, unlike desktop alpha.89.
+     */
     fun bufferedSampler(devices: List<DeviceRef>): BufferedSampler {
         val only = devices.singleOrNull()
         return BufferedSampler(
             this,
             model == HandyModel.Original &&
                 only?.family == DeviceFamily.Handy &&
-                only.connection == ConnectionKind.HandyCloud,
+                only.connection in setOf(ConnectionKind.HandyCloud, ConnectionKind.Bluetooth),
         )
     }
 

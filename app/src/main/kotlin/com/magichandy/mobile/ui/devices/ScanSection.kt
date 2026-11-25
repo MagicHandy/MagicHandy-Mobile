@@ -36,7 +36,10 @@ import com.magichandy.mobile.ui.components.Hint
 import com.magichandy.mobile.ui.components.withMonoReadouts
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
-/** Scans while on screen, keeps the results' order, and verifies a choice before it can play. */
+/**
+ * Scans while on screen until a result is chosen, keeps the results' order, and verifies a choice
+ * before it can play. A result that couldn't be verified offers Retry.
+ */
 @Composable
 internal fun ScanSection(
     family: DeviceFamily,
@@ -87,7 +90,10 @@ internal fun ScanSection(
     }
 }
 
-/** One scan result. While another verifies, the rest dim and can't connect (board V-AddHandy). */
+/**
+ * One scan result. While another verifies, the rest dim and can't connect (board V-AddHandy). A
+ * failed verification says so under the signal and offers Retry.
+ */
 @Composable
 private fun ScanRow(
     result: ScanResult,
@@ -121,6 +127,12 @@ private fun ScanRow(
                 style = MagicHandyTheme.type.small,
                 color = colors.muted,
             )
+            if (result.status == ScanResultStatus.Failed)
+                Text(
+                    stringResource(R.string.add_verify_failed),
+                    style = MagicHandyTheme.type.small,
+                    color = colors.dangerText,
+                )
         }
         when (result.status) {
             ScanResultStatus.Found ->
@@ -128,6 +140,14 @@ private fun ScanRow(
                     stringResource(R.string.action_connect),
                     onConnect,
                     kind = ButtonKind.Primary,
+                    isEnabled = !isDimmed,
+                    height = MagicHandyTheme.dimens.compactControl,
+                )
+            ScanResultStatus.Failed ->
+                AppButton(
+                    stringResource(R.string.device_retry_connection),
+                    onConnect,
+                    kind = ButtonKind.Outline,
                     isEnabled = !isDimmed,
                     height = MagicHandyTheme.dimens.compactControl,
                 )
@@ -150,12 +170,6 @@ private fun ScanRow(
                     stringResource(R.string.add_verified),
                     style = MagicHandyTheme.type.small,
                     color = colors.ok,
-                )
-            ScanResultStatus.Failed ->
-                Text(
-                    stringResource(R.string.add_verify_failed),
-                    style = MagicHandyTheme.type.small,
-                    color = colors.dangerText,
                 )
         }
     }
