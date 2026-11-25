@@ -22,8 +22,8 @@ android {
         applicationId = "com.magichandy.mobile"
         minSdk = 31
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.1.6"
+        versionCode = 8
+        versionName = "0.1.7"
     }
 
     val signingProperties = rootProject.layout.projectDirectory.file("keystore.properties").asFile

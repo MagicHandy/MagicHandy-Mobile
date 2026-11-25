@@ -8,7 +8,7 @@ The public APK uses the package ID `com.magichandy.mobile` and appears as **Magi
 
 Run `./gradlew :app:assembleDeviceTest :app:checkDeviceTestContents`. The installable APK is `app/build/outputs/apk/deviceTest/app-deviceTest.apk`. It uses the production core, is minified, and is signed with this workstation’s Android development key. Its app ID is `com.magichandy.mobile.devicetest` and its launcher name is **MagicHandy Test**. It has its own storage and can be installed alongside the public app. Use the same workstation key for subsequent test updates.
 
-Install 0.1.6 over the existing MagicHandy Test app. It preserves saved devices and the signed-in account. Manual Start now uses the desktop Full sweeps curve. Generated motion on a single Original Handy over Cloud uses the owner's previously accepted point density. The update also corrects Intiface turnaround timing and HSP refill handling. [Motion comparison and test evidence](reviews/2026-11-21-handy-motion-quality.md) · [Phone connection check](backend/device-checklist.md#verify-handy-cloud-on-a-second-phone)
+Install 0.1.7 over the existing MagicHandy Test app. It preserves saved devices and the signed-in account. The Handy now connects over Bluetooth, and a single Original Handy receives the owner's accepted point density over Bluetooth as well as Cloud. [Bluetooth review](reviews/2026-11-24-handy-bluetooth-verification.md) · [Phone checks](backend/device-checklist.md#verify-handy-bluetooth-on-the-phone)
 
 The release script builds the minified APK, checks its packaged contents, verifies its signature with Android SDK `apksigner verify --print-certs`, and writes the APK and its SHA-256 checksum. Publishing is a separate owner action.
 
