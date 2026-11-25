@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice model, option D: compact now, full later</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.main{flex:1;padding:4px 12px 8px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.nav{display:flex;align-items:center;gap:4px;color:#9aa1a9;font-size:13px}
+.back{width:48px;height:48px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center}
+h1{margin:0 0 2px;font-size:22px;font-weight:600}
+.cap{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa1a9;padding:8px 2px 2px}
+.card{background:#16181b;border:1px solid #262a30;border-radius:10px;padding:0 12px}
+.r{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;border:0;border-top:1px solid #262a30;background:transparent;padding:0;text-align:left;font-size:14px}
+.r:first-child{border-top:0}
+.r .k{flex:1}
+.r .v{color:#c9c6c0;font-size:13px;display:flex;align-items:center;gap:6px}
+.r .c{color:#6b7178;font-size:17px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}
+.seg{display:grid;grid-template-columns:repeat(3,auto);background:#0b0c0e;border:1px solid #262a30;border-radius:6px;padding:2px;gap:2px}
+.seg button{height:36px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:600}
+.seg .on{background:#1d2024;color:#e9e7e2}
+.pd{margin:-6px 0 0;padding:0 0 10px;font-size:12px;color:#9aa1a9;line-height:1.4}
+.danger{color:#f0a39f}
+.stopbar{background:#121417;border-top:1px solid #262a30;padding:10px 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+
+.check{display:flex;flex-direction:column;gap:8px;padding:2px 0 12px}
+.vm{display:flex;align-items:center;gap:3px;height:24px}
+.vm i{flex:1;background:#353b43;border-radius:1px}
+.vm i.hot{background:#5b9dd9}
+.heard{font-size:14px;line-height:1.4}
+.hint2{font-size:12px;color:#9aa1a9;line-height:1.4}
+.txt{font-size:13px;color:#c9c6c0;line-height:1.45;padding:10px 0;border-top:1px solid #262a30}
+.txt:first-child{border-top:0}
+.btn{height:40px;padding:0 14px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:13px}
+.hint3{margin:6px 2px 0;font-size:12.5px;color:#9aa1a9;line-height:1.45}
+.acc{background:#5b9dd9}
+.chipbar{background:#121417;border-top:1px solid #262a30;padding:10px 12px 0}
+.chipbar + .stopbar{border-top:0}
+.chip{display:flex;align-items:center;gap:8px;height:48px;padding:0 2px 0 12px;border:1px solid #2c3e52;border-radius:10px;background:#0b0c0e;font-size:14px;font-weight:600}
+.chip .end{margin-left:auto;height:44px;padding:0 18px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:14px;font-weight:600}
+
+.seg4{display:grid;grid-template-columns:repeat(4,1fr);background:#0b0c0e;border:1px solid #262a30;border-radius:6px;padding:2px;gap:2px;width:100%}
+.seg4 button,.seg2 button{height:36px;border:0;border-radius:4px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:600}
+.seg4 .on,.seg2 .on{background:#1d2024;color:#e9e7e2}
+.seg2{display:grid;grid-template-columns:1fr 1fr;background:#0b0c0e;border:1px solid #262a30;border-radius:6px;padding:2px;gap:2px;width:140px}
+.r.wrap{flex-wrap:wrap;padding:8px 0;gap:6px}
+.sw{width:44px;height:26px;border-radius:13px;background:#5b9dd9;position:relative;flex:none}
+.sw i{position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#0b131c}
+.sw.off{background:#353b43}
+.sw.off i{right:auto;left:3px;background:#9aa1a9}
+.btn{height:48px !important}
+.warn{margin:6px 2px 0;font-size:12.5px;color:#d8b66a;line-height:1.45}
+.sub{display:flex;flex-direction:column;gap:2px;flex:1}
+.sub small{font-size:12px;color:#9aa1a9;line-height:1.35}
+.pill{font-size:11px;font-weight:600;letter-spacing:.04em;color:#d8b66a;border:1px solid rgba(216,182,106,.45);border-radius:4px;padding:2px 6px;margin-left:6px;vertical-align:1px}
+.bar2{height:4px;border-radius:2px;background:#262a30;overflow:hidden;margin:2px 0 10px}
+.bar2 i{display:block;height:100%;width:41%;background:#5b9dd9}
+
+</style>
+</helmet>
+<div class="app">
+  <div class="main">
+    <div class="nav"><button class="back" type="button" aria-label="Back to App settings"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button>App settings</div>
+    <h1>Voice</h1>
+    <div class="cap">Speech model</div>
+    <div class="card">
+      <div class="r"><span class="k">Compact</span><span class="v"><i class="dot ok"></i>In use · <span class="mono">670 MB</span></span></div>
+      <div class="r"><span class="sub"><span class="k">Full precision</span><small>Downloading <span class="mono">41%</span> of <span class="mono">2.5 GB</span>. Compact keeps working until it's ready.</small></span><button class="btn" type="button">Cancel</button></div>
+      <div class="bar2"><i></i></div>
+      <button class="r danger" type="button"><span class="k">Remove from this phone</span></button>
+    </div>
+    <div class="cap">Microphone</div>
+    <div class="card"><button class="r" type="button"><span class="k">Microphone access</span><span class="v"><i class="dot ok"></i>Allowed</span><span class="c">›</span></button></div>
+    <p class="hint3">When it finishes, voice uses the full model from the next time you start listening. The compact one is removed then, or at once if you aren't listening.</p>
+    <p class="hint3">Listening starts only from the microphone in Chat. It ends when you tap End, with any Stop, or after 15 minutes without speech while nothing is playing.</p>
+    <p class="hint3">Your voice stays on this phone. Spoken Stop works in English, Spanish and Portuguese.</p>
+  </div>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

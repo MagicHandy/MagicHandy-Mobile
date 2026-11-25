@@ -2,6 +2,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
+        <!-- The voice test (src/voicelab), with its own launcher entry and task: debug and
+             phone-test builds only, never a release. -->
+        <activity
+            android:name="com.magichandy.mobile.voicelab.VoiceLabActivity"
+            android:exported="true"
+            android:label="@string/voicelab_launcher"
+            android:taskAffinity="com.magichandy.mobile.voicelab"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name="com.magichandy.mobile.voicelab.VoiceLabService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
         <!-- Debug only: the real UI over a fixed sample state, for design reviews and screenshots. -->
         <activity
             android:name=".preview.SampleStateActivity"

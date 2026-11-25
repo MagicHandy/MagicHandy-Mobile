@@ -38,6 +38,29 @@ object AppIcons {
     val Back: ImageVector by lazy { outline("back", "M10 3L5 8l5 5") }
     val Close: ImageVector by lazy { outline("close", "M4 4l8 8M12 4l-8 8") }
     val Send: ImageVector by lazy { outline("send", "M8 13V3M3.5 7.5L8 3l4.5 4.5") }
+
+    /** A padlock: something stays on the phone (board V-VoiceSetup). */
+    val Lock: ImageVector by lazy {
+        outline(
+            "lock",
+            "M4.5 7h7a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 12.5v-4A1.5 1.5 0 0 1 4.5 7z",
+            "M5.5 7V5a2.5 2.5 0 0 1 5 0v2",
+        )
+    }
+
+    /** An arrow into a tray: a download (board V-VoiceSetup). */
+    val Download: ImageVector by lazy {
+        outline("download", "M8 2.5v8M4.5 7L8 10.5L11.5 7M3 13.5h10")
+    }
+
+    /** The microphone that starts voice input (board V-VoiceIdle). */
+    val Mic: ImageVector by lazy {
+        outline(
+            "mic",
+            "M5.5 4a2.5 2.5 0 0 1 5 0v3a2.5 2.5 0 0 1-5 0z",
+            "M3 7.5a5 5 0 0 0 10 0M8 12.5v2",
+        )
+    }
     val Check: ImageVector by lazy { outline("check", "M3.5 8.5l3 3 6-7") }
     val Plus: ImageVector by lazy { outline("plus", "M8 3.5v9M3.5 8h9") }
     val Minus: ImageVector by lazy { outline("minus", "M3.5 8h9") }

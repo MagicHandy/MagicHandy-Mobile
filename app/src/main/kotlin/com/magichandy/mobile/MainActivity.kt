@@ -34,7 +34,12 @@ class MainActivity : ComponentActivity() {
         openLive =
             savedInstanceState?.getBoolean(OPEN_LIVE) ?: (intent.action == CoreNotice.openLive)
         setContent {
-            MagicHandyRoot(core, openLive = openLive, onLiveOpened = { openLive = false })
+            MagicHandyRoot(
+                core,
+                voice = app.voice,
+                openLive = openLive,
+                onLiveOpened = { openLive = false },
+            )
         }
     }
 
@@ -54,6 +59,7 @@ class MainActivity : ComponentActivity() {
         app.host.visible = true
         app.refreshRadio()
         app.host.access(app.core)
+        app.voice.appShown()
     }
 
     override fun onDestroy() {
@@ -65,6 +71,7 @@ class MainActivity : ComponentActivity() {
         if (!isChangingConfigurations) {
             app.host.visible = false
             app.core.appBackgrounded()
+            app.voice.appHidden()
         }
         super.onStop()
     }

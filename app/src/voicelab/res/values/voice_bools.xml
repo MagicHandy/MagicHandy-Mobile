@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Debug and phone-test builds show voice input's hidden settings. -->
+    <bool name="voice_hidden_settings">true</bool>
+</resources>

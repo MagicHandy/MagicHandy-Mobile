@@ -5,6 +5,7 @@ import com.magichandy.mobile.core.api.MagicHandyCore
 import com.magichandy.mobile.platform.AndroidHost
 import com.magichandy.mobile.platform.CoreOwner
 import com.magichandy.mobile.platform.SignInTabs
+import com.magichandy.mobile.voice.VoiceController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +35,9 @@ class MagicHandyApp : Application(), CoreOwner {
     /** The one core. Every Stop surface and screen talks to this instance. */
     override val core: MagicHandyCore
         get() = instance.value
+
+    /** Voice input's main-process side. The voice process never touches it. */
+    internal val voice: VoiceController by lazy { VoiceController(this, core, processScope) }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)

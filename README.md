@@ -37,4 +37,4 @@ Chat history, optional companion memory and settings are stored on your phone an
 
 Your chosen model provider or local server receives the conversation it needs to reply. Handy Cloud and Autoblow Cloud carry commands for devices connected through those services. MagicHandy requires no separate account and collects no analytics.
 
-Check for updates in **App settings**. [Release history](https://github.com/MagicHandy/MagicHandy-Mobile/releases) · [Desktop app](https://github.com/MagicHandy/MagicHandy) · [Developer guide](docs/README.md) · [GPL-3.0-only license](LICENSE) · [Font licenses](third_party/fonts)
+Check for updates in **App settings**. [Release history](https://github.com/MagicHandy/MagicHandy-Mobile/releases) · [Desktop app](https://github.com/MagicHandy/MagicHandy) · [Developer guide](docs/README.md) · [GPL-3.0-only license](LICENSE) · [Font licenses](third_party/fonts) · [Voice licenses](third_party/voice)

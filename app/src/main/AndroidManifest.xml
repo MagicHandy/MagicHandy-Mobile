@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- Voice input (docs/voice-design.md §7): the phone's own microphone, only while listening. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
@@ -29,6 +32,10 @@
         <service android:name=".platform.CoreService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="connectedDevice" />
         <service android:name=".platform.StopDeliveryService" android:exported="false" android:foregroundServiceType="shortService" />
         <receiver android:name=".platform.StopActionReceiver" android:exported="false" />
+        <!-- Voice input listens in its own process, so a native crash or running out of memory there
+             can't take down the process that owns motion and Stop. -->
+        <service android:name=".voice.VoiceService" android:process=":voice" android:exported="false" android:foregroundServiceType="microphone" />
+        <service android:name=".voice.VoiceLinkService" android:exported="false" />
         <service android:name=".platform.StopTileService" android:label="@string/platform_tile" android:icon="@drawable/ic_tile_stop" android:exported="true" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>

@@ -41,6 +41,7 @@ import com.magichandy.mobile.ui.components.SettingRow
 import com.magichandy.mobile.ui.components.segmentedWidthFor
 import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
+import com.magichandy.mobile.ui.voice.VoiceUi
 
 /**
  * What Android allows the app, as the core last saw it (see `systemAccess`).
@@ -92,6 +93,7 @@ fun AppSettingsScreen(
     onBack: () -> Unit,
     onOpenModels: () -> Unit,
     modifier: Modifier = Modifier,
+    voice: VoiceUi = VoiceUi.None,
 ) {
     val dimens = MagicHandyTheme.dimens
     Column(
@@ -123,6 +125,7 @@ fun AppSettingsScreen(
                 onClick = onOpenModels,
                 isFirst = true,
             )
+            if (voice.hasSettings) VoiceRow(voice)
         }
         Section(R.string.app_appearance) {
             CardRow(isFirst = true) { PaletteChoice(state, onIntent, Modifier.weight(1f)) }
@@ -225,6 +228,26 @@ private fun LanguageRow(language: AppLanguage, onIntent: (UserIntent) -> Unit) {
             )
         }
     }
+}
+
+/** Voice input (docs/voice-design.md §5): Ready, Downloading or Not set up. */
+@Composable
+private fun VoiceRow(voice: VoiceUi) {
+    val state = voice.state
+    SettingRow(
+        label = stringResource(R.string.voice_title),
+        value =
+            stringResource(
+                when {
+                    state.installed != null -> R.string.voice_ready
+                    state.download != null -> R.string.voice_downloading_short
+                    else -> R.string.voice_not_set_up
+                }
+            ),
+        valueTone = if (state.installed != null) DotTone.Ok else null,
+        onClick = voice.openSettings,
+        isFirst = false,
+    )
 }
 
 /** Deleting needs a second tap, because it can't be undone. */

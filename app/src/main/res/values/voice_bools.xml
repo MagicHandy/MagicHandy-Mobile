@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Voice input's hidden settings: off in releases; test builds turn them on (src/voicelab). -->
+    <bool name="voice_hidden_settings">false</bool>
+</resources>

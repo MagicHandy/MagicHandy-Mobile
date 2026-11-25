@@ -54,10 +54,11 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 @OptIn(ExperimentalLayoutApi::class) @Composable fun isTyping(): Boolean = WindowInsets.isImeVisible
 
 /**
- * The app frame (plan §14.2). From top to bottom: [content], then [bottomBar] (the tabs), then
- * Stop, which is the last row on every screen. [overlay] draws sheets and the Stop receipt inside
- * the content area, so they never cover Stop. TalkBack gets a "Stop all motion" action from
- * anywhere in the frame. [onStop] is told which surface was used.
+ * The app frame (plan §14.2). From top to bottom: [content], then [aboveTabs] (voice input's
+ * Listening chip), then [bottomBar] (the tabs), then Stop, which is the last row on every screen.
+ * [overlay] draws sheets and the Stop receipt inside the content area, so they never cover Stop.
+ * TalkBack gets a "Stop all motion" action from anywhere in the frame. [onStop] is told which
+ * surface was used.
  */
 @Composable
 fun AppFrame(
@@ -66,6 +67,7 @@ fun AppFrame(
     modifier: Modifier = Modifier,
     contentBackground: androidx.compose.ui.graphics.Color = MagicHandyTheme.colors.ground,
     bottomBar: (@Composable () -> Unit)? = null,
+    aboveTabs: (@Composable () -> Unit)? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -96,8 +98,14 @@ fun AppFrame(
             overlay()
         }
         val showTabs = bottomBar != null && !typing
+        aboveTabs?.invoke()
         if (bottomBar != null && showTabs) bottomBar()
-        StopRow(label = stopLabel, onStop = onStop, hasTabsAbove = showTabs)
+        StopRow(
+            label = stopLabel,
+            onStop = onStop,
+            hasTabsAbove = showTabs,
+            hasChipAbove = aboveTabs != null && !showTabs,
+        )
     }
 }
 
@@ -113,6 +121,7 @@ fun StopRow(
     onStop: (StopSource) -> Unit,
     hasTabsAbove: Boolean,
     modifier: Modifier = Modifier,
+    hasChipAbove: Boolean = false,
 ) {
     val colors = MagicHandyTheme.colors
     val dimens = MagicHandyTheme.dimens
@@ -121,7 +130,7 @@ fun StopRow(
         modifier
             .fillMaxWidth()
             .background(colors.chrome)
-            .then(if (hasTabsAbove) Modifier else Modifier.topHairline(colors.line))
+            .then(if (hasTabsAbove || hasChipAbove) Modifier else Modifier.topHairline(colors.line))
             .windowInsetsPadding(
                 WindowInsets.navigationBars.union(WindowInsets.ime).only(WindowInsetsSides.Bottom)
             )

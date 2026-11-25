@@ -1,0 +1,227 @@
+package com.magichandy.mobile.voice
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.util.Log
+import com.magichandy.mobile.core.api.VoiceModel
+import com.magichandy.mobile.core.api.isSpokenStop
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
+
+/**
+ * One listening session in the voice process (docs/voice-design.md §6–§8): the microphone, the
+ * speech detector, the spoken-Stop checks and Parakeet. Audio lives only in memory and is never
+ * written anywhere.
+ *
+ * Three threads take part: [start]'s loader, which loads the models and starts recording; the
+ * microphone's, which levels and judges the audio and queues what the recognizer should hear; and
+ * the recognizer's, which hears it, Stop checks first. Each frees what it uses when it ends.
+ */
+internal class VoiceSession(
+    private val context: Context,
+    private val store: ModelStore,
+    private val model: VoiceModel,
+    private val config: VoiceConfig,
+    private val source: MicSource,
+    private val events: Events,
+) {
+    /** What the session tells the main process. Called from the session's own threads. */
+    interface Events {
+        fun listening()
+
+        fun level(loudness: Float, isHearing: Boolean, readout: String?)
+
+        fun spokenStop()
+
+        fun turn(text: String)
+
+        /** Called once, when the session ends for [reason]. */
+        fun ended(reason: VoiceEnd)
+    }
+
+    private val isEnded = AtomicBoolean(false)
+    private val queue = RecognizerQueue()
+    private val lock = Any()
+    private var capture: MicCapture? = null
+    private var loader: Thread? = null
+    private var recognizer: Thread? = null
+
+    /**
+     * Loads the models and starts listening on a thread of its own, once [after], the session
+     * before it, has freed its models: two copies of the full model wouldn't fit in memory.
+     */
+    fun start(after: VoiceSession? = null) {
+        synchronized(lock) {
+            loader =
+                thread(name = "voice-load") {
+                    after?.awaitReleased(RELEASE_WAIT_MILLIS)
+                    if (!isEnded.get()) load()
+                }
+        }
+    }
+
+    /** Ends the session for [reason]. Safe from any thread, any number of times. */
+    fun end(reason: VoiceEnd) {
+        if (!isEnded.compareAndSet(false, true)) return
+        queue.close()
+        val running = synchronized(lock) { capture }
+        // Stopping waits for the microphone's thread, which may be the one calling.
+        if (running != null) thread(name = "voice-stop") { running.stop() }
+        events.ended(reason)
+    }
+
+    /** Waits up to [millis] for the session's threads to end and free the models. */
+    fun awaitReleased(millis: Long) {
+        val threads = synchronized(lock) { listOfNotNull(loader, recognizer) }
+        for (each in threads) each.join(millis)
+    }
+
+    private fun load() {
+        val files = model.files(config.detector)
+        if (!store.hasAll(files)) return end(VoiceEnd.ModelMissing)
+        val segmenter: SpeechSegmenter
+        val transcriber: Transcriber
+        try {
+            segmenter =
+                SpeechSegmenter(
+                    store.file(config.detector.model),
+                    config.detector,
+                    config.threshold,
+                    config.silenceSeconds,
+                    config.raise,
+                )
+        } catch (failure: RuntimeException) {
+            Log.w(TAG, "The speech detector didn't load", failure)
+            return end(VoiceEnd.ModelFailed)
+        }
+        try {
+            transcriber = Transcriber.load(store, model.parakeet)
+        } catch (failure: RuntimeException) {
+            Log.w(TAG, "Parakeet didn't load", failure)
+            segmenter.release()
+            return end(VoiceEnd.ModelFailed)
+        } catch (failure: OutOfMemoryError) {
+            Log.w(TAG, "Parakeet didn't fit in memory", failure)
+            segmenter.release()
+            return end(VoiceEnd.ModelFailed)
+        }
+        val watch = SpokenStopWatch(config.threshold, config.detector.window)
+        val microphone =
+            MicCapture(
+                context,
+                source,
+                onAudio = { samples, _, _ -> hear(segmenter, watch, samples) },
+                onEnd = { ending -> captureEnded(segmenter, ending) },
+            )
+        val started =
+            synchronized(lock) {
+                if (isEnded.get()) {
+                    false
+                } else {
+                    capture = microphone
+                    recognizer = thread(name = "voice-recognizer") { recognize(transcriber) }
+                    true
+                }
+            }
+        if (!started) {
+            segmenter.release()
+            transcriber.release()
+            return
+        }
+        if (!microphone.start()) {
+            // The microphone never started, so its thread won't free the detector.
+            segmenter.release()
+            val granted =
+                context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED
+            end(if (granted) VoiceEnd.MicFailed else VoiceEnd.MicDenied)
+            return
+        }
+        if (!isEnded.get()) events.listening()
+    }
+
+    /** On the microphone's thread: judges [samples] and queues what the recognizer should hear. */
+    private fun hear(segmenter: SpeechSegmenter, watch: SpokenStopWatch, samples: FloatArray) {
+        if (isEnded.get()) return
+        val heard =
+            segmenter.accept(samples) { probability ->
+                if (watch.accept(probability, segmenter.isSpeaking)) {
+                    val now = segmenter.position
+                    queue.checkTail(segmenter.recent(now - SpokenStopWatch.tailSamples, now))
+                }
+            }
+        for (utterance in heard.utterances) {
+            if (utterance.isShort) queue.checkShort(utterance.samples) else queue.addTurn(utterance)
+        }
+        val readout = if (config.showLevels) readout(segmenter, samples) else null
+        events.level(loudness(heard.levelled), segmenter.isSpeaking, readout)
+    }
+
+    /** On the microphone's thread, after its last audio: frees the detector. */
+    private fun captureEnded(segmenter: SpeechSegmenter, ending: CaptureEnd) {
+        segmenter.release()
+        when (ending) {
+            CaptureEnd.Stopped -> Unit
+            CaptureEnd.Silenced -> end(VoiceEnd.MicTaken)
+            CaptureEnd.Failed -> end(VoiceEnd.MicFailed)
+        }
+    }
+
+    /** The recognizer's thread: hears each job, Stop checks first, then frees Parakeet. */
+    private fun recognize(transcriber: Transcriber) {
+        try {
+            while (!isEnded.get()) {
+                when (val job = queue.take(WAIT_MILLIS) ?: continue) {
+                    is RecognizerJob.StopCheck -> {
+                        val text = transcriber.transcribe(job.samples).text
+                        if (isSpokenStop(text)) spokenStop()
+                    }
+                    is RecognizerJob.Turn -> {
+                        val text = transcriber.transcribe(job.utterance.samples).text
+                        when {
+                            isSpokenStop(text) -> spokenStop()
+                            text.isNotBlank() && !isEnded.get() -> events.turn(text)
+                        }
+                    }
+                }
+            }
+        } catch (failure: RuntimeException) {
+            Log.w(TAG, "Recognition failed", failure)
+            end(VoiceEnd.ModelFailed)
+        } finally {
+            transcriber.release()
+        }
+    }
+
+    /** A spoken Stop: the main process stops every device first, then listening ends. */
+    private fun spokenStop() {
+        if (isEnded.get()) return
+        events.spokenStop()
+        end(VoiceEnd.Stop)
+    }
+
+    private companion object {
+        const val TAG = "Voice"
+
+        /** How long the recognizer waits for work before checking whether the session ended. */
+        const val WAIT_MILLIS = 500L
+
+        /** How long a new session waits for the one before it to free its models. */
+        const val RELEASE_WAIT_MILLIS = 10_000L
+
+        /** The test builds' readout: the microphone's level, the noise, the gain, the detector. */
+        fun readout(segmenter: SpeechSegmenter, samples: FloatArray): String {
+            val noise = segmenter.noiseDb?.let { "%.0f".format(Locale.ROOT, it) } ?: "–"
+            return "mic %.0f dBFS · noise %s · gain %+.0f dB · speech %.2f"
+                .format(
+                    Locale.ROOT,
+                    levelDb(samples),
+                    noise,
+                    segmenter.gainDb,
+                    segmenter.probability,
+                )
+        }
+    }
+}

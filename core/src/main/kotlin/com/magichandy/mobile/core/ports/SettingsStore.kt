@@ -14,6 +14,7 @@ import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.PersonaId
 import com.magichandy.mobile.core.api.PersonaRef
 import com.magichandy.mobile.core.api.Personality
+import com.magichandy.mobile.core.api.VoiceModel
 import kotlin.time.Duration
 import kotlinx.coroutines.flow.StateFlow
 
@@ -48,6 +49,8 @@ public data class Preferences(
     public val selectedPersona: PersonaId = builtInPersona.id,
     /** When decoding a legacy document, its existing adult acknowledgement completes setup. */
     public val isSetupDone: Boolean = adultsOnly,
+    /** The speech model voice input uses or is switching to. */
+    public val voiceModel: VoiceModel = VoiceModel.Compact,
 )
 
 /** A field carries its typed update function and stable persisted name. */
@@ -107,6 +110,9 @@ private constructor(public val name: String, internal val set: (Preferences, T) 
         /** Optional planning target duration. */
         public val FinishAfter: PreferenceField<Duration?> =
             PreferenceField("finish_target") { s, v -> s.copy(finishAfter = v) }
+        /** Voice input's speech model. */
+        public val VoiceModelChoice: PreferenceField<VoiceModel> =
+            PreferenceField("voice_model") { s, v -> s.copy(voiceModel = v) }
     }
 }
 

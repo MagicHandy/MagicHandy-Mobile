@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_title">音声</string>
+    <string name="voice_start">話し始める</string>
+    <string name="voice_end">終了</string>
+    <string name="voice_bar">音声オン。%1$s</string>
+    <string name="voice_getting_ready">準備中…</string>
+    <string name="voice_listening">聞き取り中</string>
+    <string name="voice_hearing">聞こえています</string>
+    <string name="voice_waiting">返信を待っています…</string>
+    <string name="voice_cant_send_no_model">送信できません：チャットモデルがありません</string>
+    <string name="voice_cant_send_unreachable">送信できません：チャットモデルに接続できません</string>
+    <string name="voice_announce_listening">聞き取り中。Stop と言うとすべてのデバイスが止まります。</string>
+    <string name="voice_announce_ended">音声を終了しました</string>
+
+    <string name="voice_channel">音声入力</string>
+    <string name="voice_notice_title">聞き取り中</string>
+    <string name="voice_notice_text">「Stop」と言うとすべてのデバイスが止まります。「終了」で聞き取りをやめます。</string>
+
+    <string name="voice_downloading">音声モデルをダウンロード中 · %1$d%%</string>
+    <string name="voice_download_paused">ダウンロード一時停止中 · %1$d%%</string>
+    <string name="voice_resume">再開</string>
+    <string name="voice_retry">再試行</string>
+    <string name="voice_problem_no_connection">接続がありません。ダウンロードは止まったところから再開します。</string>
+    <string name="voice_problem_space">空き容量が足りません：%1$s の空きが必要です。</string>
+    <string name="voice_problem_space_remove">空き容量が足りません：%1$s の空きが必要です。先に%2$sを削除すると空きができます。</string>
+    <string name="voice_problem_damaged">ダウンロードが壊れていたため削除しました。</string>
+    <string name="voice_problem_failed">ダウンロードに失敗しました。</string>
+
+    <string name="voice_ended_quiet">15 分間音声がなかったため、音声を終了しました。</string>
+    <string name="voice_ended_mic_taken">音声を終了しました：別のアプリがマイクを使い始めました。</string>
+    <string name="voice_ended_mic_denied">音声にはマイクへのアクセスが必要です。</string>
+    <string name="voice_ended_mic_failed">音声を終了しました：マイクが動作しなくなりました。</string>
+    <string name="voice_ended_model_missing">音声を終了しました：音声モデルが見つからないか壊れています。</string>
+    <string name="voice_ended_model_failed">音声を終了しました：音声モデルでエラーが起きました。</string>
+    <string name="voice_ended_full_failed">音声を終了しました：フル精度を読み込めないか、メモリが不足しました。</string>
+    <string name="voice_start_again">もう一度始める</string>
+    <string name="voice_open_settings">設定を開く</string>
+    <string name="voice_download_again">削除して再ダウンロード</string>
+    <string name="voice_switch_compact">コンパクトに切り替え</string>
+
+    <string name="voice_setup_title">入力の代わりに話す</string>
+    <string name="voice_setup_how">マイクをタップして開始し、終わったら「終了」をタップします。</string>
+    <string name="voice_setup_how_detail">画面がオフでも聞き取りを続け、話が途切れるたびに内容を送信します。</string>
+    <string name="voice_setup_private">声はこのスマートフォンから出ません。</string>
+    <string name="voice_setup_private_detail">ここでテキストに変換され、保存されることはありません。チャットモデルには、入力したときと同じようにテキストが届きます。</string>
+    <string name="voice_setup_stop">「Stop」と言うとすべてのデバイスが止まります。</string>
+    <string name="voice_setup_stop_detail">どの停止でも聞き取りは終わります。いちばん速いのは今も停止ボタンです。</string>
+    <string name="voice_setup_download">%1$s の音声モデルが必要です。</string>
+    <string name="voice_setup_download_detail">ダウンロードは一度だけです。Wi-Fi をおすすめします。</string>
+    <string name="voice_download_and_start">ダウンロードして開始</string>
+    <string name="voice_choose_another">別のモデルを選ぶ</string>
+    <string name="voice_not_now">今はしない</string>
+    <string name="voice_setup_microphone">初回は Android がマイクの使用を確認します。</string>
+
+    <string name="voice_pick_title">音声モデルを選ぶ</string>
+    <string name="voice_model">音声モデル</string>
+    <string name="voice_model_compact">コンパクト</string>
+    <string name="voice_model_full">フル精度</string>
+    <string name="voice_recommended">おすすめ</string>
+    <string name="voice_in_use">使用中</string>
+    <string name="voice_compact_detail">%1$s のダウンロード · メモリ約 0.8 GB · 返信がいちばん速い</string>
+    <string name="voice_compact_detail_installed">%1$s · メモリ約 0.8 GB · 返信がいちばん速い</string>
+    <string name="voice_full_detail">%1$s のダウンロード · メモリ約 3.6 GB · 遅め。公開されたままの Parakeet v3 で、メモリ 12 GB 以上のスマートフォン向けです。</string>
+    <string name="voice_full_detail_installed">%1$s · メモリ約 3.6 GB · 遅め。公開されたままの Parakeet v3 で、メモリ 12 GB 以上のスマートフォン向けです。</string>
+    <string name="voice_pick_note">どちらもこのスマートフォン上で動きます。あとから「設定 › 音声」で切り替えられます。</string>
+    <string name="voice_download_size_and_start">%1$s をダウンロードして開始</string>
+    <string name="voice_download_size">%1$s をダウンロード</string>
+    <string name="voice_switch_note">%1$s の空きが必要です。ダウンロード中も%2$sは使え、新しいモデルの準備ができたら削除されます。</string>
+
+    <string name="voice_model_value">%1$s · %2$s</string>
+    <string name="voice_remove">このスマートフォンから削除</string>
+    <string name="voice_remove_confirm">もう一度タップすると音声モデルを削除します。</string>
+    <string name="voice_remove_confirm_listening">もう一度タップすると音声モデルを削除します。聞き取りは終了します。</string>
+    <string name="voice_microphone">マイク</string>
+    <string name="voice_microphone_access">マイクへのアクセス</string>
+    <string name="voice_allowed">許可済み</string>
+    <string name="voice_not_allowed">未許可</string>
+    <string name="voice_help_listening">聞き取りはチャットのマイクからしか始まりません。「終了」のタップ、どの停止でも、または何も再生していないときに 15 分間話さないと終わります。</string>
+    <string name="voice_help_languages">声はこのスマートフォンから出ません。話して停止できるのは英語、スペイン語、ポルトガル語です。</string>
+    <string name="voice_help_language_missing">話して停止できるのは英語、スペイン語、ポルトガル語だけのため、このアプリの言語では音声入力を提供していません。</string>
+    <string name="voice_switch_downloading">ダウンロード中：%2$s の %1$d%%。準備ができるまで%3$sが使えます。</string>
+    <string name="voice_switch_paused">%2$s の %1$d%% で一時停止中。アプリを開いている間に再開します。</string>
+    <string name="voice_switch_after">完了すると、次に聞き取りを始めるときから新しいモデルを使います。%1$sはそのときに、聞き取り中でなければすぐに削除されます。</string>
+    <string name="voice_first_downloading">ダウンロード中：%2$s の %1$d%%。</string>
+    <string name="voice_not_set_up">未設定</string>
+    <string name="voice_ready">準備完了</string>
+    <string name="voice_downloading_short">ダウンロード中</string>
+    <string name="voice_back_to_app_settings">アプリの設定に戻る</string>
+
+    <string name="receipt_voice_ended">音声を終了</string>
+    <string name="receipt_and_voice_ended">%1$s · 音声を終了</string>
+</resources>

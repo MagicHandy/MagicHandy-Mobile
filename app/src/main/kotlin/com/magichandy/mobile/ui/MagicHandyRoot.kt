@@ -62,6 +62,12 @@ import com.magichandy.mobile.ui.stop.StopReceiptPanel
 import com.magichandy.mobile.ui.stop.dismissalKey
 import com.magichandy.mobile.ui.stop.isDismissed
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
+import com.magichandy.mobile.ui.voice.ListeningChip
+import com.magichandy.mobile.ui.voice.VoiceAnnouncer
+import com.magichandy.mobile.ui.voice.VoiceSettingsScreen
+import com.magichandy.mobile.ui.voice.VoiceUi
+import com.magichandy.mobile.ui.voice.rememberVoiceUi
+import com.magichandy.mobile.voice.VoiceControls
 
 /**
  * The whole UI. It observes [core] and sends it intents; Stop goes straight to the core.
@@ -72,6 +78,7 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 @Composable
 fun MagicHandyRoot(
     core: MagicHandyCore,
+    voice: VoiceControls = NoVoice,
     openLive: Boolean = false,
     onLiveOpened: () -> Unit = {},
 ) {
@@ -81,7 +88,7 @@ fun MagicHandyRoot(
     val calls = remember(core) { CoreCalls.of(core) }
     LocalizedUi(state.app.language) {
         MagicHandyTheme(state.app.palette) {
-            AppContent(state, onIntent, onStop, calls, openLive, onLiveOpened)
+            AppContent(state, onIntent, onStop, calls, openLive, onLiveOpened, voice)
         }
     }
 }
@@ -92,6 +99,7 @@ fun MagicHandyRoot(
  *
  * @param calls the core's calls that aren't intents; previews leave them doing nothing.
  * @param openLive see [MagicHandyRoot].
+ * @param voice voice input; previews leave it not offered.
  */
 @Composable
 fun AppContent(
@@ -101,8 +109,17 @@ fun AppContent(
     calls: CoreCalls = CoreCalls.None,
     openLive: Boolean = false,
     onLiveOpened: () -> Unit = {},
+    voice: VoiceControls = NoVoice,
 ) {
     val nav = rememberAppNavigator()
+    val voiceUi =
+        rememberVoiceUi(
+            voice,
+            openSetup = { nav.openSheet(SheetPage.VoiceSetup) },
+            openPicker = { nav.pushSheet(SheetPage.VoicePicker) },
+            openModelSettings = { nav.openSheet(SheetPage.VoiceModel) },
+            openSettings = { nav.push(Route.VoiceSettings) },
+        )
     val receipt = state.stopReceipt
     LaunchedEffect(receipt?.episodeId, receipt?.at) { if (receipt != null) nav.closeSheet() }
     val interrupted = state.interruptedRun
@@ -135,6 +152,9 @@ fun AppContent(
             else R.string.stop
         )
     val showTabs = !isGated && !inSetup && nav.isAtDestination
+    // Chat's voice bar has End; everywhere else, and under a sheet, the chip does.
+    val showsChip =
+        voiceUi.state.listening != null && (nav.current != Route.Chat || nav.sheet != null)
     AppFrame(
         stopLabel = stopLabel,
         contentBackground =
@@ -168,7 +188,9 @@ fun AppContent(
             } else {
                 null
             },
+        aboveTabs = if (showsChip) ({ ListeningChip(voiceUi) }) else null,
         overlay = {
+            VoiceAnnouncer(voiceUi)
             if (!isGated) {
                 AppSheets(
                     state = state,
@@ -182,6 +204,7 @@ fun AppContent(
                             openPersonas = { nav.push(Route.Personas) },
                             addDevice = { nav.push(Route.AddDevice(it)) },
                         ),
+                    voice = voiceUi,
                 )
             }
             if (shownReceipt != null && !shownReceipt.isNoDevice) ReceiptScrim(dismissReceipt)
@@ -195,10 +218,12 @@ fun AppContent(
             ) {
                 state.backendNotice?.let { BackendNoticeToast(it) }
                 if (shownReceipt != null) {
+                    val endedBy = voiceUi.state.endedByStop
                     StopReceiptPanel(
                         shownReceipt,
                         onDone = dismissReceipt,
                         modifier = Modifier.weight(1f, fill = false),
+                        hasEndedVoice = endedBy != null && endedBy == state.stopEpoch,
                     )
                 }
             }
@@ -221,7 +246,9 @@ fun AppContent(
                         nav.resetTo(if (inSetup) SetupStart else listOf(Route.Chat))
                     }
                 } else
-                    RouteStates(nav) { route -> RouteContent(route, state, nav, onIntent, calls) }
+                    RouteStates(nav) { route ->
+                        RouteContent(route, state, nav, onIntent, calls, voiceUi)
+                    }
         }
     }
 }
@@ -243,6 +270,9 @@ internal fun initialScreen(state: AppState): InitialScreen =
         !state.firstRun.hasAcknowledgedAdultsOnly -> InitialScreen.Consent
         else -> InitialScreen.App
     }
+
+/** Voice input for previews and tests, which never offer it. */
+private val NoVoice: VoiceControls = VoiceControls.Fixed()
 
 /** Where setup resumes once Before you start is acknowledged: Choose your AI, above step 1. */
 private val SetupStart = listOf(Route.Setup(1), Route.Setup(2))
@@ -316,6 +346,7 @@ private fun RouteContent(
     nav: AppNavigator,
     onIntent: (UserIntent) -> Unit,
     calls: CoreCalls,
+    voice: VoiceUi,
 ) {
     val system = systemAccess(state.app)
     val origin = providerOrigin(nav.previous)
@@ -333,6 +364,7 @@ private fun RouteContent(
                     nav.push(Route.ChooseAi)
                     if (state.models.chatNeedsSignIn) nav.push(Route.ChatGptSetup)
                 },
+                voice = voice,
             )
         Route.Devices ->
             DevicesScreen(
@@ -389,7 +421,9 @@ private fun RouteContent(
                 onIntent = onIntent,
                 onBack = { nav.pop() },
                 onOpenModels = { nav.push(Route.Models) },
+                voice = voice,
             )
+        Route.VoiceSettings -> VoiceSettingsScreen(voice, onBack = { nav.pop() })
         Route.Models ->
             ModelsScreen(
                 state = state,

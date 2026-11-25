@@ -1,9 +1,9 @@
 # Frontend status
 
-- **Date:** 2026-11-24
+- **Date:** 2026-11-25
 - **Scope:** the Compose UI in `:app` (`com.magichandy.mobile.ui`). The backend's status is in `docs/backend/status.md`.
 
-In debug builds, the v1 UI runs on the Pixel 10 emulator (API 37) against the real core (M0–M4), with simulated devices, a canned model, and the real foreground service and notification. `./gradlew check` passes ktfmt formatting, Android Lint (with warnings treated as errors), the debug and release builds, the release contents check and **959 JVM tests**: 305 in `:core`, 244 in `:transport` and 410 in `:app`, which include 268 palette contrast checks and the 82 preview screenshots. Version 0.1.6 is the first public release (2026-11-21).
+In debug builds, the v1 UI runs on the Pixel 10 emulator (API 37) against the real core (M0–M4), with simulated devices, a canned model, and the real foreground service and notification. `./gradlew check` passes ktfmt formatting, Android Lint (with warnings treated as errors), the debug and release builds, the release contents check and **1,064 JVM tests**: 315 in `:core`, 247 in `:transport` and 502 in `:app`, which include 268 palette contrast checks, the 106 preview screenshots, voice input's 59 and the voice test's 10. Version 0.1.6 is the first public release (2026-11-21), and 0.1.8 adds voice input.
 
 The [2026-11-19 review](../reviews/2026-11-19-ui-fidelity-and-implementation-review.md) compared every screen with its board and triaged Gemini's implementation review. Its fixes and its two open decisions are settled: forms wait for the core, and the motor test stays at 1.5 seconds (plan §12).
 
@@ -29,9 +29,30 @@ The [2026-11-19 review](../reviews/2026-11-19-ui-fidelity-and-implementation-rev
 | Accessibility | Every touch target is at least 48 dp. Rows, buttons and the Stop row reflow at 200% font scale without breaking words or hiding Stop. TalkBack hears a streaming reply a sentence at a time, never a sentence still being written, while the Stop receipt stays assertive. |
 | Device and model controls | Boards V-CoyotePage, V-CoyoteLive, V-AddVibrator, V-RefusalFallback and V-AddHandyIntiface. The Coyote's page sets its channel limits while it's disconnected, and Live steps a playing Coyote's channels within them. The Intiface picker finds vibrators or strokers at an address and connects the one picked, with the bridge's Stop caveat first for strokers. A generic stroker's page has Reverse direction and no model. Test motion's wording fits each device; the Coyote has Check alone, since a test at zero strength couldn't be felt. Adding The Handy labels Handy Cloud **Recommended**. Choosing a nearby device ends the scan and keeps the list, and a device that couldn't be verified says so in its row and offers Retry. |
 | Boundaries | `UiBoundaryTest` (ArchUnit, in `:app`) fails the build if the UI depends on `:transport` or on anything in `:core` outside `core.api`. |
-| Previews and screenshots | Every screen's main states in Steel Azure and OLED black, plus Chat, the Stop receipt and a persona's editor at 200% font scale, in the debug source set. `PreviewScreenshotTest` draws all 82 on Robolectric and compares each with its recorded image in `app/src/test/screenshots`. `check` fails on any change bigger than stray anti-aliasing. The debug `SampleStateActivity` renders the real UI over the same sample states. |
+| Voice test | Debug and phone-test builds only ([guide](../voice-test.md), plan §19; boards V-VoiceLab, V-VoiceLabListen and V-VoiceLabClip). A separate **Voice test** launcher entry compares Parakeet v3 (int8, 4-bit and full precision, through sherpa-onnx) with Google ML Kit's Basic and Advanced speech recognition. It works hands-free, with a speech detector and the screen off, or runs one clip on every engine and scores it against the line read out. It raises quiet speech with its own automatic gain, cuts turns with padding before and after, and shows the microphone's level and the detector's confidence while it listens. It never sends a message or moves a device, and the Stop bar stops every device directly. It runs voice input's own capture, gain, segmenter, model store and recognizer, and Settings › Voice › Advanced › Check the microphone opens it. The release build has voice input but not this page. |
+| Voice input | Hands-free speech to text in Chat (plan §20, [design](../voice-design.md); boards V-VoiceIdle to V-VoiceAdvanced). With nothing typed, the microphone stands in for Send. The first tap opens Talk instead of typing: **Download and start** fetches Compact, and phones with 12 GB or more also get **Choose another model** for full precision. While listening, the voice bar replaces the composer with Listening or Hearing you, the meter and End, and other screens show a Listening · End chip. A spoken Stop stops every device directly, any Stop ends listening, and the receipt says "voice ended". Downloads, failures and the reasons listening ended sit above the composer, each with its next step. App settings gains Voice, which shows the model, switches it with a progress row, removes it and links to microphone access; test builds add the hidden settings. Every board was compared with the built screen before release. Listening runs in its own `:voice` process as a microphone foreground service. |
+| Previews and screenshots | Every screen's main states in Steel Azure and OLED black, plus Chat, the Stop receipt and a persona's editor at 200% font scale, in the debug source set. `PreviewScreenshotTest` draws all 106, voice input's states among them, on Robolectric and compares each with its recorded image in `app/src/test/screenshots`. `check` fails on any change bigger than stray anti-aliasing. The debug `SampleStateActivity` renders the real UI over the same sample states. |
 
 ## Checked on the emulator
+
+On 2026-11-25, voice input in the debug build, on the Pixel 10 emulator started with 12 GB of memory, with simulated devices:
+
+- **First use:** Chat offered the microphone, and its first tap opened Talk instead of typing with Choose another model. The picker opened over it, and Back returned to it.
+- **Download and start:** the 671 MB of Compact and Silero downloaded in about 2 minutes and passed their checksums. Listening began about 3 s later, in the `:voice` process at about 930 MB, as a microphone foreground service bound to the main process.
+- **Listening:** the voice bar showed Listening, the meter and End, and Devices showed the Listening · End chip above the tabs. Stop ended listening and freed the model; so did End in the voice bar and in the notification.
+- **The notification:** "Listening" with End, once the app had notification access. Without it, as on a fresh install with no device connected yet, Android hides it while listening carries on; the app asks for notifications when a device first connects.
+- **Settings › Voice:** Ready in App settings. Switching to full precision showed its progress row, paused when the app left and resumed on return, and Cancel deleted what it had fetched. Remove asked for a second tap and deleted the model.
+- **The microphone refused:** Android's prompt, then "Voice needs microphone access" with Open settings, which opened the app's page in Android's settings.
+- **Not checked:** speech, a spoken Stop and the 15-minute timeout, since the emulator had no audio input. They're for the phone.
+
+Earlier on 2026-11-25, the voice test in the debug build:
+
+- **The page:** it matches its boards, and ML Kit's Basic and Advanced modes both report "Not on this phone", as the emulator has neither model.
+- **Parakeet int8:** it downloaded and passed its checksums, loaded in 2.3 s at about 800 MB, and transcribed sherpa-onnx's 3.85 s sample word for word in 0.25 s on the PC's CPU.
+- **Hands-free:** it started a microphone foreground service, with its notification and Android's microphone indicator, and stopped cleanly.
+- **Share:** it opened the share sheet.
+- **Not checked:** speech itself, since the emulator had no audio input. Speech is checked on the phone.
+- **Detection, after the first phone test:** a temporary probe played sherpa-onnx's sample through the page's own pipeline at −40 to −63 dBFS, clean and in a simulated room at 1 m and 2 m. The first build lost words from −55 dBFS and heard nothing at 2 m. The gain, the new turn cutting and the padding heard the whole sentence every time, with the int8 and 4-bit builds alike (plan §19).
 
 On the evening of 2026-11-20, after merging the persona backend, from a fresh install:
 
@@ -59,6 +80,8 @@ Earlier checks (2026-11-19 and the morning of 2026-11-20) covered every board si
 | Phone acceptance on real devices and accounts ([checklist](../backend/device-checklist.md)) | Owner, with the release build |
 | Compare Bluetooth and Cloud motion on the same Handy ([checklist](../backend/device-checklist.md#verify-handy-bluetooth-on-the-phone)) | Owner, with 0.1.7 |
 | Planned: read the slider over Bluetooth so runs ease in, as on Cloud ([plan §11](../../android-architecture-plan.md#11-milestones-and-exit-criteria)) | Backend, then owner |
+| Run the voice test on the Pixel 10 Pro XL and share its results ([guide](../voice-test.md#a-test-session)) | Owner, with MagicHandy Test |
+| Try voice input on the Pixel: how quickly a spoken Stop stops, a short sharp "Stop!", 30 minutes with the screen off, the call path with TalkBack, and full precision against Compact ([design §10](../voice-design.md#10-before-building)) | Owner, with 0.1.8 |
 | Check TalkBack's sentence-by-sentence reading with TalkBack on a phone (the splitting is unit-tested) | Owner, with phone acceptance |
 | Check that a ChatGPT sign-in, an OpenRouter key and a LAN server each move setup on to Your companion (only the simulated model was available here) | Owner, with phone acceptance |
 

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_title">Voz</string>
+    <string name="voice_start">Começar a falar</string>
+    <string name="voice_end">Encerrar</string>
+    <string name="voice_bar">Voz ativada. %1$s</string>
+    <string name="voice_getting_ready">Preparando…</string>
+    <string name="voice_listening">Ouvindo</string>
+    <string name="voice_hearing">Estou ouvindo você</string>
+    <string name="voice_waiting">Aguardando a resposta…</string>
+    <string name="voice_cant_send_no_model">Não é possível enviar: sem modelo de chat</string>
+    <string name="voice_cant_send_unreachable">Não é possível enviar: não é possível acessar o modelo de chat</string>
+    <string name="voice_announce_listening">Ouvindo. Diga Pare para parar todos os dispositivos.</string>
+    <string name="voice_announce_ended">Voz encerrada</string>
+
+    <string name="voice_channel">Entrada de voz</string>
+    <string name="voice_notice_title">Ouvindo</string>
+    <string name="voice_notice_text">Diga “Pare” para parar todos os dispositivos. Encerrar para de ouvir.</string>
+
+    <string name="voice_downloading">Baixando o modelo de voz · %1$d%%</string>
+    <string name="voice_download_paused">Download pausado · %1$d%%</string>
+    <string name="voice_resume">Retomar</string>
+    <string name="voice_retry">Tentar de novo</string>
+    <string name="voice_problem_no_connection">Sem conexão. O download continua de onde parou.</string>
+    <string name="voice_problem_space">Não há espaço suficiente: são necessários %1$s livres.</string>
+    <string name="voice_problem_space_remove">Não há espaço suficiente: são necessários %1$s livres. Remover %2$s antes abriria espaço.</string>
+    <string name="voice_problem_damaged">O download estava corrompido e foi excluído.</string>
+    <string name="voice_problem_failed">O download falhou.</string>
+
+    <string name="voice_ended_quiet">A voz foi encerrada após 15 minutos de silêncio.</string>
+    <string name="voice_ended_mic_taken">A voz foi encerrada: outro app pegou o microfone.</string>
+    <string name="voice_ended_mic_denied">A voz precisa de acesso ao microfone.</string>
+    <string name="voice_ended_mic_failed">A voz foi encerrada: o microfone parou de funcionar.</string>
+    <string name="voice_ended_model_missing">A voz foi encerrada: o modelo de voz está faltando ou corrompido.</string>
+    <string name="voice_ended_model_failed">A voz foi encerrada: o modelo de voz falhou.</string>
+    <string name="voice_ended_full_failed">A voz foi encerrada: Precisão total não carregou ou ficou sem memória.</string>
+    <string name="voice_start_again">Começar de novo</string>
+    <string name="voice_open_settings">Abrir configurações</string>
+    <string name="voice_download_again">Remover e baixar de novo</string>
+    <string name="voice_switch_compact">Mudar para Compacto</string>
+
+    <string name="voice_setup_title">Fale em vez de digitar</string>
+    <string name="voice_setup_how">Toque no microfone para começar e em Encerrar quando terminar.</string>
+    <string name="voice_setup_how_detail">Continua ouvindo com a tela desligada e envia o que você diz a cada pausa.</string>
+    <string name="voice_setup_private">Sua voz fica neste celular.</string>
+    <string name="voice_setup_private_detail">Ela vira texto aqui e nunca é salva. Seu modelo de chat recebe o texto, como se você tivesse digitado.</string>
+    <string name="voice_setup_stop">Diga “Pare” para parar todos os dispositivos.</string>
+    <string name="voice_setup_stop_detail">Qualquer Parar também encerra a escuta. O botão Parar continua sendo o jeito mais rápido.</string>
+    <string name="voice_setup_download">Precisa de um modelo de voz de %1$s,</string>
+    <string name="voice_setup_download_detail">baixado uma vez. O ideal é usar Wi-Fi.</string>
+    <string name="voice_download_and_start">Baixar e começar</string>
+    <string name="voice_choose_another">Escolher outro modelo</string>
+    <string name="voice_not_now">Agora não</string>
+    <string name="voice_setup_microphone">O Android pede o microfone na primeira vez.</string>
+
+    <string name="voice_pick_title">Escolha um modelo de voz</string>
+    <string name="voice_model">Modelo de voz</string>
+    <string name="voice_model_compact">Compacto</string>
+    <string name="voice_model_full">Precisão total</string>
+    <string name="voice_recommended">Recomendado</string>
+    <string name="voice_in_use">Em uso</string>
+    <string name="voice_compact_detail">Download de %1$s · cerca de 0,8 GB de memória · as respostas mais rápidas</string>
+    <string name="voice_compact_detail_installed">%1$s · cerca de 0,8 GB de memória · as respostas mais rápidas</string>
+    <string name="voice_full_detail">Download de %1$s · cerca de 3,6 GB de memória · mais lento. O Parakeet v3 como foi publicado, para celulares com 12 GB de memória ou mais.</string>
+    <string name="voice_full_detail_installed">%1$s · cerca de 3,6 GB de memória · mais lento. O Parakeet v3 como foi publicado, para celulares com 12 GB de memória ou mais.</string>
+    <string name="voice_pick_note">Os dois rodam neste celular. Você pode trocar depois em Configurações › Voz.</string>
+    <string name="voice_download_size_and_start">Baixar %1$s e começar</string>
+    <string name="voice_download_size">Baixar %1$s</string>
+    <string name="voice_switch_note">Precisa de %1$s livres. %2$s continua funcionando durante o download e é removido quando o novo modelo estiver pronto.</string>
+
+    <string name="voice_model_value">%1$s · %2$s</string>
+    <string name="voice_remove">Remover deste celular</string>
+    <string name="voice_remove_confirm">Toque de novo para remover o modelo de voz.</string>
+    <string name="voice_remove_confirm_listening">Toque de novo para remover o modelo de voz. A escuta será encerrada.</string>
+    <string name="voice_microphone">Microfone</string>
+    <string name="voice_microphone_access">Acesso ao microfone</string>
+    <string name="voice_allowed">Permitido</string>
+    <string name="voice_not_allowed">Não permitido</string>
+    <string name="voice_help_listening">A escuta só começa pelo microfone no chat. Ela termina quando você toca em Encerrar, com qualquer Parar ou após 15 minutos sem fala enquanto nada está tocando.</string>
+    <string name="voice_help_languages">Sua voz fica neste celular. Parar falando funciona em inglês, espanhol e português.</string>
+    <string name="voice_help_language_missing">A voz não está disponível neste idioma do app, porque Parar falando só funciona em inglês, espanhol e português.</string>
+    <string name="voice_switch_downloading">Baixando: %1$d%% de %2$s. %3$s continua funcionando até ficar pronto.</string>
+    <string name="voice_switch_paused">Pausado em %1$d%% de %2$s. Ele continua enquanto o app está aberto.</string>
+    <string name="voice_switch_after">Quando terminar, a voz usa o novo modelo a partir da próxima vez que você começar a ouvir. %1$s é removido nesse momento, ou na hora se você não estiver ouvindo.</string>
+    <string name="voice_first_downloading">Baixando: %1$d%% de %2$s.</string>
+    <string name="voice_not_set_up">Não configurada</string>
+    <string name="voice_ready">Pronta</string>
+    <string name="voice_downloading_short">Baixando</string>
+    <string name="voice_back_to_app_settings">Voltar a Configurações do app</string>
+
+    <string name="receipt_voice_ended">Voz encerrada</string>
+    <string name="receipt_and_voice_ended">%1$s · voz encerrada</string>
+</resources>

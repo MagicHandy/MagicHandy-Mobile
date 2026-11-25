@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Voice input's hidden settings (docs/voice-design.md §5.2), shown in test builds only, in
+    English. Bringing one back to a release means translating its row first.
+-->
+<resources>
+    <string name="voice_advanced" translatable="false">Advanced</string>
+    <string name="voice_advanced_tag" translatable="false">Test builds</string>
+    <string name="voice_advanced_warning" translatable="false">These can make a spoken Stop slower or less reliable. Release builds hide them and use these defaults. Changes apply the next time you start listening.</string>
+    <string name="voice_audio" translatable="false">Audio</string>
+    <string name="voice_audio_standard" translatable="false">Standard</string>
+    <string name="voice_audio_speech" translatable="false">Speech</string>
+    <string name="voice_audio_echo_cancel" translatable="false">Echo cancel</string>
+    <string name="voice_audio_raw" translatable="false">Raw</string>
+    <string name="voice_audio_talkback" translatable="false">While TalkBack is on, listening uses Echo cancel whatever this says.</string>
+    <string name="voice_raise" translatable="false">Raise quiet speech</string>
+    <string name="voice_detector" translatable="false">Speech detector</string>
+    <string name="voice_detector_silero" translatable="false">Silero</string>
+    <string name="voice_detector_ten" translatable="false">TEN</string>
+    <string name="voice_threshold" translatable="false">Speech starts at</string>
+    <string name="voice_silence" translatable="false">Silence that ends a turn</string>
+    <string name="voice_seconds" translatable="false">%1$s s</string>
+    <string name="voice_show_levels" translatable="false">Show levels while listening</string>
+    <string name="voice_check_microphone" translatable="false">Check the microphone</string>
+    <string name="voice_check_microphone_busy" translatable="false">Not while listening: it records too.</string>
+</resources>

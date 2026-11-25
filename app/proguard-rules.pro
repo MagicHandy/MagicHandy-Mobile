@@ -4,3 +4,7 @@
 
 # kotlinx.serialization's consumer rules retain companion accessors. The stores call generated serializers
 # directly. checkReleaseContents verifies the stored models, journal, chat and persona serializers in DEX.
+
+# Voice input: sherpa-onnx's native code finds its Kotlin classes, fields and methods by name.
+# checkReleaseContents verifies the recognizer and the speech detector in DEX.
+-keep class com.k2fsa.sherpa.onnx.** { *; }

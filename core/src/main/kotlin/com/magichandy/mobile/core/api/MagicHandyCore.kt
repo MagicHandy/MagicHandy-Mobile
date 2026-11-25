@@ -51,6 +51,13 @@ public interface MagicHandyCore {
     /** Activity visibility and memory callbacks never change the epoch of a service-owned run. */
     public fun appBackgrounded() {}
 
+    /**
+     * Voice input started ([isActive] true) or stopped listening. While it listens, the person is
+     * still talking to the app with the screen off, so [appBackgrounded] leaves a streaming reply
+     * running instead of interrupting it.
+     */
+    public fun setVoiceActive(isActive: Boolean) {}
+
     public fun trimMemory() {}
 
     /**
@@ -124,4 +131,7 @@ public enum class StopSource {
 
     /** The foreground service was destroyed while it still owned device work. */
     ServiceLost,
+
+    /** A spoken "stop", recognized on the phone by voice input before any inference. */
+    SpokenStop,
 }

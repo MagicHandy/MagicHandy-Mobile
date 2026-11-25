@@ -20,6 +20,9 @@ spotless = "8.9.0"
 ktfmt = "0.64"
 # Screenshot tests of the Compose previews on Robolectric.
 roborazzi = "1.77.0"
+# Voice input's runtime for Silero and Parakeet, in every build. It isn't on Maven, so
+# app/build.gradle.kts downloads the AAR from its GitHub release and checks its SHA-256.
+sherpaOnnx = "2.0.3"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -62,6 +65,9 @@ roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose"
 preview-scanner = { module = "io.github.sergio-sastre.ComposablePreviewScanner:android", version = "0.9.3" }
 # Registers the empty activity that hosts composables in those tests.
 androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+# Google's on-device speech recognition, compared with Parakeet on the voice test page. Debug and
+# deviceTest builds only: it's an alpha, closed-source library that never ships in a release.
+mlkit-genai-speech = { module = "com.google.mlkit:genai-speech-recognition", version = "1.0.0-alpha2" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

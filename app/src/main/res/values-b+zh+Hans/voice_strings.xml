@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_title">语音</string>
+    <string name="voice_start">开始说话</string>
+    <string name="voice_end">结束</string>
+    <string name="voice_bar">语音已开启。%1$s</string>
+    <string name="voice_getting_ready">正在准备…</string>
+    <string name="voice_listening">正在聆听</string>
+    <string name="voice_hearing">听到你了</string>
+    <string name="voice_waiting">正在等待回复…</string>
+    <string name="voice_cant_send_no_model">无法发送：没有聊天模型</string>
+    <string name="voice_cant_send_unreachable">无法发送：无法连接聊天模型</string>
+    <string name="voice_announce_listening">正在聆听。说 Stop 可停止所有设备。</string>
+    <string name="voice_announce_ended">语音已结束</string>
+
+    <string name="voice_channel">语音输入</string>
+    <string name="voice_notice_title">正在聆听</string>
+    <string name="voice_notice_text">说“Stop”可停止所有设备。点“结束”停止聆听。</string>
+
+    <string name="voice_downloading">正在下载语音模型 · %1$d%%</string>
+    <string name="voice_download_paused">下载已暂停 · %1$d%%</string>
+    <string name="voice_resume">继续</string>
+    <string name="voice_retry">重试</string>
+    <string name="voice_problem_no_connection">没有网络连接。下载会从中断处继续。</string>
+    <string name="voice_problem_space">空间不足：需要 %1$s 可用空间。</string>
+    <string name="voice_problem_space_remove">空间不足：需要 %1$s 可用空间。先移除%2$s即可腾出空间。</string>
+    <string name="voice_problem_damaged">下载的文件已损坏，已被删除。</string>
+    <string name="voice_problem_failed">下载失败。</string>
+
+    <string name="voice_ended_quiet">安静 15 分钟后，语音已结束。</string>
+    <string name="voice_ended_mic_taken">语音已结束：另一个应用占用了麦克风。</string>
+    <string name="voice_ended_mic_denied">语音需要麦克风权限。</string>
+    <string name="voice_ended_mic_failed">语音已结束：麦克风停止工作。</string>
+    <string name="voice_ended_model_missing">语音已结束：语音模型缺失或已损坏。</string>
+    <string name="voice_ended_model_failed">语音已结束：语音模型出错。</string>
+    <string name="voice_ended_full_failed">语音已结束：完整精度模型无法加载或内存不足。</string>
+    <string name="voice_start_again">重新开始</string>
+    <string name="voice_open_settings">打开设置</string>
+    <string name="voice_download_again">移除并重新下载</string>
+    <string name="voice_switch_compact">切换到精简版</string>
+
+    <string name="voice_setup_title">用说话代替打字</string>
+    <string name="voice_setup_how">点麦克风开始，说完后点“结束”。</string>
+    <string name="voice_setup_how_detail">屏幕关闭时也会继续聆听，每次停顿时发送你说的话。</string>
+    <string name="voice_setup_private">你的声音只留在这部手机上。</string>
+    <string name="voice_setup_private_detail">它在这里转成文字，从不保存。你的聊天模型收到的是文字，就像你打出来的一样。</string>
+    <string name="voice_setup_stop">说“Stop”可停止所有设备。</string>
+    <string name="voice_setup_stop_detail">任何停止都会结束聆听。“停止”按钮仍是最快的方式。</string>
+    <string name="voice_setup_download">需要一个 %1$s 的语音模型，</string>
+    <string name="voice_setup_download_detail">只需下载一次，最好使用 Wi-Fi。</string>
+    <string name="voice_download_and_start">下载并开始</string>
+    <string name="voice_choose_another">选择其他模型</string>
+    <string name="voice_not_now">以后再说</string>
+    <string name="voice_setup_microphone">第一次使用时，Android 会请求麦克风权限。</string>
+
+    <string name="voice_pick_title">选择语音模型</string>
+    <string name="voice_model">语音模型</string>
+    <string name="voice_model_compact">精简版</string>
+    <string name="voice_model_full">完整精度</string>
+    <string name="voice_recommended">推荐</string>
+    <string name="voice_in_use">使用中</string>
+    <string name="voice_compact_detail">下载 %1$s · 约占 0.8 GB 内存 · 回复最快</string>
+    <string name="voice_compact_detail_installed">%1$s · 约占 0.8 GB 内存 · 回复最快</string>
+    <string name="voice_full_detail">下载 %1$s · 约占 3.6 GB 内存 · 较慢。按原样发布的 Parakeet v3，适合内存 12 GB 或以上的手机。</string>
+    <string name="voice_full_detail_installed">%1$s · 约占 3.6 GB 内存 · 较慢。按原样发布的 Parakeet v3，适合内存 12 GB 或以上的手机。</string>
+    <string name="voice_pick_note">两者都在这部手机上运行。之后可以在“设置 › 语音”中切换。</string>
+    <string name="voice_download_size_and_start">下载 %1$s 并开始</string>
+    <string name="voice_download_size">下载 %1$s</string>
+    <string name="voice_switch_note">需要 %1$s 可用空间。下载期间%2$s仍可使用，新模型就绪后将其移除。</string>
+
+    <string name="voice_model_value">%1$s · %2$s</string>
+    <string name="voice_remove">从这部手机移除</string>
+    <string name="voice_remove_confirm">再点一次即可移除语音模型。</string>
+    <string name="voice_remove_confirm_listening">再点一次即可移除语音模型。聆听将会结束。</string>
+    <string name="voice_microphone">麦克风</string>
+    <string name="voice_microphone_access">麦克风权限</string>
+    <string name="voice_allowed">已允许</string>
+    <string name="voice_not_allowed">未允许</string>
+    <string name="voice_help_listening">只能从聊天中的麦克风开始聆听。点“结束”、任何停止，或在没有播放内容时 15 分钟无人说话，都会结束聆听。</string>
+    <string name="voice_help_languages">你的声音只留在这部手机上。语音停止支持英语、西班牙语和葡萄牙语。</string>
+    <string name="voice_help_language_missing">此应用语言下不提供语音输入，因为语音停止只支持英语、西班牙语和葡萄牙语。</string>
+    <string name="voice_switch_downloading">正在下载：%2$s 的 %1$d%%。就绪前%3$s仍可使用。</string>
+    <string name="voice_switch_paused">已暂停在 %2$s 的 %1$d%%。应用打开时会继续下载。</string>
+    <string name="voice_switch_after">下载完成后，从下次开始聆听起将使用新模型。届时会移除%1$s；如果你没有在聆听，则立即移除。</string>
+    <string name="voice_first_downloading">正在下载：%2$s 的 %1$d%%。</string>
+    <string name="voice_not_set_up">未设置</string>
+    <string name="voice_ready">就绪</string>
+    <string name="voice_downloading_short">正在下载</string>
+    <string name="voice_back_to_app_settings">返回应用设置</string>
+
+    <string name="receipt_voice_ended">语音已结束</string>
+    <string name="receipt_and_voice_ended">%1$s · 语音已结束</string>
+</resources>

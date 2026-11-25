@@ -29,6 +29,9 @@ import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.navigation.AppNavigator
 import com.magichandy.mobile.ui.navigation.SheetPage
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
+import com.magichandy.mobile.ui.voice.VoicePickerPage
+import com.magichandy.mobile.ui.voice.VoiceSetupPage
+import com.magichandy.mobile.ui.voice.VoiceUi
 
 /** What the sheets can open outside themselves. */
 data class SheetExits(
@@ -49,6 +52,7 @@ fun BoxScope.AppSheets(
     onIntent: (UserIntent) -> Unit,
     calls: CoreCalls,
     exits: SheetExits,
+    voice: VoiceUi = VoiceUi.None,
 ) {
     val page = nav.sheet ?: return
     val isNested = nav.sheets.size > 1
@@ -82,6 +86,9 @@ fun BoxScope.AppSheets(
             SheetPage.RefusalFallback -> RefusalFallbackPage(state, calls.setRefusalFallback)
             SheetPage.Memory -> MemoryPage(state, onIntent)
             SheetPage.DeviceType -> DeviceTypeList(exits.addDevice)
+            SheetPage.VoiceSetup -> VoiceSetupPage(voice, nav::closeSheet)
+            SheetPage.VoicePicker -> VoicePickerPage(voice, isFromSettings = false, nav::closeSheet)
+            SheetPage.VoiceModel -> VoicePickerPage(voice, isFromSettings = true, nav::closeSheet)
         }
     }
 }
@@ -102,6 +109,9 @@ private fun sheetTitle(page: SheetPage, state: AppState): String =
                 ?: stringResource(R.string.refusal_title_generic)
         SheetPage.Memory -> stringResource(R.string.settings_memory)
         SheetPage.DeviceType -> stringResource(R.string.device_type_title)
+        SheetPage.VoiceSetup -> stringResource(R.string.voice_setup_title)
+        SheetPage.VoicePicker -> stringResource(R.string.voice_pick_title)
+        SheetPage.VoiceModel -> stringResource(R.string.voice_model)
     }
 
 @Composable

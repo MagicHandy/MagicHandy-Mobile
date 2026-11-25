@@ -31,7 +31,7 @@ Key decisions:
   - **the same devices as the desktop**: The Handy over Bluetooth, Cloud or Intiface (several Handys too), Intiface vibrators, Coyote 3.0, Autoblow Ultra and VacuGlide;
   - models from **ChatGPT, OpenRouter, and servers on the local network** (Ollama and llama.cpp at least).
 
-  Video, the pattern library, Labs, voice, accounts, remote access and desktop setup are dropped. On-device inference comes after v1. Further simplifications are in §15.
+  Video, the pattern library, Labs, voice, accounts, remote access and desktop setup are dropped. (Voice input came back in 0.1.8, §20.) On-device inference comes after v1. Further simplifications are in §15.
 - **Order:** v1 ships whole; milestones M0–M4 (§11) only set the order of work.
 - **Designs:** five directions and the robust flows are sketched on a design canvas (§14), and the system-level designs are in [docs/mobile-system-design.md](docs/mobile-system-design.md).
 - **Priority:** mobile first. Battery, background survival, network resilience, latency and a one-handed UI come before matching desktop features (§3.3).
@@ -698,3 +698,62 @@ Codex CLI ran `gpt-6.2-astra` at high reasoning effort, with image generation. I
 - **A required Stop press on Before you start.** The rehearsal stays optional, as approved for the one-page first run.
 - **A style example in the editors, and a live audition.** A fixed line can't reflect the description or the model, and an audition would need a model, could cost money and touches memory and motion.
 - **A persona shortcut in Chat's header.** It would compete with the chat's title; switching stays three taps away in Settings.
+
+## 19. Voice test (2026-11-25)
+
+To find out whether a hands-free voice mode would work on phones, debug and phone-test builds carry a **Voice test** page, described in [docs/voice-test.md](docs/voice-test.md). Voice input itself shipped in 0.1.8 (§20); the release build has its speech engine and the microphone permission, but not this page.
+
+- **Why these engines:** Parakeet v3 is the desktop's model. It runs on Android through sherpa-onnx (Apache-2.0) and doesn't depend on the phone's maker or Google. Google's ML Kit speech recognition, Basic and Advanced (Gemini Nano), is the strongest built-in alternative on a Pixel 10, so the page measures both on the same audio.
+- **Not the desktop's design:** the owner asked for the desktop's voice mode to be treated as a source of ideas, not the standard. The test page uses a neural speech detector (Silero or TEN) instead of the desktop's loudness threshold. It measures the time from the end of speech to text, and marks transcripts the typed-Stop rule would act on.
+- **Constraints found while building it:**
+  - ML Kit's GenAI APIs work only while the app is on screen; a foreground service gets `BACKGROUND_USE_BLOCKED`.
+  - ML Kit is closed-source alpha.
+  - Parakeet's builds are 0.7 to 2.5 GB downloads and need 0.8 to 3.6 GB of memory (int8 measured at about 0.8 GB once loaded).
+- **Speech detection, after the first phone test:** on the Pixel, hands-free missed clear speech in a quiet room. Two causes:
+  - Android's speech-recognition path must have no automatic gain (CDD 5.4). Its level puts ordinary speech a metre away near −52 dBFS, and unprocessed audio is about 18 dB quieter still.
+  - The first build cut turns with sherpa-onnx's own segmenter. It starts a turn only after 0.2 s in a row at confidence 0.5, and adds no audio before or after the turn.
+- **What the emulator measured:** sherpa-onnx's sample, played quieter and in a simulated room (RT60 0.5 s):
+  - the first build lost the first word at −55 dBFS, and at 2 m heard nothing at −55 dBFS;
+  - the fixed page heard the whole sentence at every level down to −63 dBFS;
+  - the 4-bit build transcribed exactly as int8 did.
+- **The fix:**
+  - **Standard audio** (`MIC`) is the default. sherpa-onnx's and Home Assistant's Android apps record it.
+  - **Automatic gain**, like WebRTC's AGC2, raises speech toward −26 dBFS. It adds up to 30 dB, and never lifts the noise floor above −50 dBFS.
+  - **Turns are cut by the page itself,** from the detector's confidence for each window, as Silero's own iterator does. Where speech starts is adjustable, and each turn gets 0.3 s before it and 0.2 s after it.
+  - **The listening card shows** the microphone's level, the noise floor, the gain and the detector's confidence. Each result records how loud its speech arrived.
+- **Decision pending:** results from the owner's Pixel 10 Pro XL.
+
+## 20. Voice input (2026-11-25)
+
+The second voice test build performed much better on the owner's Pixel, so [docs/voice-design.md](docs/voice-design.md) sketched how voice input would fit Chat and Settings. The owner chose option B for the model, and voice input shipped in 0.1.8 as sketched; the design note's §11 lists what the build does differently.
+
+- **One mode:** hands-free speech to text. Tap the microphone in the composer, and End when you're done. Each turn is sent like a typed message, and listening carries on with the screen off.
+- **Simplified from the test:**
+  - one engine, Parakeet v3, with Silero downloaded alongside it;
+  - in releases, fixed audio settings (Standard audio, gain on, Silero at 0.5, 0.6 s silence);
+  - no hold-to-talk or language menu, and no readouts or microphone check outside test builds.
+- **Settings:** one Voice row in App settings, with the model, microphone access and two lines of help.
+- **Stop:**
+  - a spoken Stop calls `emergencyStop` directly, through a new `StopSource.SpokenStop`;
+  - any Stop ends listening, and a new `AppState.stopEpoch` drops turns heard before it;
+  - a voice-specific `isSpokenStop` rule catches "Stop, stop, stop." and short or mid-turn Stops, but not "Don't. Stop."
+- **Process:** following §9.2, voice runs in its own `:voice` process with its own `microphone` foreground service, so a native crash can't take down Stop's process. `CoreService` doesn't change.
+- **Reviews:** two Gemini 4 Neon reviews the same day revised the sketch:
+  - the [first](docs/reviews/2026-11-25-voice-sketch-review.md) confirmed 17 findings;
+  - the [second](docs/reviews/2026-11-25-voice-model-and-settings-review.md) covered the model choice, the hidden settings and the bug fixes.
+
+  The bugs both found in the voice test's code are fixed with tests.
+- **The model:** option B. **Download and start** gets Compact (int8, 671 MB). Phones that report 10.5 GiB or more also see **Choose another model**, for full precision (2.6 GB), and Settings › Voice switches between them with a progress row. The chosen model is a saved setting (`AppSettingsState.voiceModel`). Full precision still has to show on the Pixel that it keeps a spoken Stop within about 1 s and runs 30 minutes without throttling.
+- **Hidden settings:**
+  - every setting the voice test tunes stays wired into the app with the tested defaults, in an internal `VoiceConfig` rather than `core.api`;
+  - releases hide them and test builds show them;
+  - the Stop checks keep their own fixed values, so no setting can slow a spoken Stop.
+
+  Bringing one back to a release means saving it, translating its row and checking it against the Stop rules.
+- **Decisions:**
+  - the separate `:voice` process;
+  - the 27.6 MB of native code compressed and for `arm64-v8a` only, which keeps the APK near 15 MB;
+  - int8 as the compact build;
+  - option B for the model choice;
+  - voice ships in 0.1.8.
+- **Boards:** V-VoiceIdle, V-VoiceSetup, V-VoiceListen, V-VoiceStop and V-VoiceSettings; for the model and hidden settings, V-VoiceModelA, V-VoiceModelPick, V-VoiceModelB, V-VoiceModelC, V-VoiceModelSwitch, V-VoiceModelD and V-VoiceAdvanced.

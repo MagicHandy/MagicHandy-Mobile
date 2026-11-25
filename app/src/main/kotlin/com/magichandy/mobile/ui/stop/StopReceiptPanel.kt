@@ -56,7 +56,12 @@ fun BoxScope.ReceiptScrim(onDone: () -> Unit) {
  * announces it assertively. With nothing connected it's a toast that goes by itself.
  */
 @Composable
-fun StopReceiptPanel(receipt: StopReceipt, onDone: () -> Unit, modifier: Modifier = Modifier) {
+fun StopReceiptPanel(
+    receipt: StopReceipt,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+    hasEndedVoice: Boolean = false,
+) {
     val colors = MagicHandyTheme.colors
     val shape = MagicHandyTheme.shapes.card
     if (receipt.isNoDevice) {
@@ -120,7 +125,7 @@ fun StopReceiptPanel(receipt: StopReceipt, onDone: () -> Unit, modifier: Modifie
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                footerText(receipt),
+                footerText(receipt, hasEndedVoice),
                 style = MagicHandyTheme.type.small,
                 color = colors.muted,
                 modifier = Modifier.weight(1f),
@@ -134,15 +139,23 @@ fun StopReceiptPanel(receipt: StopReceipt, onDone: () -> Unit, modifier: Modifie
     }
 }
 
+/** What else the Stop ended: Autopilot, the reply, and listening (board V-VoiceStop). */
 @Composable
-private fun footerText(receipt: StopReceipt): String =
-    when {
-        receipt.didTurnOffAutopilot && receipt.didCancelReply ->
-            stringResource(R.string.receipt_autopilot_off_reply_cancelled)
-        receipt.didTurnOffAutopilot -> stringResource(R.string.receipt_autopilot_off)
-        receipt.didCancelReply -> stringResource(R.string.receipt_reply_cancelled)
-        else -> ""
+private fun footerText(receipt: StopReceipt, hasEndedVoice: Boolean): String {
+    val ended =
+        when {
+            receipt.didTurnOffAutopilot && receipt.didCancelReply ->
+                stringResource(R.string.receipt_autopilot_off_reply_cancelled)
+            receipt.didTurnOffAutopilot -> stringResource(R.string.receipt_autopilot_off)
+            receipt.didCancelReply -> stringResource(R.string.receipt_reply_cancelled)
+            else -> ""
+        }
+    return when {
+        !hasEndedVoice -> ended
+        ended.isEmpty() -> stringResource(R.string.receipt_voice_ended)
+        else -> stringResource(R.string.receipt_and_voice_ended, ended)
     }
+}
 
 private fun headerTone(receipt: StopReceipt): DotTone =
     when {

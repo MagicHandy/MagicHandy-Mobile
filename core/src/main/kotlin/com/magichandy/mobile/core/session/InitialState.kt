@@ -140,6 +140,7 @@ internal fun AppState.preferences(p: Preferences): AppState =
                 palette = p.palette.current(),
                 language = p.language,
                 hasAskedForNotifications = p.askedNotifications,
+                voiceModel = p.voiceModel,
                 isStopTileAdded =
                     when (p.stopTile) {
                         TilePresence.Unknown -> null

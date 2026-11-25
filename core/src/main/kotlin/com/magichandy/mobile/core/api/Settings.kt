@@ -65,7 +65,24 @@ public data class AppSettingsState(
     public val hasAskedForNotifications: Boolean = false,
     /** Last presence reported by Android. Null until System UI has reported this tile. */
     public val isStopTileAdded: Boolean? = null,
+    /**
+     * The speech model voice input uses, or is downloading to switch to. [VoiceModel.Compact] until
+     * the person chooses another, and again once voice is removed from the phone.
+     */
+    public val voiceModel: VoiceModel = VoiceModel.Compact,
 )
+
+/**
+ * The speech models voice input can download and run on the phone (docs/voice-design.md §5.1). Both
+ * are Parakeet v3, which recognizes 25 European languages by itself.
+ */
+public enum class VoiceModel {
+    /** The int8 build: a 670 MB download, about 0.8 GB of memory, and the quickest replies. */
+    Compact,
+
+    /** Parakeet v3 as published: a 2.5 GB download, about 3.6 GB of memory, and slower. */
+    Full,
+}
 
 /**
  * The palettes, all dark and chosen for phones (plan §14.1). The semantic colours stay fixed in

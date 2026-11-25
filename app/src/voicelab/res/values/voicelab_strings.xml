@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The voice test is a measuring tool in test builds only, so it isn't translated. -->
+<resources>
+    <string name="voicelab_launcher" translatable="false">Voice test</string>
+</resources>

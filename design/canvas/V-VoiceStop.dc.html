@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice: a spoken Stop ends listening</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.dim{flex:1;padding:16px;opacity:.35;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.dim b{font-size:17px}
+.bub{max-width:80%;background:#1d2024;border:1px solid #353b43;border-radius:10px;padding:9px 12px;line-height:1.45}
+.bub.me{align-self:flex-end;background:#1b2634;border-color:#2c3e52}
+.rec{margin:0 12px 10px;background:#16181b;border:1px solid #353b43;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.rh{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;padding-bottom:8px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.bad{background:#d6453f}.idle{background:#9aa1a9}
+.r{display:grid;grid-template-columns:12px 1fr;gap:2px 10px;padding:9px 0;border-top:1px solid #262a30}
+.r .dot{margin-top:6px}
+.rn{font-weight:600;font-size:14px}
+.rd{grid-column:2;font-size:13px;color:#c9c6c0;line-height:1.4}
+.foot{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid #262a30;font-size:13px;color:#9aa1a9}
+.done{height:40px;padding:0 14px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px 12px;background:#121417;border-top:1px solid #262a30}
+.tab{height:48px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500}
+.tab.on{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+.stopbar{background:#121417;padding:0 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+
+.voice{display:flex;align-items:center;gap:10px;height:48px;background:#0b0c0e;border:1px solid #2c3e52;border-radius:10px;padding:2px 2px 2px 12px}
+.vl{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
+.vm{flex:1;display:flex;align-items:center;gap:3px;height:26px;min-width:0}
+.vm i{flex:1;background:#353b43;border-radius:1px}
+.vm i.hot{background:#5b9dd9}
+.end{height:44px;padding:0 18px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:14px;font-weight:600}
+.mic{width:44px;height:44px;border:0;border-radius:6px;background:#5b9dd9;display:grid;place-items:center}
+.idle{background:#9aa1a9}
+.dim{opacity:.35}
+.sheet{background:#16181b;border:1px solid #353b43;border-bottom:0;border-radius:10px 10px 0 0;padding:6px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.sh{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:600;min-height:48px}
+.x{width:48px;height:48px;border:0;background:transparent;display:grid;place-items:center;margin-right:-12px}
+.pts{display:flex;flex-direction:column;gap:12px}
+.pt{display:grid;grid-template-columns:20px 1fr;gap:12px;font-size:14px;line-height:1.45;color:#c9c6c0}
+.pt b{color:#e9e7e2;font-weight:600}
+.pri{height:52px;border:0;border-radius:6px;background:#5b9dd9;color:#0b131c;font-weight:700;font-size:15px}
+.sec{height:48px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px}
+.fine{font-size:12px;color:#9aa1a9;text-align:center;margin-top:-4px}
+
+</style>
+</helmet>
+<div class="app">
+  <div class="dim" aria-hidden="true" style="justify-content:flex-end"><b>Evening</b><div class="bub me">Keep that rhythm and go a little deeper.</div><div class="bub">Deeper, same rhythm. Stay with me.</div></div>
+  <section class="rec" role="status" aria-live="assertive" aria-label="Stop results">
+    <div class="rh"><i class="dot bad"></i>Stop sent · 1 confirmed, 1 unconfirmed</div>
+    <div class="r"><i class="dot bad"></i><span class="rn">Vibrator · Stop unconfirmed</span><span class="rd">Only Intiface Central replied.</span></div>
+    <div class="r"><i class="dot ok"></i><span class="rn">The Handy · Stopped</span><span class="rd">Confirmed over Bluetooth in <span class="mono">120 ms</span>.</span></div>
+    <div class="foot"><span>Autopilot off · voice ended</span><button class="done" type="button">Done</button></div>
+  </section>
+  <nav class="tabs" aria-label="Main"><button class="tab on" type="button" aria-current="page">Chat</button><button class="tab" type="button">Devices</button><button class="tab" type="button">Settings</button></nav>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop again</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

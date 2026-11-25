@@ -1,105 +1,835 @@
 {
   "v": 3,
-  "createdOnFiles": {"v": 1, "at": "2026-11-18T17:00:00Z"},
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-18T17:00:00Z"
+  },
   "title": "MagicHandy Mobile designs",
-  "launch": {"view": "canvas", "page": "v1"},
+  "launch": {
+    "view": "canvas",
+    "page": "v1"
+  },
   "pages": [
-    {"id": "v1", "name": "v1 direction"},
-    {"id": "explore", "name": "Exploration · Nov 18"}
+    {
+      "id": "v1",
+      "name": "v1 direction"
+    },
+    {
+      "id": "explore",
+      "name": "Exploration · Nov 18"
+    }
   ],
   "boards": {
-    "V-Overview.dc.html": {"x": 0, "y": 0, "w": 2270, "h": 900, "title": "v1 direction at a glance", "page": "v1"},
-    "V-Chat.dc.html": {"x": 0, "y": 1280, "w": 390, "h": 844, "title": "Chat while playing", "page": "v1"},
-    "V-Live.dc.html": {"x": 470, "y": 1280, "w": 390, "h": 844, "title": "Live controls", "page": "v1"},
-    "V-Devices.dc.html": {"x": 940, "y": 1280, "w": 390, "h": 844, "title": "Devices", "page": "v1"},
-    "V-Settings.dc.html": {"x": 1410, "y": 1280, "w": 390, "h": 844, "title": "Compact settings sheet", "page": "v1"},
-    "V-Keyboard.dc.html": {"x": 1880, "y": 1280, "w": 390, "h": 844, "title": "Typing while playing", "page": "v1"},
-    "V-MotionMode.dc.html": {"x": 0, "y": 2504, "w": 390, "h": 844, "title": "Motion mode", "page": "v1"},
-    "V-Autopilot.dc.html": {"x": 470, "y": 2504, "w": 390, "h": 844, "title": "Autopilot settings", "page": "v1"},
-    "V-AppSettings.dc.html": {"x": 940, "y": 2504, "w": 390, "h": 844, "title": "App settings", "page": "v1"},
-    "V-AddServer.dc.html": {"x": 1410, "y": 2504, "w": 390, "h": 844, "title": "Add a server on your network", "page": "v1"},
-    "V-Onboarding.dc.html": {"x": 1880, "y": 2504, "w": 390, "h": 844, "title": "Before you start", "page": "v1"},
-    "V-AddHandy.dc.html": {"x": 0, "y": 3728, "w": 390, "h": 844, "title": "Connect The Handy", "page": "v1"},
-    "V-HandyPage.dc.html": {"x": 470, "y": 3728, "w": 390, "h": 844, "title": "Device page · The Handy", "page": "v1"},
-    "V-Coyote.dc.html": {"x": 940, "y": 3728, "w": 390, "h": 844, "title": "Coyote · before you connect", "page": "v1"},
-    "V-VacuGlide.dc.html": {"x": 1410, "y": 3728, "w": 390, "h": 844, "title": "VacuGlide safeguards", "page": "v1"},
-    "V-StopReceipt.dc.html": {"x": 1880, "y": 3728, "w": 390, "h": 844, "title": "Stop receipt", "page": "v1"},
-    "V-ConnectionLost.dc.html": {"x": 0, "y": 4952, "w": 390, "h": 844, "title": "Connection lost", "page": "v1"},
-    "V-Restored.dc.html": {"x": 470, "y": 4952, "w": 390, "h": 844, "title": "Run interrupted", "page": "v1"},
-    "V-System.dc.html": {"x": 940, "y": 4952, "w": 390, "h": 844, "title": "Notification, lock screen, tile", "page": "v1"},
-    "V-Lowlight.dc.html": {"x": 1410, "y": 4952, "w": 390, "h": 844, "title": "Chat · Lowlight palette", "page": "v1"},
-    "V-Architecture.dc.html": {"x": 0, "y": 6176, "w": 2270, "h": 900, "title": "Architecture", "page": "v1"},
-    "A2-Astra.dc.html": {"x": 0, "y": 7456, "w": 2270, "h": 820, "title": "Astra 6.2 · round two concepts", "page": "v1"},
-    "V-CoyotePage.dc.html": {"x": 0, "y": 8796, "w": 390, "h": 844, "title": "Coyote page · strength limits", "page": "v1"},
-    "V-CoyoteLive.dc.html": {"x": 470, "y": 8796, "w": 390, "h": 844, "title": "Coyote strength on Live", "page": "v1"},
-    "V-AddVibrator.dc.html": {"x": 940, "y": 8796, "w": 390, "h": 844, "title": "Add a vibrator · choose one", "page": "v1"},
-    "V-RefusalFallback.dc.html": {"x": 1410, "y": 8796, "w": 390, "h": 844, "title": "If the chat model refuses", "page": "v1"},
-    "V-AddHandyIntiface.dc.html": {"x": 1880, "y": 8796, "w": 390, "h": 844, "title": "The Handy through Intiface Central", "page": "v1"},
-    "V-SetupModel.dc.html": {"x": 0, "y": 10020, "w": 390, "h": 844, "title": "Setup · choose your AI", "page": "v1"},
-    "V-SetupCompanion.dc.html": {"x": 470, "y": 10020, "w": 390, "h": 844, "title": "Setup · your companion", "page": "v1"},
-    "V-SetupReady.dc.html": {"x": 940, "y": 10020, "w": 390, "h": 844, "title": "Setup · you're set", "page": "v1"},
-    "V-SetupReadyNoModel.dc.html": {"x": 1410, "y": 10020, "w": 390, "h": 844, "title": "Setup · finished without a model", "page": "v1"},
-    "V-Personas.dc.html": {"x": 0, "y": 11244, "w": 390, "h": 844, "title": "Personas", "page": "v1"},
-    "V-PersonaDefault.dc.html": {"x": 470, "y": 11244, "w": 390, "h": 844, "title": "MagicHandy's personality", "page": "v1"},
-    "V-PersonaCustom.dc.html": {"x": 940, "y": 11244, "w": 390, "h": 844, "title": "A persona you made", "page": "v1"},
-    "V-PersonaStyle.dc.html": {"x": 1410, "y": 11244, "w": 390, "h": 844, "title": "Choosing a reaction style", "page": "v1"},
-    "Main.dc.html": {"x": 0, "y": 0, "w": 2270, "h": 820, "title": "Five directions at a glance", "page": "explore"},
-    "GT-Chat.dc.html": {"x": 0, "y": 1200, "w": 390, "h": 844, "title": "Graphite Touch · Chat", "page": "explore"},
-    "GD-Chat.dc.html": {"x": 470, "y": 1200, "w": 390, "h": 844, "title": "Graphite Deck · Chat", "page": "explore"},
-    "LL-Chat.dc.html": {"x": 940, "y": 1200, "w": 390, "h": 844, "title": "Lowlight · Chat", "page": "explore"},
-    "IN-Chat.dc.html": {"x": 1410, "y": 1200, "w": 390, "h": 844, "title": "Instrument · Chat", "page": "explore"},
-    "NV-Chat.dc.html": {"x": 1880, "y": 1200, "w": 390, "h": 844, "title": "Native · Chat", "page": "explore"},
-    "GT-Live.dc.html": {"x": 0, "y": 2424, "w": 390, "h": 844, "title": "Graphite Touch · Live and Autopilot", "page": "explore"},
-    "GD-Live.dc.html": {"x": 470, "y": 2424, "w": 390, "h": 844, "title": "Graphite Deck · Live and Autopilot", "page": "explore"},
-    "LL-Live.dc.html": {"x": 940, "y": 2424, "w": 390, "h": 844, "title": "Lowlight · Live and Autopilot", "page": "explore"},
-    "IN-Live.dc.html": {"x": 1410, "y": 2424, "w": 390, "h": 844, "title": "Instrument · Live and Autopilot", "page": "explore"},
-    "NV-Live.dc.html": {"x": 1880, "y": 2424, "w": 390, "h": 844, "title": "Native · Live and Autopilot", "page": "explore"},
-    "F-Devices.dc.html": {"x": 0, "y": 3648, "w": 390, "h": 844, "title": "Devices", "page": "explore"},
-    "F-AddHandy.dc.html": {"x": 470, "y": 3648, "w": 390, "h": 844, "title": "Add The Handy over Bluetooth", "page": "explore"},
-    "F-VacuGlide.dc.html": {"x": 940, "y": 3648, "w": 390, "h": 844, "title": "VacuGlide on a phone", "page": "explore"},
-    "F-Models.dc.html": {"x": 1410, "y": 3648, "w": 390, "h": 844, "title": "Models", "page": "explore"},
-    "F-AddServer.dc.html": {"x": 1880, "y": 3648, "w": 390, "h": 844, "title": "Add a server on your network", "page": "explore"},
-    "F-Onboarding.dc.html": {"x": 0, "y": 4872, "w": 390, "h": 844, "title": "First run: before you start", "page": "explore"},
-    "F-Keyboard.dc.html": {"x": 470, "y": 4872, "w": 390, "h": 844, "title": "Typing while playing", "page": "explore"},
-    "F-ConnectionLost.dc.html": {"x": 940, "y": 4872, "w": 390, "h": 844, "title": "Connection lost mid-run", "page": "explore"},
-    "F-Restored.dc.html": {"x": 1410, "y": 4872, "w": 390, "h": 844, "title": "After Android closed the app", "page": "explore"},
-    "F-System.dc.html": {"x": 1880, "y": 4872, "w": 390, "h": 844, "title": "Notification, lock screen, Quick Settings", "page": "explore"},
-    "S-ChatSettings.dc.html": {"x": 0, "y": 6096, "w": 390, "h": 844, "title": "Chat settings · compact sheet", "page": "explore"},
-    "S-MotionMode.dc.html": {"x": 470, "y": 6096, "w": 390, "h": 844, "title": "Motion mode menu", "page": "explore"},
-    "S-DeckMenu.dc.html": {"x": 940, "y": 6096, "w": 390, "h": 844, "title": "Graphite Deck · quick menu", "page": "explore"},
-    "A-Astra.dc.html": {"x": 0, "y": 7320, "w": 2270, "h": 820, "title": "Astra 6.2 concept screens", "page": "explore"}
+    "V-Overview.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 2270,
+      "h": 900,
+      "title": "v1 direction at a glance",
+      "page": "v1"
+    },
+    "V-Chat.dc.html": {
+      "x": 0,
+      "y": 1280,
+      "w": 390,
+      "h": 844,
+      "title": "Chat while playing",
+      "page": "v1"
+    },
+    "V-Live.dc.html": {
+      "x": 470,
+      "y": 1280,
+      "w": 390,
+      "h": 844,
+      "title": "Live controls",
+      "page": "v1"
+    },
+    "V-Devices.dc.html": {
+      "x": 940,
+      "y": 1280,
+      "w": 390,
+      "h": 844,
+      "title": "Devices",
+      "page": "v1"
+    },
+    "V-Settings.dc.html": {
+      "x": 1410,
+      "y": 1280,
+      "w": 390,
+      "h": 844,
+      "title": "Compact settings sheet",
+      "page": "v1"
+    },
+    "V-Keyboard.dc.html": {
+      "x": 1880,
+      "y": 1280,
+      "w": 390,
+      "h": 844,
+      "title": "Typing while playing",
+      "page": "v1"
+    },
+    "V-MotionMode.dc.html": {
+      "x": 0,
+      "y": 2504,
+      "w": 390,
+      "h": 844,
+      "title": "Motion mode",
+      "page": "v1"
+    },
+    "V-Autopilot.dc.html": {
+      "x": 470,
+      "y": 2504,
+      "w": 390,
+      "h": 844,
+      "title": "Autopilot settings",
+      "page": "v1"
+    },
+    "V-AppSettings.dc.html": {
+      "x": 940,
+      "y": 2504,
+      "w": 390,
+      "h": 844,
+      "title": "App settings",
+      "page": "v1"
+    },
+    "V-AddServer.dc.html": {
+      "x": 1410,
+      "y": 2504,
+      "w": 390,
+      "h": 844,
+      "title": "Add a server on your network",
+      "page": "v1"
+    },
+    "V-Onboarding.dc.html": {
+      "x": 1880,
+      "y": 2504,
+      "w": 390,
+      "h": 844,
+      "title": "Before you start",
+      "page": "v1"
+    },
+    "V-AddHandy.dc.html": {
+      "x": 0,
+      "y": 3728,
+      "w": 390,
+      "h": 844,
+      "title": "Connect The Handy",
+      "page": "v1"
+    },
+    "V-HandyPage.dc.html": {
+      "x": 470,
+      "y": 3728,
+      "w": 390,
+      "h": 844,
+      "title": "Device page · The Handy",
+      "page": "v1"
+    },
+    "V-Coyote.dc.html": {
+      "x": 940,
+      "y": 3728,
+      "w": 390,
+      "h": 844,
+      "title": "Coyote · before you connect",
+      "page": "v1"
+    },
+    "V-VacuGlide.dc.html": {
+      "x": 1410,
+      "y": 3728,
+      "w": 390,
+      "h": 844,
+      "title": "VacuGlide safeguards",
+      "page": "v1"
+    },
+    "V-StopReceipt.dc.html": {
+      "x": 1880,
+      "y": 3728,
+      "w": 390,
+      "h": 844,
+      "title": "Stop receipt",
+      "page": "v1"
+    },
+    "V-ConnectionLost.dc.html": {
+      "x": 0,
+      "y": 4952,
+      "w": 390,
+      "h": 844,
+      "title": "Connection lost",
+      "page": "v1"
+    },
+    "V-Restored.dc.html": {
+      "x": 470,
+      "y": 4952,
+      "w": 390,
+      "h": 844,
+      "title": "Run interrupted",
+      "page": "v1"
+    },
+    "V-System.dc.html": {
+      "x": 940,
+      "y": 4952,
+      "w": 390,
+      "h": 844,
+      "title": "Notification, lock screen, tile",
+      "page": "v1"
+    },
+    "V-Lowlight.dc.html": {
+      "x": 1410,
+      "y": 4952,
+      "w": 390,
+      "h": 844,
+      "title": "Chat · Lowlight palette",
+      "page": "v1"
+    },
+    "V-Architecture.dc.html": {
+      "x": 0,
+      "y": 6176,
+      "w": 2270,
+      "h": 900,
+      "title": "Architecture",
+      "page": "v1"
+    },
+    "A2-Astra.dc.html": {
+      "x": 0,
+      "y": 7456,
+      "w": 2270,
+      "h": 820,
+      "title": "Astra 6.2 · round two concepts",
+      "page": "v1"
+    },
+    "V-CoyotePage.dc.html": {
+      "x": 0,
+      "y": 8796,
+      "w": 390,
+      "h": 844,
+      "title": "Coyote page · strength limits",
+      "page": "v1"
+    },
+    "V-CoyoteLive.dc.html": {
+      "x": 470,
+      "y": 8796,
+      "w": 390,
+      "h": 844,
+      "title": "Coyote strength on Live",
+      "page": "v1"
+    },
+    "V-AddVibrator.dc.html": {
+      "x": 940,
+      "y": 8796,
+      "w": 390,
+      "h": 844,
+      "title": "Add a vibrator · choose one",
+      "page": "v1"
+    },
+    "V-RefusalFallback.dc.html": {
+      "x": 1410,
+      "y": 8796,
+      "w": 390,
+      "h": 844,
+      "title": "If the chat model refuses",
+      "page": "v1"
+    },
+    "V-AddHandyIntiface.dc.html": {
+      "x": 1880,
+      "y": 8796,
+      "w": 390,
+      "h": 844,
+      "title": "The Handy through Intiface Central",
+      "page": "v1"
+    },
+    "V-SetupModel.dc.html": {
+      "x": 0,
+      "y": 10020,
+      "w": 390,
+      "h": 844,
+      "title": "Setup · choose your AI",
+      "page": "v1"
+    },
+    "V-SetupCompanion.dc.html": {
+      "x": 470,
+      "y": 10020,
+      "w": 390,
+      "h": 844,
+      "title": "Setup · your companion",
+      "page": "v1"
+    },
+    "V-SetupReady.dc.html": {
+      "x": 940,
+      "y": 10020,
+      "w": 390,
+      "h": 844,
+      "title": "Setup · you're set",
+      "page": "v1"
+    },
+    "V-SetupReadyNoModel.dc.html": {
+      "x": 1410,
+      "y": 10020,
+      "w": 390,
+      "h": 844,
+      "title": "Setup · finished without a model",
+      "page": "v1"
+    },
+    "V-Personas.dc.html": {
+      "x": 0,
+      "y": 11244,
+      "w": 390,
+      "h": 844,
+      "title": "Personas",
+      "page": "v1"
+    },
+    "V-PersonaDefault.dc.html": {
+      "x": 470,
+      "y": 11244,
+      "w": 390,
+      "h": 844,
+      "title": "MagicHandy's personality",
+      "page": "v1"
+    },
+    "V-PersonaCustom.dc.html": {
+      "x": 940,
+      "y": 11244,
+      "w": 390,
+      "h": 844,
+      "title": "A persona you made",
+      "page": "v1"
+    },
+    "V-PersonaStyle.dc.html": {
+      "x": 1410,
+      "y": 11244,
+      "w": 390,
+      "h": 844,
+      "title": "Choosing a reaction style",
+      "page": "v1"
+    },
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 2270,
+      "h": 820,
+      "title": "Five directions at a glance",
+      "page": "explore"
+    },
+    "GT-Chat.dc.html": {
+      "x": 0,
+      "y": 1200,
+      "w": 390,
+      "h": 844,
+      "title": "Graphite Touch · Chat",
+      "page": "explore"
+    },
+    "GD-Chat.dc.html": {
+      "x": 470,
+      "y": 1200,
+      "w": 390,
+      "h": 844,
+      "title": "Graphite Deck · Chat",
+      "page": "explore"
+    },
+    "LL-Chat.dc.html": {
+      "x": 940,
+      "y": 1200,
+      "w": 390,
+      "h": 844,
+      "title": "Lowlight · Chat",
+      "page": "explore"
+    },
+    "IN-Chat.dc.html": {
+      "x": 1410,
+      "y": 1200,
+      "w": 390,
+      "h": 844,
+      "title": "Instrument · Chat",
+      "page": "explore"
+    },
+    "NV-Chat.dc.html": {
+      "x": 1880,
+      "y": 1200,
+      "w": 390,
+      "h": 844,
+      "title": "Native · Chat",
+      "page": "explore"
+    },
+    "GT-Live.dc.html": {
+      "x": 0,
+      "y": 2424,
+      "w": 390,
+      "h": 844,
+      "title": "Graphite Touch · Live and Autopilot",
+      "page": "explore"
+    },
+    "GD-Live.dc.html": {
+      "x": 470,
+      "y": 2424,
+      "w": 390,
+      "h": 844,
+      "title": "Graphite Deck · Live and Autopilot",
+      "page": "explore"
+    },
+    "LL-Live.dc.html": {
+      "x": 940,
+      "y": 2424,
+      "w": 390,
+      "h": 844,
+      "title": "Lowlight · Live and Autopilot",
+      "page": "explore"
+    },
+    "IN-Live.dc.html": {
+      "x": 1410,
+      "y": 2424,
+      "w": 390,
+      "h": 844,
+      "title": "Instrument · Live and Autopilot",
+      "page": "explore"
+    },
+    "NV-Live.dc.html": {
+      "x": 1880,
+      "y": 2424,
+      "w": 390,
+      "h": 844,
+      "title": "Native · Live and Autopilot",
+      "page": "explore"
+    },
+    "F-Devices.dc.html": {
+      "x": 0,
+      "y": 3648,
+      "w": 390,
+      "h": 844,
+      "title": "Devices",
+      "page": "explore"
+    },
+    "F-AddHandy.dc.html": {
+      "x": 470,
+      "y": 3648,
+      "w": 390,
+      "h": 844,
+      "title": "Add The Handy over Bluetooth",
+      "page": "explore"
+    },
+    "F-VacuGlide.dc.html": {
+      "x": 940,
+      "y": 3648,
+      "w": 390,
+      "h": 844,
+      "title": "VacuGlide on a phone",
+      "page": "explore"
+    },
+    "F-Models.dc.html": {
+      "x": 1410,
+      "y": 3648,
+      "w": 390,
+      "h": 844,
+      "title": "Models",
+      "page": "explore"
+    },
+    "F-AddServer.dc.html": {
+      "x": 1880,
+      "y": 3648,
+      "w": 390,
+      "h": 844,
+      "title": "Add a server on your network",
+      "page": "explore"
+    },
+    "F-Onboarding.dc.html": {
+      "x": 0,
+      "y": 4872,
+      "w": 390,
+      "h": 844,
+      "title": "First run: before you start",
+      "page": "explore"
+    },
+    "F-Keyboard.dc.html": {
+      "x": 470,
+      "y": 4872,
+      "w": 390,
+      "h": 844,
+      "title": "Typing while playing",
+      "page": "explore"
+    },
+    "F-ConnectionLost.dc.html": {
+      "x": 940,
+      "y": 4872,
+      "w": 390,
+      "h": 844,
+      "title": "Connection lost mid-run",
+      "page": "explore"
+    },
+    "F-Restored.dc.html": {
+      "x": 1410,
+      "y": 4872,
+      "w": 390,
+      "h": 844,
+      "title": "After Android closed the app",
+      "page": "explore"
+    },
+    "F-System.dc.html": {
+      "x": 1880,
+      "y": 4872,
+      "w": 390,
+      "h": 844,
+      "title": "Notification, lock screen, Quick Settings",
+      "page": "explore"
+    },
+    "S-ChatSettings.dc.html": {
+      "x": 0,
+      "y": 6096,
+      "w": 390,
+      "h": 844,
+      "title": "Chat settings · compact sheet",
+      "page": "explore"
+    },
+    "S-MotionMode.dc.html": {
+      "x": 470,
+      "y": 6096,
+      "w": 390,
+      "h": 844,
+      "title": "Motion mode menu",
+      "page": "explore"
+    },
+    "S-DeckMenu.dc.html": {
+      "x": 940,
+      "y": 6096,
+      "w": 390,
+      "h": 844,
+      "title": "Graphite Deck · quick menu",
+      "page": "explore"
+    },
+    "A-Astra.dc.html": {
+      "x": 0,
+      "y": 7320,
+      "w": 2270,
+      "h": 820,
+      "title": "Astra 6.2 concept screens",
+      "page": "explore"
+    },
+    "V-VoiceLab.dc.html": {
+      "x": 0,
+      "y": 12468,
+      "w": 390,
+      "h": 844,
+      "title": "Voice test: engines and microphone",
+      "page": "v1"
+    },
+    "V-VoiceLabListen.dc.html": {
+      "x": 470,
+      "y": 12468,
+      "w": 390,
+      "h": 844,
+      "title": "Voice test: hands-free",
+      "page": "v1"
+    },
+    "V-VoiceLabClip.dc.html": {
+      "x": 940,
+      "y": 12468,
+      "w": 390,
+      "h": 844,
+      "title": "Voice test: one clip, every engine",
+      "page": "v1"
+    },
+    "V-VoiceIdle.dc.html": {
+      "x": 0,
+      "y": 13732,
+      "w": 390,
+      "h": 844,
+      "title": "Voice: Chat with the microphone",
+      "page": "v1"
+    },
+    "V-VoiceSetup.dc.html": {
+      "x": 470,
+      "y": 13732,
+      "w": 390,
+      "h": 844,
+      "title": "Voice: the first tap",
+      "page": "v1"
+    },
+    "V-VoiceListen.dc.html": {
+      "x": 940,
+      "y": 13732,
+      "w": 390,
+      "h": 844,
+      "title": "Voice: listening",
+      "page": "v1"
+    },
+    "V-VoiceStop.dc.html": {
+      "x": 1410,
+      "y": 13732,
+      "w": 390,
+      "h": 844,
+      "title": "Voice: a spoken Stop ends listening",
+      "page": "v1"
+    },
+    "V-VoiceSettings.dc.html": {
+      "x": 1880,
+      "y": 13732,
+      "w": 390,
+      "h": 844,
+      "title": "Voice: App settings › Voice, while listening",
+      "page": "v1"
+    },
+    "V-VoiceModelA.dc.html": {
+      "x": 0,
+      "y": 14996,
+      "w": 390,
+      "h": 844,
+      "title": "Voice model, option A: Choose a model",
+      "page": "v1"
+    },
+    "V-VoiceModelPick.dc.html": {
+      "x": 470,
+      "y": 14996,
+      "w": 390,
+      "h": 844,
+      "title": "Voice model: the picker",
+      "page": "v1"
+    },
+    "V-VoiceModelB.dc.html": {
+      "x": 940,
+      "y": 14996,
+      "w": 390,
+      "h": 844,
+      "title": "Voice model, option B: recommended first",
+      "page": "v1"
+    },
+    "V-VoiceModelC.dc.html": {
+      "x": 1410,
+      "y": 14996,
+      "w": 390,
+      "h": 844,
+      "title": "Voice model, option C: both in the sheet",
+      "page": "v1"
+    },
+    "V-VoiceModelD.dc.html": {
+      "x": 2350,
+      "y": 14996,
+      "w": 390,
+      "h": 844,
+      "title": "Voice model, option D: compact now, full later",
+      "page": "v1"
+    },
+    "V-VoiceAdvanced.dc.html": {
+      "x": 2820,
+      "y": 14996,
+      "w": 390,
+      "h": 844,
+      "title": "Voice: hidden settings, shown in test builds",
+      "page": "v1"
+    },
+    "V-VoiceModelSwitch.dc.html": {
+      "x": 1880,
+      "y": 14996,
+      "w": 390,
+      "h": 844,
+      "title": "Voice model: the picker from Settings",
+      "page": "v1"
+    }
   },
   "order": [
     "V-Overview.dc.html",
-    "V-Chat.dc.html", "V-Live.dc.html", "V-Devices.dc.html", "V-Settings.dc.html", "V-Keyboard.dc.html",
-    "V-MotionMode.dc.html", "V-Autopilot.dc.html", "V-AppSettings.dc.html", "V-AddServer.dc.html", "V-Onboarding.dc.html",
-    "V-AddHandy.dc.html", "V-HandyPage.dc.html", "V-Coyote.dc.html", "V-VacuGlide.dc.html", "V-StopReceipt.dc.html",
-    "V-ConnectionLost.dc.html", "V-Restored.dc.html", "V-System.dc.html", "V-Lowlight.dc.html",
-    "V-Architecture.dc.html", "A2-Astra.dc.html",
+    "V-Chat.dc.html",
+    "V-Live.dc.html",
+    "V-Devices.dc.html",
+    "V-Settings.dc.html",
+    "V-Keyboard.dc.html",
+    "V-MotionMode.dc.html",
+    "V-Autopilot.dc.html",
+    "V-AppSettings.dc.html",
+    "V-AddServer.dc.html",
+    "V-Onboarding.dc.html",
+    "V-AddHandy.dc.html",
+    "V-HandyPage.dc.html",
+    "V-Coyote.dc.html",
+    "V-VacuGlide.dc.html",
+    "V-StopReceipt.dc.html",
+    "V-ConnectionLost.dc.html",
+    "V-Restored.dc.html",
+    "V-System.dc.html",
+    "V-Lowlight.dc.html",
+    "V-Architecture.dc.html",
+    "A2-Astra.dc.html",
     "Main.dc.html",
-    "GT-Chat.dc.html", "GD-Chat.dc.html", "LL-Chat.dc.html", "IN-Chat.dc.html", "NV-Chat.dc.html",
-    "GT-Live.dc.html", "GD-Live.dc.html", "LL-Live.dc.html", "IN-Live.dc.html", "NV-Live.dc.html",
-    "F-Devices.dc.html", "F-AddHandy.dc.html", "F-VacuGlide.dc.html", "F-Models.dc.html", "F-AddServer.dc.html",
-    "F-Onboarding.dc.html", "F-Keyboard.dc.html", "F-ConnectionLost.dc.html", "F-Restored.dc.html", "F-System.dc.html",
-    "S-ChatSettings.dc.html", "S-MotionMode.dc.html", "S-DeckMenu.dc.html",
-    "A-Astra.dc.html"
+    "GT-Chat.dc.html",
+    "GD-Chat.dc.html",
+    "LL-Chat.dc.html",
+    "IN-Chat.dc.html",
+    "NV-Chat.dc.html",
+    "GT-Live.dc.html",
+    "GD-Live.dc.html",
+    "LL-Live.dc.html",
+    "IN-Live.dc.html",
+    "NV-Live.dc.html",
+    "F-Devices.dc.html",
+    "F-AddHandy.dc.html",
+    "F-VacuGlide.dc.html",
+    "F-Models.dc.html",
+    "F-AddServer.dc.html",
+    "F-Onboarding.dc.html",
+    "F-Keyboard.dc.html",
+    "F-ConnectionLost.dc.html",
+    "F-Restored.dc.html",
+    "F-System.dc.html",
+    "S-ChatSettings.dc.html",
+    "S-MotionMode.dc.html",
+    "S-DeckMenu.dc.html",
+    "A-Astra.dc.html",
+    "V-VoiceLab.dc.html",
+    "V-VoiceLabListen.dc.html",
+    "V-VoiceLabClip.dc.html",
+    "V-VoiceIdle.dc.html",
+    "V-VoiceSetup.dc.html",
+    "V-VoiceListen.dc.html",
+    "V-VoiceStop.dc.html",
+    "V-VoiceSettings.dc.html",
+    "V-VoiceModelA.dc.html",
+    "V-VoiceModelPick.dc.html",
+    "V-VoiceModelB.dc.html",
+    "V-VoiceModelC.dc.html",
+    "V-VoiceModelD.dc.html",
+    "V-VoiceAdvanced.dc.html",
+    "V-VoiceModelSwitch.dc.html"
   ],
   "notes": {
-    "v1Core": {"x": 0, "y": 1020, "text": "Core screens", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Setup": {"x": 0, "y": 2244, "text": "Settings and setup", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Safety": {"x": 0, "y": 3468, "text": "Devices and safeguards", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Fail": {"x": 0, "y": 4692, "text": "Failures, recovery and system", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Arch": {"x": 0, "y": 5916, "text": "Architecture", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Astra": {"x": 0, "y": 7196, "text": "Astra 6.2 · round two", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Controls": {"x": 0, "y": 8536, "text": "Device and model controls · Nov 20", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Setup2": {"x": 0, "y": 9760, "text": "First-run setup · Nov 20", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "v1Personas": {"x": 0, "y": 10984, "text": "Personas · Nov 20", "kind": "title1", "maxW": 2270, "page": "v1"},
-    "rowChat": {"x": 0, "y": 940, "text": "Chat while playing", "kind": "title1", "maxW": 2270, "page": "explore"},
-    "rowLive": {"x": 0, "y": 2164, "text": "Live controls and Autopilot", "kind": "title1", "maxW": 2270, "page": "explore"},
-    "rowFlowsA": {"x": 0, "y": 3388, "text": "Robust flows · Graphite Touch baseline", "kind": "title1", "maxW": 2270, "page": "explore"},
-    "rowFlowsB": {"x": 0, "y": 4612, "text": "Edge states and system surfaces", "kind": "title1", "maxW": 2270, "page": "explore"},
-    "rowSettings": {"x": 0, "y": 5836, "text": "Compact settings menu", "kind": "title1", "maxW": 2270, "page": "explore"},
-    "rowAstra": {"x": 0, "y": 7060, "text": "Astra 6.2 consult (Codex CLI)", "kind": "title1", "maxW": 2270, "page": "explore"}
+    "v1Core": {
+      "x": 0,
+      "y": 1020,
+      "text": "Core screens",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Setup": {
+      "x": 0,
+      "y": 2244,
+      "text": "Settings and setup",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Safety": {
+      "x": 0,
+      "y": 3468,
+      "text": "Devices and safeguards",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Fail": {
+      "x": 0,
+      "y": 4692,
+      "text": "Failures, recovery and system",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Arch": {
+      "x": 0,
+      "y": 5916,
+      "text": "Architecture",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Astra": {
+      "x": 0,
+      "y": 7196,
+      "text": "Astra 6.2 · round two",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Controls": {
+      "x": 0,
+      "y": 8536,
+      "text": "Device and model controls · Nov 20",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Setup2": {
+      "x": 0,
+      "y": 9760,
+      "text": "First-run setup · Nov 20",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Personas": {
+      "x": 0,
+      "y": 10984,
+      "text": "Personas · Nov 20",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "rowChat": {
+      "x": 0,
+      "y": 940,
+      "text": "Chat while playing",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "explore"
+    },
+    "rowLive": {
+      "x": 0,
+      "y": 2164,
+      "text": "Live controls and Autopilot",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "explore"
+    },
+    "rowFlowsA": {
+      "x": 0,
+      "y": 3388,
+      "text": "Robust flows · Graphite Touch baseline",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "explore"
+    },
+    "rowFlowsB": {
+      "x": 0,
+      "y": 4612,
+      "text": "Edge states and system surfaces",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "explore"
+    },
+    "rowSettings": {
+      "x": 0,
+      "y": 5836,
+      "text": "Compact settings menu",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "explore"
+    },
+    "rowAstra": {
+      "x": 0,
+      "y": 7060,
+      "text": "Astra 6.2 consult (Codex CLI)",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "explore"
+    },
+    "v1VoiceLab": {
+      "x": 0,
+      "y": 12208,
+      "text": "Voice test (test builds only) · Nov 25",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1Voice": {
+      "x": 0,
+      "y": 13472,
+      "text": "Voice input · built in 0.1.8 · Nov 25",
+      "kind": "title1",
+      "maxW": 2270,
+      "page": "v1"
+    },
+    "v1VoiceModel": {
+      "x": 0,
+      "y": 14736,
+      "text": "Voice input · choosing the model (B built) and hidden settings · Nov 25",
+      "kind": "title1",
+      "maxW": 3210,
+      "page": "v1"
+    }
   },
   "designSystems": []
 }

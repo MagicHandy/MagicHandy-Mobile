@@ -323,6 +323,12 @@ public sealed interface UserIntent {
     /** Requests an app version check. */
     public data object CheckForUpdate : UserIntent
 
+    /**
+     * Chooses the speech model for voice input. The app downloads it, and voice keeps using the
+     * model it has until the new one is ready.
+     */
+    public data class SetVoiceModel(public val model: VoiceModel) : UserIntent
+
     /** Deletes all conversations and persona memory together. */
     public data object DeleteAllChatsAndMemory : UserIntent
 }

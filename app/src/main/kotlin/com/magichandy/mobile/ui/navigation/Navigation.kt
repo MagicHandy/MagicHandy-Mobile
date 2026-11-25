@@ -50,6 +50,11 @@ sealed interface Route {
         override val key: String = "models"
     }
 
+    /** Settings › Voice (board V-VoiceSettings), opened from App settings. */
+    data object VoiceSettings : Route {
+        override val key: String = "voice"
+    }
+
     data object AddServer : Route {
         override val key: String = "add-server"
     }
@@ -94,6 +99,7 @@ sealed interface Route {
                     Live,
                     AppSettings,
                     Models,
+                    VoiceSettings,
                     AddServer,
                     OpenRouterSetup,
                     ChatGptSetup,
@@ -139,6 +145,15 @@ enum class SheetPage {
     RefusalFallback,
     Memory,
     DeviceType,
+
+    /** Voice input's first tap (V-VoiceSetup). */
+    VoiceSetup,
+
+    /** The speech model picker on first use, over the first tap's sheet (V-VoiceModelPick). */
+    VoicePicker,
+
+    /** The speech model picker from Settings › Voice (V-VoiceModelSwitch). */
+    VoiceModel,
 }
 
 /** The back stack and the open sheet. Back closes a sheet before it pops a route. */

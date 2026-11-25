@@ -48,6 +48,7 @@ import com.magichandy.mobile.ui.components.bottomHairline
 import com.magichandy.mobile.ui.components.topHairline
 import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
+import com.magichandy.mobile.ui.voice.VoiceUi
 
 /**
  * Chat while playing (board V-Chat): the header, the transcript and its notices, then the deck.
@@ -66,6 +67,7 @@ fun ChatScreen(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     onChooseAi: () -> Unit = {},
+    voice: VoiceUi = VoiceUi.None,
 ) {
     Column(modifier.fillMaxSize()) {
         if (!isTyping) ChatHeader(state, onOpenChats)
@@ -96,6 +98,7 @@ fun ChatScreen(
             onIntent = onIntent,
             onOpenLive = onOpenLive,
             onChooseAi = onChooseAi,
+            voice = voice,
         )
     }
 }

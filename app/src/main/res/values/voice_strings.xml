@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Voice input (docs/voice-design.md; boards V-Voice*). -->
+<resources>
+    <string name="voice_title">Voice</string>
+    <string name="voice_start">Start talking</string>
+    <string name="voice_end">End</string>
+    <string name="voice_bar">Voice on. %1$s</string>
+    <string name="voice_getting_ready">Getting ready…</string>
+    <string name="voice_listening">Listening</string>
+    <string name="voice_hearing">Hearing you</string>
+    <string name="voice_waiting">Waiting for the reply…</string>
+    <string name="voice_cant_send_no_model">Can\'t send: no chat model</string>
+    <string name="voice_cant_send_unreachable">Can\'t send: the chat model isn\'t reachable</string>
+    <string name="voice_announce_listening">Listening. Say Stop to stop every device.</string>
+    <string name="voice_announce_ended">Voice ended</string>
+
+    <!-- The notification while listening. -->
+    <string name="voice_channel">Voice input</string>
+    <string name="voice_notice_title">Listening</string>
+    <string name="voice_notice_text">Say “Stop” to stop every device. End stops listening.</string>
+
+    <!-- Downloading the model in Chat. -->
+    <string name="voice_downloading">Downloading the speech model · %1$d%%</string>
+    <string name="voice_download_paused">Download paused · %1$d%%</string>
+    <string name="voice_resume">Resume</string>
+    <string name="voice_retry">Retry</string>
+    <string name="voice_problem_no_connection">No connection. The download picks up where it stopped.</string>
+    <string name="voice_problem_space">Not enough space: this needs %1$s free.</string>
+    <string name="voice_problem_space_remove">Not enough space: this needs %1$s free. Removing %2$s first would make room.</string>
+    <string name="voice_problem_damaged">The download was damaged, so it was deleted.</string>
+    <string name="voice_problem_failed">The download failed.</string>
+
+    <!-- Why listening ended, and the next step. -->
+    <string name="voice_ended_quiet">Voice ended after 15 quiet minutes.</string>
+    <string name="voice_ended_mic_taken">Voice ended: another app took the microphone.</string>
+    <string name="voice_ended_mic_denied">Voice needs microphone access.</string>
+    <string name="voice_ended_mic_failed">Voice ended: the microphone stopped working.</string>
+    <string name="voice_ended_model_missing">Voice ended: the speech model is missing or damaged.</string>
+    <string name="voice_ended_model_failed">Voice ended: the speech model failed.</string>
+    <string name="voice_ended_full_failed">Voice ended: Full precision failed to load or ran out of memory.</string>
+    <string name="voice_start_again">Start again</string>
+    <string name="voice_open_settings">Open settings</string>
+    <string name="voice_download_again">Remove and download again</string>
+    <string name="voice_switch_compact">Switch to Compact</string>
+
+    <!-- The first tap (V-VoiceSetup, V-VoiceModelB). -->
+    <string name="voice_setup_title">Talk instead of typing</string>
+    <string name="voice_setup_how">Tap the microphone to start, and End when you\'re done.</string>
+    <string name="voice_setup_how_detail">It keeps listening with the screen off, and sends what you say each time you pause.</string>
+    <string name="voice_setup_private">Your voice stays on this phone.</string>
+    <string name="voice_setup_private_detail">It\'s turned into text here and never saved. Your chat model gets the text, as if you\'d typed it.</string>
+    <string name="voice_setup_stop">Say “Stop” to stop every device.</string>
+    <string name="voice_setup_stop_detail">Any Stop also ends listening. The Stop button is still the fastest way.</string>
+    <string name="voice_setup_download">Needs a %1$s speech model,</string>
+    <string name="voice_setup_download_detail">downloaded once. Wi-Fi is best.</string>
+    <string name="voice_download_and_start">Download and start</string>
+    <string name="voice_choose_another">Choose another model</string>
+    <string name="voice_not_now">Not now</string>
+    <string name="voice_setup_microphone">Android asks for the microphone the first time.</string>
+
+    <!-- The picker (V-VoiceModelPick, V-VoiceModelSwitch). -->
+    <string name="voice_pick_title">Choose a speech model</string>
+    <string name="voice_model">Speech model</string>
+    <string name="voice_model_compact">Compact</string>
+    <string name="voice_model_full">Full precision</string>
+    <string name="voice_recommended">Recommended</string>
+    <string name="voice_in_use">In use</string>
+    <string name="voice_compact_detail">%1$s download · about 0.8 GB of memory · the quickest replies</string>
+    <string name="voice_compact_detail_installed">%1$s · about 0.8 GB of memory · the quickest replies</string>
+    <string name="voice_full_detail">%1$s download · about 3.6 GB of memory · slower. Parakeet v3 as published, for phones with 12 GB of memory or more.</string>
+    <string name="voice_full_detail_installed">%1$s · about 3.6 GB of memory · slower. Parakeet v3 as published, for phones with 12 GB of memory or more.</string>
+    <string name="voice_pick_note">Both run on this phone. You can switch later in Settings › Voice.</string>
+    <string name="voice_download_size_and_start">Download %1$s and start</string>
+    <string name="voice_download_size">Download %1$s</string>
+    <string name="voice_switch_note">Needs %1$s free. %2$s keeps working while it downloads, and is removed once the new model is ready.</string>
+
+    <!-- Settings › Voice (V-VoiceSettings, V-VoiceModelD). -->
+    <string name="voice_model_value">%1$s · %2$s</string>
+    <string name="voice_remove">Remove from this phone</string>
+    <string name="voice_remove_confirm">Tap again to remove the speech model.</string>
+    <string name="voice_remove_confirm_listening">Tap again to remove the speech model. Listening will end.</string>
+    <string name="voice_microphone">Microphone</string>
+    <string name="voice_microphone_access">Microphone access</string>
+    <string name="voice_allowed">Allowed</string>
+    <string name="voice_not_allowed">Not allowed</string>
+    <string name="voice_help_listening">Listening starts only from the microphone in Chat. It ends when you tap End, with any Stop, or after 15 minutes without speech while nothing is playing.</string>
+    <string name="voice_help_languages">Your voice stays on this phone. Spoken Stop works in English, Spanish and Portuguese.</string>
+    <string name="voice_help_language_missing">Voice isn\'t offered in this app language, since spoken Stop works only in English, Spanish and Portuguese.</string>
+    <string name="voice_switch_downloading">Downloading %1$d%% of %2$s. %3$s keeps working until it\'s ready.</string>
+    <string name="voice_switch_paused">Paused at %1$d%% of %2$s. It resumes while the app is open.</string>
+    <string name="voice_switch_after">When it finishes, voice uses the new model from the next time you start listening. %1$s is removed then, or at once if you aren\'t listening.</string>
+    <string name="voice_first_downloading">Downloading %1$d%% of %2$s.</string>
+    <string name="voice_not_set_up">Not set up</string>
+    <string name="voice_ready">Ready</string>
+    <string name="voice_downloading_short">Downloading</string>
+    <string name="voice_back_to_app_settings">Back to App settings</string>
+
+    <!-- The Stop receipt (V-VoiceStop). -->
+    <string name="receipt_voice_ended">Voice ended</string>
+    <string name="receipt_and_voice_ended">%1$s · voice ended</string>
+</resources>

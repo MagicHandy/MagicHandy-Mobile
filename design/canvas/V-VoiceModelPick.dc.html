@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice model: the picker</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.hdr{display:flex;align-items:center;gap:10px;padding:14px 12px 8px 16px}
+.sess{display:flex;flex-direction:column;align-items:flex-start;border:0;background:transparent;padding:0;text-align:left;min-height:48px;justify-content:center}
+.sess b{font-size:17px;display:flex;align-items:center;gap:4px}
+.sess span{font-size:12px;color:#9aa1a9;margin-top:2px}
+.dv{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:12px;color:#c9c6c0}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.acc{background:#5b9dd9}
+.log{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:14px;justify-content:flex-end}
+.msg{display:flex;flex-direction:column;max-width:86%}
+.me{align-self:flex-end;align-items:flex-end}
+.meta{font-size:12px;color:#9aa1a9;margin-bottom:4px}
+.bub{background:#1d2024;border:1px solid #353b43;border-radius:10px 10px 10px 4px;padding:9px 12px;line-height:1.45}
+.me .bub{background:#1b2634;border-color:#2c3e52;border-radius:10px 10px 4px 10px}
+.rc{margin-top:6px;font-size:12px;color:#9aa1a9}
+.caret{display:inline-block;width:2px;height:16px;background:#5b9dd9;vertical-align:-3px;margin-left:2px}
+.deck{background:#16181b;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.strip{height:48px;border:1px solid #262a30;border-radius:6px;background:#0b0c0e;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;font-size:14px;text-align:left}
+.strip .sep{color:#4b5159}
+.acts{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:6px}
+.a{height:48px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
+.a.on{background:rgba(91,157,217,.15);border-color:transparent}
+.field{display:flex;align-items:center;gap:8px;background:#0b0c0e;border:1px solid #4b5159;border-radius:10px;padding:2px 2px 2px 12px}
+.field input{flex:1;min-width:0;height:44px;border:0;background:transparent;color:#e9e7e2;font:16px Inter,sans-serif;outline:none}
+.send{width:44px;height:44px;border:0;border-radius:6px;background:#5b9dd9;display:grid;place-items:center}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px 12px;background:#121417;border-top:1px solid #262a30}
+.tab{height:52px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.tab.on{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+.stopbar{background:#121417;padding:0 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.voice{display:flex;align-items:center;gap:10px;height:48px;background:#0b0c0e;border:1px solid #2c3e52;border-radius:10px;padding:2px 2px 2px 12px}
+.vl{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
+.vm{flex:1;display:flex;align-items:center;gap:3px;height:26px;min-width:0}
+.vm i{flex:1;background:#353b43;border-radius:1px}
+.vm i.hot{background:#5b9dd9}
+.end{height:44px;padding:0 18px;border:1px solid #353b43;border-radius:6px;background:transparent;font-size:14px;font-weight:600}
+.mic{width:44px;height:44px;border:0;border-radius:6px;background:#5b9dd9;display:grid;place-items:center}
+.idle{background:#9aa1a9}
+.dim{opacity:.35}
+.sheet{background:#16181b;border:1px solid #353b43;border-bottom:0;border-radius:10px 10px 0 0;padding:6px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.sh{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:600;min-height:48px}
+.x{width:48px;height:48px;border:0;background:transparent;display:grid;place-items:center;margin-right:-12px}
+.pts{display:flex;flex-direction:column;gap:12px}
+.pt{display:grid;grid-template-columns:20px 1fr;gap:12px;font-size:14px;line-height:1.45;color:#c9c6c0}
+.pt b{color:#e9e7e2;font-weight:600}
+.pri{height:52px;border:0;border-radius:6px;background:#5b9dd9;color:#0b131c;font-weight:700;font-size:15px}
+.sec{height:48px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px}
+.fine{font-size:12px;color:#9aa1a9;text-align:center;margin-top:-4px}
+
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:grid;grid-template-columns:22px 1fr;gap:3px 10px;align-items:start;text-align:left;padding:12px;border:1px solid #353b43;border-radius:10px;background:transparent;width:100%}
+.opt.on{border-color:#5b9dd9;background:rgba(91,157,217,.10)}
+.radio{grid-row:span 2;width:18px;height:18px;border-radius:50%;border:2px solid #9aa1a9;box-sizing:border-box;margin-top:2px}
+.radio.on{border:5px solid #5b9dd9}
+.ot{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.tag{font-size:11px;font-weight:600;color:#5b9dd9;border:1px solid rgba(91,157,217,.5);border-radius:4px;padding:1px 6px}
+.od{grid-column:2;font-size:13px;color:#c9c6c0;line-height:1.4}
+.link{height:48px;border:0;background:transparent;color:#5b9dd9;font-weight:600;font-size:14px}
+.opt.slim{padding:9px 12px}
+
+</style>
+</helmet>
+<div class="app">
+  <header class="hdr dim">
+    <button class="sess" type="button" aria-label="Chats: Evening"><b>Evening<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#9aa1a9" stroke-width="1.8" aria-hidden="true"><path d="M4 6l4 4 4-4"></path></svg></b><span>Companion · Terra</span></button>
+    <div class="dv" aria-label="The Handy playing, Vibrator playing"><span><i class="dot ok"></i> The Handy · Playing</span><span><i class="dot ok"></i> Vibrator · Playing</span></div>
+  </header>
+  <main class="log dim">
+    <div class="msg me"><div class="meta">You · 21:41</div><div class="bub">Perfect. Let Autopilot take over, and build to the finish over twenty minutes.</div></div>
+    <div class="msg"><div class="meta">Companion · 21:41</div><div class="bub">Autopilot has it. I'll build slowly toward the end.</div></div>
+    <div class="msg me"><div class="meta">You · 21:46</div><div class="bub">Keep that rhythm and go a little deeper.</div></div>
+    <div class="msg"><div class="meta">Companion · 21:46</div><div class="bub">Deeper, same rhythm. Stay with me.</div><div class="rc mono">Stroke 15–85 → 5–90 · commanded</div></div>
+  </main>
+  <section class="sheet" role="dialog" aria-label="Choose a speech model">
+    <div class="sh">Choose a speech model<button class="x" type="button" aria-label="Close"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#e9e7e2" stroke-width="1.8" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"></path></svg></button></div>
+    <div class="opts" role="radiogroup" aria-label="Speech model">
+      <button class="opt on" type="button" role="radio" aria-checked="true"><span class="radio on"></span><span class="ot">Compact<span class="tag">Recommended</span></span><span class="od">670 MB download · about 0.8 GB of memory · the quickest replies</span></button>
+      <button class="opt" type="button" role="radio" aria-checked="false"><span class="radio"></span><span class="ot">Full precision</span><span class="od">2.5 GB download · about 3.6 GB of memory · slower. Parakeet v3 as published, for phones with 12 GB of memory or more.</span></button>
+    </div>
+    <div class="fine" style="text-align:left;margin-top:0">Both run on this phone. You can switch later in Settings › Voice.</div>
+    <button class="pri" type="button">Download 670 MB and start</button>
+  </section>
+  <nav class="tabs" aria-label="Main">
+    <button class="tab on" type="button" aria-current="page"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#5b9dd9" stroke-width="1.5" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"></path></svg>Chat</button>
+    <button class="tab" type="button"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="5" height="10" rx="1.5"></rect><rect x="9" y="5" width="5" height="8" rx="1.5"></rect></svg>Devices</button>
+    <button class="tab" type="button" aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5h12M2 11.5h12"></path><circle cx="6" cy="4.5" r="1.8" fill="#121417"></circle><circle cx="10.5" cy="11.5" r="1.8" fill="#121417"></circle></svg>Settings</button>
+  </nav>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

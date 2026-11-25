@@ -36,6 +36,7 @@ import com.magichandy.mobile.core.ports.PreferenceEdit
 import com.magichandy.mobile.core.ports.PreferenceField
 import com.magichandy.mobile.core.ports.activePersona
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
@@ -176,6 +177,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
                     chat.stopEarlierThan(s.epoch)
                     autopilot.epochChanged(s.epoch)
                     last = s.epoch
+                    ui.update { it.copy(stopEpoch = s.epoch.value) }
                 }
                 if (
                     uncertainEpoch != s.epoch &&
@@ -301,9 +303,16 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
 
     override fun appBackgrounded() {
         d.scope.launch(d.dispatchers.session) {
-            if (engine.state.value.owners.isEmpty()) chat.interrupt(InterruptCause.AppInBackground)
+            if (engine.state.value.owners.isEmpty() && !voiceActive.get()) {
+                chat.interrupt(InterruptCause.AppInBackground)
+            }
         }
     }
+
+    /** Set while voice input listens: the person is still in the conversation, screen off. */
+    private val voiceActive = AtomicBoolean(false)
+
+    override fun setVoiceActive(isActive: Boolean) = voiceActive.set(isActive)
 
     override fun trimMemory() {
         d.scope.launch(d.dispatchers.io) { d.chats.trimPages() }
@@ -405,6 +414,8 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             UserIntent.DeleteAllChatsAndMemory -> chat.clearAll()
             is UserIntent.SetPalette -> patch(PreferenceField.PaletteChoice.edit(intent.palette))
             is UserIntent.SetLanguage -> patch(PreferenceField.Language.edit(intent.language))
+            is UserIntent.SetVoiceModel ->
+                patch(PreferenceField.VoiceModelChoice.edit(intent.model))
             is UserIntent.SetStyle -> patch(PreferenceField.Style.edit(intent.style))
             is UserIntent.SetMotionMode -> setMotionMode(intent.mode)
             is UserIntent.SetCheckIns -> patch(PreferenceField.CheckIn.edit(intent.checkIns))

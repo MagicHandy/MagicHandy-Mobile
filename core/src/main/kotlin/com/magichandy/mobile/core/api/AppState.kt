@@ -26,6 +26,12 @@ public data class AppState(
     public val backendNotice: BackendNotice? = null,
     /** Whether durable initial settings and models are available for UI routing. */
     public val startup: StartupState = StartupState.Ready,
+    /**
+     * Advances with every Stop from any surface, including Stops that leave no receipt, such as
+     * switching motion off or a device being lost. Voice input ends listening when it changes, and
+     * drops anything heard before it.
+     */
+    public val stopEpoch: Long = 0,
 )
 
 /** Storage loading does not delay direct Stop or its recovery attempts. */

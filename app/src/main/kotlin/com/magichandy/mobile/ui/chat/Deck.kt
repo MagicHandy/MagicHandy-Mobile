@@ -59,11 +59,16 @@ import com.magichandy.mobile.ui.components.DotTone
 import com.magichandy.mobile.ui.components.StatusDot
 import com.magichandy.mobile.ui.format.Words
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
+import com.magichandy.mobile.ui.voice.MicButton
+import com.magichandy.mobile.ui.voice.VoiceBar
+import com.magichandy.mobile.ui.voice.VoiceStrip
+import com.magichandy.mobile.ui.voice.VoiceUi
 
 /**
  * The deck (board V-Chat): the Now playing strip, the play actions while something plays, and the
  * composer. While typing it keeps only the strip and the composer (board V-Keyboard). With no chat
- * model, Choose an AI sits above the composer; the draft is kept while it's open.
+ * model, Choose an AI sits above the composer; the draft is kept while it's open. While voice input
+ * listens, the voice bar takes the composer's place (board V-VoiceListen).
  */
 @Composable
 fun ChatDeck(
@@ -73,6 +78,7 @@ fun ChatDeck(
     onOpenLive: () -> Unit,
     modifier: Modifier = Modifier,
     onChooseAi: () -> Unit = {},
+    voice: VoiceUi = VoiceUi.None,
 ) {
     val colors = MagicHandyTheme.colors
     val shape = MagicHandyTheme.shapes.sheet
@@ -100,7 +106,8 @@ fun ChatDeck(
                 hasChevron = true,
             )
         }
-        Composer(state, onIntent)
+        VoiceStrip(voice)
+        if (voice.state.listening != null) VoiceBar(voice) else Composer(state, onIntent, voice)
     }
 }
 
@@ -285,7 +292,7 @@ private fun DeckActions(state: AppState, onIntent: (UserIntent) -> Unit) {
 }
 
 @Composable
-private fun Composer(state: AppState, onIntent: (UserIntent) -> Unit) {
+private fun Composer(state: AppState, onIntent: (UserIntent) -> Unit, voice: VoiceUi) {
     val colors = MagicHandyTheme.colors
     val shape = MagicHandyTheme.shapes.card
     var draft by rememberSaveable { mutableStateOf("") }
@@ -365,6 +372,11 @@ private fun Composer(state: AppState, onIntent: (UserIntent) -> Unit) {
                 }
             },
         )
+        // With nothing typed, the microphone stands in for Send (board V-VoiceIdle).
+        if (draft.isEmpty() && voice.isOffered) {
+            MicButton(voice, isChatReady = blocked != SendBlock.NoChatModel)
+            return@Row
+        }
         val sendLabel = stringResource(R.string.composer_send)
         // Accent while chat is available, as on the board; it acts only when there is text. The
         // 48 dp target keeps a thin margin of the field around the 44 dp button.
