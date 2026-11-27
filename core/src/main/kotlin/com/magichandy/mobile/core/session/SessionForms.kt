@@ -79,7 +79,8 @@ internal class SessionForms(
                 )
             is UserIntent.Rename -> setup.rename(intent)
             is UserIntent.Remove -> setup.remove(intent.device)
-            is UserIntent.SaveOpenRouter -> accounts.saveOpenRouter(intent)
+            is UserIntent.SaveOpenRouter -> accounts.openRouter.save(intent)
+            is UserIntent.EditOpenRouter -> accounts.openRouter.edit(intent)
             is UserIntent.SaveServer -> servers.save(intent)
             is UserIntent.RemoveConnection -> removeConnection(intent.connection)
             is UserIntent.SavePersona -> editPersonas { it.savePersona(intent) }

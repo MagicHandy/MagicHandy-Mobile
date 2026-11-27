@@ -2,6 +2,7 @@ package com.magichandy.mobile.transport.simulated
 
 import com.magichandy.mobile.core.api.Banner
 import com.magichandy.mobile.core.api.ChatEntry
+import com.magichandy.mobile.core.api.ChatId
 import com.magichandy.mobile.core.api.ConnectionKind
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
@@ -52,6 +53,7 @@ import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -332,6 +334,61 @@ internal class RunBoundaryTest {
         assertTrue(id !in fixture.core.state.value.devices.awaitingReturn)
         assertNull(fixture.d.journal.read())
         fixture.scope.cancel()
+    }
+
+    @Test
+    fun `a current spoken Stop bypasses chat and a stale transcript cannot stop the next run`() =
+        runTest {
+            val f = DebugFixture(this)
+            f.onboard()
+            f.connect(DeviceId("handy"))
+            f.send(UserIntent.StartMotion)
+            val original = f.core.currentStopEpoch
+            val word =
+                UserIntent.SendVoiceMessage(
+                    "stop",
+                    original,
+                    ChatId("other"),
+                )
+            f.core.dispatch(word)
+            assertTrue(f.core.currentStopEpoch > original)
+            runCurrent()
+            assertEquals(RunPhase.Idle, f.core.state.value.run.phase)
+            f.send(UserIntent.StartMotion)
+            f.send(word)
+            assertEquals(RunPhase.Playing, f.core.state.value.run.phase)
+            f.scope.cancel()
+        }
+
+    @Test
+    fun `two host loss notifications wait for the same suspended disconnect`() = runTest {
+        val entered = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        val f =
+            DebugFixture(this) { d ->
+                d.copy(
+                    devices =
+                        object : DeviceDirectory by d.devices {
+                            override suspend fun disconnect(device: DeviceId) {
+                                entered.complete(Unit)
+                                finish.await()
+                                d.devices.disconnect(device)
+                            }
+                        }
+                )
+            }
+        f.onboard()
+        f.connect(DeviceId("handy"))
+        f.core.emergencyStop(StopSource.ServiceLost)
+        runCurrent()
+        assertTrue(entered.isCompleted)
+        f.core.emergencyStop(StopSource.TaskRemoved)
+        val draining = async { f.core.awaitEmergencyStop() }
+        runCurrent()
+        assertFalse(draining.isCompleted)
+        finish.complete(Unit)
+        draining.await()
+        f.scope.cancel()
     }
 
     @Test

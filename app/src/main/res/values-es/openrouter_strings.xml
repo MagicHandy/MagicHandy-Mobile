@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- OpenRouter page (boards V-OpenRouterSetup and V-OpenRouterSettings) -->
+    <string name="router_lead">Usa una cuenta de OpenRouter para elegir entre cientos de modelos. Pagas a OpenRouter por lo que usas.</string>
+    <string name="router_key_hint">Crea o copia una clave en openrouter.ai, en Keys.</string>
+    <string name="router_key_saved">Clave guardada</string>
+    <string name="router_key_keep">Déjalo vacío para conservar la clave guardada.</string>
+    <string name="router_model_choose">Elige un modelo</string>
+    <string name="router_model_change">Modelo: %1$s. Cambiar</string>
+    <string name="router_price">Unos %1$s por cada 100 respuestas</string>
+    <string name="router_price_free">Gratis</string>
+    <string name="router_privacy">Tu clave se guarda cifrada en este teléfono. MagicHandy solo usa proveedores que dicen no guardar tus chats ni entrenar con ellos.</string>
+    <string name="router_loading">Cargando modelos…</string>
+    <string name="router_unreachable">No se pudo conectar con OpenRouter. Revisa tu conexión a internet.</string>
+    <string name="router_try_again">Reintentar</string>
+    <string name="router_remove">Quitar esta conexión</string>
+    <string name="router_remove_title">¿Quitar %1$s?</string>
+    <string name="router_remove_body">Su clave se borra de este teléfono. Tus claves en openrouter.ai no cambian.</string>
+    <string name="router_remove_confirm">Quitar</string>
+    <string name="back_to_openrouter">Volver a OpenRouter</string>
+
+    <!-- Reasoning -->
+    <string name="router_reasoning">Razonamiento</string>
+    <string name="router_reasoning_off">Desactivado</string>
+    <string name="router_reasoning_on">Activado</string>
+    <string name="router_level_minimal">Mínimo</string>
+    <string name="router_level_low">Bajo</string>
+    <string name="router_level_medium">Medio</string>
+    <string name="router_level_high">Alto</string>
+    <string name="router_level_extra_high">Muy alto</string>
+    <string name="router_level_max">Máximo</string>
+    <string name="router_reasoning_hint">El movimiento espera la respuesta completa, así que sin razonamiento va más rápido.</string>
+    <string name="router_reasoning_default">El movimiento espera la respuesta completa, así que sin razonamiento va más rápido. Por defecto, este modelo usa el nivel %1$s.</string>
+    <string name="router_reasoning_required">Este modelo necesita razonamiento. Los niveles más bajos responden antes y cuestan menos.</string>
+    <string name="router_reasoning_always">Este modelo siempre razona.</string>
+    <string name="router_reasoning_applies">Se aplica desde tu próximo mensaje.</string>
+
+    <!-- Refusals on the OpenRouter page -->
+    <string name="router_refused_key">OpenRouter no aceptó esta clave. Revísala o crea una nueva en openrouter.ai.</string>
+    <string name="router_refused_model">OpenRouter no puede usar ese modelo con MagicHandy. Elige otro.</string>
+    <string name="router_refused_unreachable">No se pudo conectar con OpenRouter. Revisa tu conexión a internet y vuelve a intentarlo.</string>
+    <string name="router_refused_duplicate">Ese modelo ya está guardado con esta clave.</string>
+
+    <!-- Choosing a model (board V-OpenRouterModels) -->
+    <string name="router_pick_title">Elige un modelo</string>
+    <string name="router_search">Buscar modelos</string>
+    <string name="router_search_hint">Nombre o ID</string>
+    <string name="router_search_clear">Borrar la búsqueda</string>
+    <string name="router_sort_popular">Populares</string>
+    <string name="router_sort_price">Más baratos</string>
+    <string name="router_filter_optional">Razonamiento opcional</string>
+    <string name="router_price_note">Los precios son estimaciones para 100 respuestas. El razonamiento se cobra aparte.</string>
+    <string name="router_suggested_title">Sugeridos para el movimiento</string>
+    <string name="router_all_title">Todos los modelos</string>
+    <string name="router_no_match">Ningún modelo coincide.</string>
+    <string name="router_tag_optional">Razonamiento opcional</string>
+    <string name="router_tag_required">Requiere razonamiento</string>
+    <string name="router_tested_deepseek">Rápido y económico. Funciona mejor sin razonamiento.</string>
+    <string name="router_tested_terra">El movimiento más fiable en nuestras pruebas, aunque más lento.</string>
+    <string name="router_manual">Escribe el ID de un modelo</string>
+    <string name="router_manual_use">Usar este modelo</string>
+    <string name="router_list_note">Solo aparecen los modelos que funcionan con MagicHandy a través de proveedores que no guardan tus chats.</string>
+
+    <!-- Models -->
+    <string name="connection_offline">Sin conexión</string>
+    <string name="router_connection_line">OpenRouter · %1$s · Razonamiento: %2$s</string>
+    <string name="router_reasoning_none">Este modelo no usa razonamiento.</string>
+    <string name="router_model_default">Predeterminado del modelo</string>
+</resources>

@@ -23,6 +23,17 @@ public sealed interface UserIntent {
     /** Sends a message. A typed "stop" takes the Stop fast path before any inference. */
     public data class SendMessage(public val text: String) : UserIntent
 
+    /** A transcription belongs to the listening session's original Stop epoch and destination. */
+    public data class SendVoiceMessage(
+        public val text: String,
+        public val stopEpoch: Long,
+        public val chat: ChatId?,
+    ) : UserIntent
+
+    /** Load the next older page if [oldest] is still the first visible entry in [chat]. */
+    public data class LoadOlderMessages(public val chat: ChatId, public val oldest: EntryId) :
+        UserIntent
+
     /** Resends the message whose reply was interrupted. */
     public data object SendAgain : UserIntent
 
@@ -300,6 +311,11 @@ public sealed interface UserIntent {
      * Saves the OpenRouter credential, model and reasoning preference. When [selectForChat] is
      * true, the saved connection also becomes the chat model even if another connection is already
      * selected.
+     *
+     * When the app can reach OpenRouter, the key and the model are checked first: InvalidKey when
+     * OpenRouter doesn't accept the key, InvalidModel when the model can't chat in MagicHandy, and
+     * Unreachable when OpenRouter can't be reached. A model that always reasons is saved with
+     * reasoning on, and a level the model doesn't list becomes its nearest listed one.
      */
     public data class SaveOpenRouter(
         public val apiKey: Secret,
@@ -307,7 +323,28 @@ public sealed interface UserIntent {
         public val capability: CapabilityLevel,
         public val isReasoningOn: Boolean,
         public val selectForChat: Boolean = false,
+        /** The level while [isReasoningOn]; null lets the model choose. */
+        public val reasoningEffort: ReasoningEffort? = null,
     ) : FormIntent
+
+    /**
+     * Changes a saved OpenRouter connection. A null [apiKey] keeps the saved key. The checks and
+     * refusals are those of [SaveOpenRouter], plus NotFound when the connection is gone.
+     */
+    public data class EditOpenRouter(
+        public val connection: ConnectionId,
+        public val apiKey: Secret?,
+        public val model: String,
+        public val capability: CapabilityLevel,
+        public val isReasoningOn: Boolean,
+        public val reasoningEffort: ReasoningEffort?,
+    ) : FormIntent
+
+    /**
+     * Loads OpenRouter's catalog into [ModelsState.routerCatalog] for the OpenRouter pages, unless
+     * it loaded in the last 15 minutes. Sends no key and no chat content.
+     */
+    public data object LoadOpenRouterModels : UserIntent
 
     /** Removes the model connection and its associated credential. */
     public data class RemoveConnection(public val connection: ConnectionId) : FormIntent

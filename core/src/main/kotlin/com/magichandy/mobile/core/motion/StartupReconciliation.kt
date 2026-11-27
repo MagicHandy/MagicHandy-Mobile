@@ -91,44 +91,85 @@ private fun leadIn(s: SliderReading, main: MotionBatch, reversed: Boolean): Lead
     )
 }
 
+/** Only Ready admits main motion. StoppedAway is positive halt evidence for a failed resume. */
+internal enum class StartupResult(val evidence: WriteResult) {
+    Ready(WriteResult.Accepted),
+    StoppedAway(WriteResult.Accepted),
+    Stale(WriteResult.Stale),
+    Uncertain(WriteResult.Uncertain),
+}
+
+internal fun WriteResult.asStartupResult(): StartupResult =
+    when (this) {
+        WriteResult.Accepted -> StartupResult.Ready
+        WriteResult.Stale -> StartupResult.Stale
+        WriteResult.Uncertain -> StartupResult.Uncertain
+    }
+
+private fun SliderReading.stationaryWithinTravel(): Boolean {
+    if (!valid() || speedAbsolute != 0.0) return false
+    val travel = (maximumAbsolute - minimumAbsolute) * 100 / (maximumPercent - minimumPercent)
+    val origin = minimumAbsolute - minimumPercent / 100 * travel
+    return travel.isFinite() && travel > 0 && (positionAbsolute - origin) / travel in -0.01..1.01
+}
+
 internal suspend fun reconcileStartup(
     link: StartupPosition,
     batch: MotionBatch,
     fence: OutputFence,
-): WriteResult {
-    if (!fence.isCurrent()) return WriteResult.Stale
-    if (link.halt(fence) != StopEvidence.Acknowledged) return WriteResult.Uncertain
-    if (!fence.isCurrent()) return WriteResult.Stale
+    resuming: Boolean = false,
+): StartupResult {
+    if (!fence.isCurrent()) return StartupResult.Stale
+    if (link.halt(fence) != StopEvidence.Acknowledged) return StartupResult.Uncertain
+    if (!fence.isCurrent()) return StartupResult.Stale
     val firstRead = link.read(fence)
-    if (!fence.isCurrent()) return WriteResult.Stale
-    var observed = firstRead ?: return WriteResult.Accepted
+    if (!fence.isCurrent()) return StartupResult.Stale
+    var observed = firstRead ?: return StartupResult.Ready
     repeat(2) {
         if (observed.valid() && observed.speedAbsolute > 5) {
             delay(150)
-            if (!fence.isCurrent()) return WriteResult.Stale
+            if (!fence.isCurrent()) return StartupResult.Stale
             val next = link.read(fence)
-            if (!fence.isCurrent()) return WriteResult.Stale
-            observed = next ?: return WriteResult.Uncertain
+            if (!fence.isCurrent()) return StartupResult.Stale
+            observed = next ?: return StartupResult.Uncertain
         }
     }
-    if (!observed.valid() || observed.speedAbsolute > 5) return WriteResult.Uncertain
+    if (!observed.valid() || observed.speedAbsolute > 5) return StartupResult.Uncertain
     val lead = leadIn(observed, batch, link.reversed)
-    if (!fence.isCurrent()) return WriteResult.Stale
-    if (lead == null) return WriteResult.Accepted
+    if (!fence.isCurrent()) return StartupResult.Stale
+    if (lead == null) return StartupResult.Ready
     val sent = link.position(lead.batch, fence)
-    if (sent != WriteResult.Accepted) return sent
+    if (sent != WriteResult.Accepted) return sent.asStartupResult()
     delay(lead.millis + 150)
     repeat(6) { attempt ->
-        if (!fence.isCurrent()) return WriteResult.Uncertain
-        val state = link.read(fence) ?: return WriteResult.Uncertain
-        if (lead.arrival.reached(state)) {
-            if (link.halt(fence) != StopEvidence.Acknowledged || !fence.isCurrent())
-                return WriteResult.Uncertain
-            val stopped = link.read(fence) ?: return WriteResult.Uncertain
-            return if (lead.arrival.reached(stopped)) WriteResult.Accepted
-            else WriteResult.Uncertain
-        }
+        if (!fence.isCurrent()) return StartupResult.Uncertain
+        val state = link.read(fence) ?: return StartupResult.Uncertain
+        if (!state.valid()) return StartupResult.Uncertain
+        if (lead.arrival.reached(state)) return verifyHalt(link, fence, lead.arrival)
         if (attempt < 5) delay(150)
+        else if (resuming && state.stationaryWithinTravel())
+            return verifyHalt(link, fence, lead.arrival, missedAt = state)
     }
-    return WriteResult.Uncertain
+    return StartupResult.Uncertain
+}
+
+/** A stopped, stable miss is retryable only on the same physical lease that acknowledged halt. */
+private suspend fun verifyHalt(
+    link: StartupPosition,
+    fence: OutputFence,
+    target: Arrival,
+    missedAt: SliderReading? = null,
+): StartupResult {
+    if (!fence.isCurrent() || link.halt(fence) != StopEvidence.Acknowledged || !fence.isCurrent())
+        return StartupResult.Uncertain
+    val stopped = link.read(fence) ?: return StartupResult.Uncertain
+    if (!fence.isCurrent()) return StartupResult.Uncertain
+    return when {
+        target.reached(stopped) -> StartupResult.Ready
+        missedAt != null &&
+            stopped.stationaryWithinTravel() &&
+            abs(stopped.positionAbsolute - missedAt.positionAbsolute) <= target.tolerance ->
+            StartupResult.StoppedAway
+        else -> StartupResult.Uncertain
+    }
 }

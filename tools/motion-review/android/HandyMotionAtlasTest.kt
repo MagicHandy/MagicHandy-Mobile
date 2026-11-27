@@ -88,6 +88,12 @@ internal class HandyMotionAtlasTest {
             }
         }
         return buildJsonObject {
+            put("sampling_policy", sampler.fit.name)
+            put(
+                "policy_reference_route",
+                if (sampler.fit != BufferedFit.Precise) "cloud"
+                else input.getValue("route").jsonPrimitive.content,
+            )
             put("period", period)
             put("max_error", maxError)
             put("peak_wire_speed", peakSpeed)

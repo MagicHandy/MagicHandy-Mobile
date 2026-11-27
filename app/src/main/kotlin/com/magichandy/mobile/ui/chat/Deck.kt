@@ -23,7 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,7 +109,20 @@ fun ChatDeck(
             )
         }
         VoiceStrip(voice)
-        if (voice.state.listening != null) VoiceBar(voice) else Composer(state, onIntent, voice)
+        val drafts = rememberSaveableStateHolder()
+        val ids = remember(state.chat.chats) { state.chat.chats.map { it.id.value }.toSet() }
+        var knownChats by remember { mutableStateOf(ids) }
+        LaunchedEffect(ids, state.chat.chatId) {
+            (knownChats - ids).forEach(drafts::removeState)
+            knownChats = ids
+            if (state.chat.chatId != null) drafts.removeState("unsaved-chat")
+        }
+        if (voice.state.listening != null) VoiceBar(voice)
+        else {
+            drafts.SaveableStateProvider(state.chat.chatId?.value ?: "unsaved-chat") {
+                Composer(state, onIntent, voice)
+            }
+        }
     }
 }
 
@@ -198,7 +213,13 @@ private fun stripContent(state: AppState): StripContent {
     return when (run.phase) {
         RunPhase.Playing -> {
             val pace = run.commandedPace?.let { Words.percent(it) } ?: "–"
-            val full = stringResource(R.string.strip_playing, pace)
+            val playing = stringResource(R.string.strip_playing, pace)
+            val full =
+                run.pendingPace?.let {
+                    playing +
+                        stringResource(R.string.separator) +
+                        stringResource(R.string.pace_next, Words.percent(it))
+                } ?: playing
             val start = full.indexOf(pace)
             StripContent(
                 DotTone.Ok,

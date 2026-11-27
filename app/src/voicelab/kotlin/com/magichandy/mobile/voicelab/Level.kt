@@ -1,8 +1,8 @@
 package com.magichandy.mobile.voicelab
 
+import com.magichandy.mobile.core.api.SpeechLevel
 import com.magichandy.mobile.voice.AutoLevel
 import com.magichandy.mobile.voice.SILENCE_DB
-import com.magichandy.mobile.voice.SpeechLevel
 import com.magichandy.mobile.voice.levelDb
 import java.util.Locale
 import kotlin.math.log10

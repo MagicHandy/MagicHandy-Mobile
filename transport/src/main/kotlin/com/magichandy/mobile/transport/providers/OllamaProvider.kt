@@ -1,5 +1,6 @@
 package com.magichandy.mobile.transport.providers
 
+import com.magichandy.mobile.core.api.ProviderReplyFailure
 import com.magichandy.mobile.core.chat.PromptBudget
 import com.magichandy.mobile.core.ports.ModelRequest
 import com.magichandy.mobile.core.ports.StructuredProvider
@@ -51,7 +52,9 @@ internal class OllamaProvider(
             )
         val admitted =
             budget.admit(messages, preserveTailMessages = contract?.preserveTail ?: 1)
-                ?: return TextResult.Interrupted
+                ?: return TextResult.Failed(
+                    ProviderReplyFailure(ProviderReplyFailure.Reason.ContextLimit)
+                )
         val body = buildJsonObject {
             put("model", model)
             put("stream", true)
@@ -86,7 +89,7 @@ internal class OllamaProvider(
                 .build()
         return try {
             http.exchange(r) { res ->
-                if (!res.isSuccessful) return@exchange TextResult.Interrupted
+                if (!res.isSuccessful) return@exchange compatibleFailure(res.code)
                 val source = res.body.source()
                 val out = StringBuilder()
                 var bytes = 0L

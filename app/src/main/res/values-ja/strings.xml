@@ -46,6 +46,11 @@
     <string name="chat_empty">あいさつするか、%1$sにしてほしいことを伝えてください。</string>
     <string name="author_you">あなた</string>
     <string name="time_now">今</string>
+    <string name="pace_next">次のペース %1$s</string>
+    <string name="receipt_sweeps">ストローク %1$d～%2$d%%</string>
+    <string name="receipt_pattern_range">ストローク範囲 %1$d–%2$d%%</string>
+    <string name="receipt_phrase">ストロークパターン %1$s</string>
+    <string name="receipt_stroke_group">%1$d × %2$d–%3$d%%</string>
     <string name="receipt_pace_change">ペース %1$d → %2$d</string>
     <string name="receipt_pace">ペース %1$d</string>
     <string name="receipt_stroke">ストローク %1$d–%2$d</string>
@@ -410,12 +415,8 @@
     <string name="server_failure_not_model_server">応答はありましたが、モデルサーバーではありません。</string>
     <string name="server_failure_no_models">サーバーにまだモデルがありません。サーバーでモデルを取得してから、もう一度確認してください。</string>
     <string name="server_failure_not_private">ローカルサーバーにはプライベートネットワークのアドレスのみ使用できます。サーバーのアドレスを確認してください。</string>
-    <string name="openrouter_lead">自分の API キーで OpenRouter 経由でチャットします。キーはこのスマートフォンに暗号化して保存されます。</string>
     <string name="field_api_key">API キー</string>
     <string name="field_model">モデル</string>
-    <string name="field_model_hint">プロバイダー/モデル</string>
-    <string name="openrouter_reasoning">推論</string>
-    <string name="openrouter_reasoning_desc">推論がオフのとき、上級は推論なしの契約を使います。</string>
     <string name="chatgpt_lead">ブラウザで ChatGPT アカウントにサインインします。MagicHandy はデスクトップ版と同じく、GPT-6.1 Terra を上級で使います。</string>
     <string name="chatgpt_sign_in">ChatGPT で続ける</string>
     <string name="chatgpt_waiting">ChatGPT にサインインしています…</string>
@@ -706,4 +707,10 @@
     <string name="handy_cloud_service">Handy Cloud を利用できません。ネットワークを確認して再接続してください。</string>
     <string name="handy_cloud_reply">Handy Cloud の応答を認識できませんでした。ファームウェアのバージョンを確認して再接続してください。</string>
     <string name="handy_cloud_idle">Handy の待機状態を確認できませんでした。本体で停止してから再接続してください。</string>
+    <string name="reply_provider_credentials">認証情報が拒否されました。モデル設定で API キーまたはサーバー認証を確認してください。</string>
+    <string name="reply_provider_billing">支払いまたはクレジットが必要です。再送信の前に請求情報を確認してください。</string>
+    <string name="reply_provider_rate">リクエストが多すぎます。しばらく待ってから再送信してください。</string>
+    <string name="banner_resume_position_title">一時停止中</string>
+    <string name="banner_resume_position_body">スライダーが開始位置に達する前に停止しました。スライダーが自由に動くことを確認してから、再開をタップしてください。</string>
+    <string name="provider_context_limit">このリクエストはモデルのコンテキスト上限を超えています。「モデル」でコンテキストが大きいモデルを選んでください。</string>
 </resources>

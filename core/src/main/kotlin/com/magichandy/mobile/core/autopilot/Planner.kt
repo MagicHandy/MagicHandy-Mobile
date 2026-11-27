@@ -2,6 +2,7 @@
 package com.magichandy.mobile.core.autopilot
 
 import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.api.ProviderReplyFailure
 import com.magichandy.mobile.core.chat.ChatContract
 import com.magichandy.mobile.core.chat.ConversationWindow
 import com.magichandy.mobile.core.chat.TurnContext
@@ -44,6 +45,17 @@ internal data class Decision(
     val air: Int = 0,
 )
 
+/** What a planning request came to. */
+internal sealed interface Planned {
+    data class Step(val decision: Decision) : Planned
+
+    /** The provider said why it couldn't plan. */
+    data class Failed(val failure: ProviderReplyFailure) : Planned
+
+    /** No usable step this time, such as a dropped connection or a reply that didn't validate. */
+    data object Missed : Planned
+}
+
 internal data class PlanFacts(
     val elapsed: Duration,
     val unchanged: Duration,
@@ -84,8 +96,8 @@ internal suspend fun decide(
     context: TurnContext,
     facts: PlanFacts,
     history: List<TextMessage>,
-): Decision? {
-    val tokens = ConversationWindow.named(model.info.capability, model.contextTokens).contextTokens
+): Planned {
+    val tokens = ConversationWindow.forModel(model).contextTokens
     val request =
         ChatContract.compose(
             context,
@@ -93,9 +105,14 @@ internal suspend fun decide(
             tokens,
             purpose = if (facts.purpose == "plan" && context.local) "plan-local" else facts.purpose,
             timingFloor = facts.floor,
-        ) ?: return null
-    val result = provider.plan(request)
-    if (result !is TextResult.Completed) return null
+        ) ?: return Planned.Failed(ProviderReplyFailure(ProviderReplyFailure.Reason.ContextLimit))
+    val result =
+        when (val reply = provider.plan(request)) {
+            is TextResult.Completed -> reply
+            is TextResult.Failed -> return Planned.Failed(reply.error)
+            TextResult.Interrupted,
+            TextResult.Refused -> return Planned.Missed
+        }
     return try {
         val raw = modelObject(result.text)
         require(request.schema.accepts(raw, context.local))
@@ -111,23 +128,27 @@ internal suspend fun decide(
         require(score == null || score.speed in context.minimum..context.maximum)
         val speech = reply.word("reply").orEmpty().trim()
         require(speech.length <= 12000)
-        Decision(
-            score
-                ?: context.base.takeIf {
-                    !context.running && facts.purpose == "plan" && context.mode != MotionMode.Tempo
-                },
-            speech,
-            reply.word("next") ?: "normal",
-            reply["next_check_seconds"]?.jsonPrimitive?.intOrNull,
-            reply.vibration(),
-            if (context.mode == MotionMode.Tempo) tempoProposal(reply, context).first else null,
-            reply["air_steps"]?.jsonPrimitive?.intOrNull ?: 0,
+        Planned.Step(
+            Decision(
+                score
+                    ?: context.base.takeIf {
+                        !context.running &&
+                            facts.purpose == "plan" &&
+                            context.mode != MotionMode.Tempo
+                    },
+                speech,
+                reply.word("next") ?: "normal",
+                reply["next_check_seconds"]?.jsonPrimitive?.intOrNull,
+                reply.vibration(),
+                if (context.mode == MotionMode.Tempo) tempoProposal(reply, context).first else null,
+                reply["air_steps"]?.jsonPrimitive?.intOrNull ?: 0,
+            )
         )
     } catch (_: IllegalArgumentException) {
-        null
+        Planned.Missed
     } catch (_: IllegalStateException) {
-        null
+        Planned.Missed
     } catch (_: NoSuchElementException) {
-        null
+        Planned.Missed
     }
 }

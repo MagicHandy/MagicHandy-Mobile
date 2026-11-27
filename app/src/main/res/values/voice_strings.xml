@@ -98,4 +98,6 @@
     <!-- The Stop receipt (V-VoiceStop). -->
     <string name="receipt_voice_ended">Voice ended</string>
     <string name="receipt_and_voice_ended">%1$s · voice ended</string>
+    <string name="voice_ended_overloaded">Listening ended because speech recognition fell behind. Try shorter phrases or use the compact model.</string>
+    <string name="voice_ended_input_changed">Listening ended because the phone’s built-in microphone is unavailable. Check the audio input before starting again.</string>
 </resources>

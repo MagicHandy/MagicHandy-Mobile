@@ -27,6 +27,7 @@ internal fun responsesFailure(status: Int?, code: String?): TextResult.Failed {
     val reason =
         when {
             status == 401 -> Reason.SignInRequired
+            code == "rate_limit_exceeded" -> Reason.RateLimited
             code == "subscription_sharing_usage_limit_exceeded" || status in setOf(402, 429) ->
                 Reason.UsageLimit
             code in
@@ -51,6 +52,19 @@ internal fun responsesFailure(status: Int?, code: String?): TextResult.Failed {
                         "subscription_sharing_route_not_supported",
                     ) -> Reason.RequestRejected
             else -> Reason.ServiceUnavailable
+        }
+    return TextResult.Failed(ProviderReplyFailure(reason, status))
+}
+
+/** Preserve only a recovery category and numeric HTTP status from a compatible provider. */
+internal fun compatibleFailure(status: Int): TextResult.Failed {
+    val reason =
+        when (status) {
+            401 -> Reason.CredentialsRejected
+            402 -> Reason.BillingRequired
+            404 -> Reason.ModelUnavailable
+            429 -> Reason.RateLimited
+            else -> return responsesFailure(status, null)
         }
     return TextResult.Failed(ProviderReplyFailure(reason, status))
 }

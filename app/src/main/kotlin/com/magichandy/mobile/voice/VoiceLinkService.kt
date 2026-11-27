@@ -7,7 +7,10 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
+import android.util.Log
 import com.magichandy.mobile.MagicHandyApp
+import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.StopSource
 
 /**
@@ -31,6 +34,18 @@ class VoiceLinkService : Service() {
             Messenger(
                 Handler(thread.looper) { message ->
                     route(message, app.core::emergencyStop, app.voice::receive)
+                    if (
+                        message.what == VoiceProtocol.SPOKEN_STOP &&
+                            resources.getBoolean(R.bool.voice_hidden_settings)
+                    ) {
+                        val lastSpeech = message.data.getLong(VoiceProtocol.LAST_SPEECH_MILLIS)
+                        val elapsed = SystemClock.elapsedRealtime()
+                        if (lastSpeech in 1..elapsed)
+                            Log.i(
+                                "MagicHandyVoiceQA",
+                                "Last voiced audio to core Stop: " + (elapsed - lastSpeech) + " ms",
+                            )
+                    }
                     true
                 }
             )

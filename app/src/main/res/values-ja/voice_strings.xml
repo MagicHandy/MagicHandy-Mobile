@@ -90,4 +90,6 @@
 
     <string name="receipt_voice_ended">音声を終了</string>
     <string name="receipt_and_voice_ended">%1$s · 音声を終了</string>
+    <string name="voice_ended_overloaded">音声認識が追いつかなかったため、聞き取りを終了しました。短い文を話すか、軽量モデルをお試しください。</string>
+    <string name="voice_ended_input_changed">端末の内蔵マイクを使用できないため、聞き取りを終了しました。入力機器を確認してから再開してください。</string>
 </resources>

@@ -19,7 +19,15 @@ public enum class TextRole {
 }
 
 /** One complete message in a bounded text-only conversation. */
-public data class TextMessage(public val role: TextRole, public val text: String)
+public data class TextMessage(
+    public val role: TextRole,
+    public val text: String,
+    /**
+     * Locally composed quotation of the opening. Used only for budget admission, never sent as a
+     * wire field.
+     */
+    public val isOpeningReference: Boolean = false,
+)
 
 /** A streamed turn has exactly one terminal outcome. Only a completed reply can be persisted. */
 public sealed interface TextResult {

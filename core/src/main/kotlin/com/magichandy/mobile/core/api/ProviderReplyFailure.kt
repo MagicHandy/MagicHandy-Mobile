@@ -19,5 +19,10 @@ public data class ProviderReplyFailure(
         RequestRejected,
         ServiceUnavailable,
         UnexpectedResponse,
+        CredentialsRejected,
+        BillingRequired,
+        RateLimited,
+        /** The mandatory input and output reserve exceed the selected model's context. */
+        ContextLimit,
     }
 }

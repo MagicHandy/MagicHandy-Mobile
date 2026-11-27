@@ -1,6 +1,6 @@
 package com.magichandy.mobile.voicelab
 
-import com.magichandy.mobile.voice.MicSource
+import com.magichandy.mobile.core.api.MicSource
 import com.magichandy.mobile.voice.SAMPLE_RATE
 import java.io.DataInputStream
 import java.io.File

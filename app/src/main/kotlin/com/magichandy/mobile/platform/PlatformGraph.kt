@@ -15,6 +15,7 @@ import com.magichandy.mobile.core.ports.ModelProvider
 import com.magichandy.mobile.core.ports.ModelSignIn
 import com.magichandy.mobile.core.ports.SavedModel
 import com.magichandy.mobile.core.ports.SecretHandle
+import com.magichandy.mobile.core.ports.UnusableCredential
 import com.magichandy.mobile.platform.storage.AndroidVault
 import com.magichandy.mobile.platform.storage.AtomicBytes
 import com.magichandy.mobile.platform.storage.FileJournal
@@ -28,6 +29,7 @@ import com.magichandy.mobile.transport.providers.AccessTokenSource
 import com.magichandy.mobile.transport.providers.ChatGptAccount
 import com.magichandy.mobile.transport.providers.CompatibleProvider
 import com.magichandy.mobile.transport.providers.LanServers
+import com.magichandy.mobile.transport.providers.OpenRouterAccount
 import com.magichandy.mobile.transport.providers.ResponsesProvider
 import java.io.File
 import java.io.IOException
@@ -132,10 +134,19 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
                 ProviderKind.OpenRouter ->
                     CompatibleProvider.openRouter(
                         http,
-                        AccessTokenSource { m.credential?.let { vault.get(it) } },
+                        // A key that can no longer be decrypted reads as missing, so chat asks
+                        // for it again instead of reporting an outage.
+                        AccessTokenSource {
+                            try {
+                                m.credential?.let { vault.get(it) }
+                            } catch (_: UnusableCredential) {
+                                null
+                            }
+                        },
                         m.info.model,
                         m.info.isReasoningOn,
                         m.contextTokens.takeIf { it > 0 } ?: 65536,
+                        m.info.reasoningEffort,
                     )
                 ProviderKind.Ollama,
                 ProviderKind.LlamaCpp,
@@ -171,6 +182,7 @@ internal fun platformCore(app: MagicHandyApp): MagicHandyCore {
             MobileReleases(http),
             androidApi = android.os.Build.VERSION.SDK_INT,
             awaitStorage = stores::awaitReady,
+            openRouter = OpenRouterAccount.create(http),
         )
     )
 }

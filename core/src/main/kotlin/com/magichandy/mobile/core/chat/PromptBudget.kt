@@ -26,7 +26,8 @@ public class PromptBudget(
 
     /**
      * Keep all developer instructions and the final [preserveTailMessages] intact. Drop only an
-     * oldest prefix of the other dialogue. Null means the essential request alone does not fit.
+     * oldest prefix of the other dialogue after reserving the bounded opening reference when it
+     * fits. Null means the essential request alone does not fit.
      */
     public fun admit(
         messages: List<TextMessage>,
@@ -40,10 +41,19 @@ public class PromptBudget(
             if (index >= tail || message.role == TextRole.Developer) remaining -= message.wireBytes
         }
         if (remaining < 0) return null
+        val opening =
+            messages
+                .indexOfFirst { it.isOpeningReference }
+                .takeIf {
+                    it in 0 until tail &&
+                        messages[it].role == TextRole.User &&
+                        messages[it].wireBytes <= remaining
+                } ?: -1
+        if (opening >= 0) remaining -= messages[opening].wireBytes
         var first = tail
         while (first > 0) {
             val previous = messages[first - 1]
-            if (previous.role != TextRole.Developer) {
+            if (previous.role != TextRole.Developer && first - 1 != opening) {
                 val size = previous.wireBytes
                 if (size > remaining) break
                 remaining -= size
@@ -54,7 +64,7 @@ public class PromptBudget(
             if (first == 0) messages
             else
                 messages.filterIndexed { index, message ->
-                    index >= first || message.role == TextRole.Developer
+                    index == opening || index >= first || message.role == TextRole.Developer
                 }
         return AdmittedPrompt(
             admitted,

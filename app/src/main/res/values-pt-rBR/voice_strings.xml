@@ -90,4 +90,6 @@
 
     <string name="receipt_voice_ended">Voz encerrada</string>
     <string name="receipt_and_voice_ended">%1$s · voz encerrada</string>
+    <string name="voice_ended_overloaded">A escuta terminou porque o reconhecimento de fala ficou atrasado. Tente frases mais curtas ou use o modelo compacto.</string>
+    <string name="voice_ended_input_changed">A escuta terminou porque o microfone integrado do telefone está indisponível. Verifique a entrada de áudio antes de recomeçar.</string>
 </resources>

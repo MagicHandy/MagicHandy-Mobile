@@ -3,6 +3,7 @@ package com.magichandy.mobile.voice
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
@@ -10,6 +11,8 @@ import android.media.AudioRecordingConfiguration
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.MicSource
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
@@ -23,6 +26,9 @@ enum class CaptureEnd {
 
     /** Reading failed, as when Android's audio service restarts. */
     Failed,
+
+    /** Android selected an external input or could not establish the built-in route. */
+    InputChanged,
 }
 
 /**
@@ -48,6 +54,9 @@ class MicCapture(
      * Guards [record] between [stop] and the capture thread's release; never held while reading.
      */
     private val recorderLock = Any()
+    val endReason: CaptureEnd?
+        get() = ending.get()
+
     private var record: AudioRecord? = null
     @Volatile private var sessionId = 0
     private var worker: Thread? = null
@@ -100,6 +109,17 @@ class MicCapture(
             opened.release()
             return false
         }
+        val builtIn =
+            audio.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull {
+                it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC
+            }
+        if (builtIn == null) {
+            opened.release()
+            ending.compareAndSet(null, CaptureEnd.InputChanged)
+            return false
+        }
+        // Some devices decline a preference even when the built-in mic is already routed.
+        opened.setPreferredDevice(builtIn)
         // Listen for silencing before recording starts, so the change that starts it isn't missed.
         sessionId = opened.audioSessionId
         audio.registerAudioRecordingCallback(silencing, null)
@@ -149,6 +169,7 @@ class MicCapture(
     private fun capture(recorder: AudioRecord) {
         val chunk = ShortArray(CHUNK)
         var position = 0L
+        var routeVerified = false
         var emptyReads = 0
         try {
             while (ending.get() == null) {
@@ -159,6 +180,26 @@ class MicCapture(
                 }
                 if (read == 0) continue
                 emptyReads = 0
+                // A preference is not a routing guarantee. Discard the chunk before detection or
+                // transcription if Android rerouted it, including when a headset connects mid-turn.
+                val route = recorder.routedDevice?.type
+                if (
+                    route == null &&
+                        !routeVerified &&
+                        SystemClock.elapsedRealtime() - startedAt < ROUTE_WAIT_MILLIS
+                ) {
+                    position += read
+                    continue
+                }
+                if (!isBuiltInMicrophone(route)) {
+                    ending.compareAndSet(null, CaptureEnd.InputChanged)
+                    break
+                }
+                if (!routeVerified) {
+                    routeVerified = true
+                    if (context.resources.getBoolean(R.bool.voice_hidden_settings))
+                        Log.i("MagicHandyVoiceQA", "Input route verified: built-in microphone")
+                }
                 val pcm = chunk.copyOf(read)
                 onAudio(FloatArray(read) { pcm[it] / FULL_SCALE }, pcm, position)
                 position += read
@@ -180,7 +221,8 @@ class MicCapture(
     }
 
     private companion object {
-        /** 64 ms of audio per read: whole windows for both speech detectors. */
+        const val ROUTE_WAIT_MILLIS = 1000L
+        /** 64 ms of audio per read, in whole windows for both speech detectors. */
         const val CHUNK = 1024
         const val BUFFER_CHUNKS = 8
         const val STOP_WAIT_MILLIS = 2_000L
@@ -192,3 +234,5 @@ class MicCapture(
         const val TAG = "Voice"
     }
 }
+
+internal fun isBuiltInMicrophone(type: Int?): Boolean = type == AudioDeviceInfo.TYPE_BUILTIN_MIC

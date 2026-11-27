@@ -19,7 +19,7 @@ import kotlinx.coroutines.test.runTest
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 internal class StartupReconciliationTest {
-    private class Peer(val stationary: SliderReading, override val reversed: Boolean) :
+    private open class Peer(val stationary: SliderReading, override val reversed: Boolean) :
         StartupPosition {
         var measured = stationary
         var arrives = true
@@ -31,7 +31,7 @@ internal class StartupReconciliationTest {
             return StopEvidence.Acknowledged
         }
 
-        override suspend fun read(fence: OutputFence) = measured
+        override suspend fun read(fence: OutputFence): SliderReading? = measured
 
         override suspend fun position(batch: MotionBatch, fence: OutputFence): WriteResult {
             lead = batch
@@ -60,7 +60,7 @@ internal class StartupReconciliationTest {
             for (reverse in listOf(false, true)) {
                 val link = Peer(stationary, reverse)
                 assertEquals(
-                    WriteResult.Accepted,
+                    StartupResult.Ready,
                     reconcileStartup(
                         link,
                         first,
@@ -93,14 +93,51 @@ internal class StartupReconciliationTest {
             engine.attach(positioned)
             assertTrue(engine.admit(engine.epoch, listOf(positioned)))
             assertEquals(
-                WriteResult.Uncertain,
-                engine.write(engine.stream(engine.epoch), positioned, first, true),
+                StartupResult.Uncertain,
+                engine.prepare(engine.stream(engine.epoch), positioned, first, false),
             )
             runCurrent()
             assertTrue(owner.stops >= 1)
             assertEquals(0, owner.writes)
         }
     }
+
+    @Test
+    fun `a resume miss needs a correlated second halt and stationary in-range readback`() =
+        runTest {
+            val fence = OutputFence(com.magichandy.mobile.core.ports.Epoch(1)) { true }
+            for (failure in listOf("halt", "moving", "missing", "outside", "drift")) {
+                val link =
+                    object : Peer(stationary, false) {
+                            override suspend fun halt(fence: OutputFence): StopEvidence {
+                                val result = super.halt(fence)
+                                return if (failure == "halt" && halts == 2)
+                                    StopEvidence.Unconfirmed(
+                                        com.magichandy.mobile.core.api.UnconfirmedCause.NoReply
+                                    )
+                                else result
+                            }
+
+                            override suspend fun read(fence: OutputFence): SliderReading? =
+                                if (halts < 2) measured
+                                else
+                                    when (failure) {
+                                        "moving" -> measured.copy(speedAbsolute = 1.0)
+                                        "missing" -> null
+                                        "outside" -> measured.copy(positionAbsolute = 120.0)
+                                        "drift" -> measured.copy(positionAbsolute = 85.0)
+                                        else -> measured
+                                    }
+                        }
+                        .apply { arrives = false }
+                assertEquals(
+                    StartupResult.Uncertain,
+                    reconcileStartup(link, first, fence, true),
+                    failure,
+                )
+                assertEquals(2, link.halts)
+            }
+        }
 
     @Test
     fun `an unsuccessful startup Stop prevents calibration reads and all writes`() = runTest {
@@ -120,7 +157,7 @@ internal class StartupReconciliationTest {
                     error("write after failed Stop")
             }
         assertEquals(
-            WriteResult.Uncertain,
+            StartupResult.Uncertain,
             reconcileStartup(
                 peer,
                 first,
@@ -141,10 +178,10 @@ internal class StartupReconciliationTest {
         engine.attach(owner)
         assertTrue(engine.admit(engine.epoch, listOf(owner)))
         val stream = engine.stream(engine.epoch)
-        val preparing = async { engine.write(stream, owner, first, true) }
+        val preparing = async { engine.prepare(stream, owner, first, true) }
         runCurrent()
         engine.stop(StopSource.AppFooter)
-        assertEquals(WriteResult.Uncertain, preparing.await())
+        assertEquals(StartupResult.Uncertain, preparing.await())
         assertEquals(WriteResult.Stale, engine.write(stream, owner, first))
         assertEquals(0, device.writes)
     }

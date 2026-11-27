@@ -54,6 +54,7 @@ internal data class EngineState(
     val members: Set<DeviceId> = emptySet(),
     val streamGeneration: Long = 0,
     val pausedPosition: PlaybackPosition? = null,
+    val resumePositionMissed: Boolean = false,
     val edgeRequested: Boolean = false,
     val beforeTempoHold: TempoLane? = null,
     val score: ScoreRequest? = null,
@@ -154,6 +155,7 @@ internal fun EngineState.stopped(
             else endedRun,
         members = emptySet(),
         pausedPosition = null,
+        resumePositionMissed = false,
         edgeRequested = false,
         beforeTempoHold = null,
         score = null,
@@ -213,7 +215,6 @@ internal fun EngineState.pausing(
         confirmed = emptySet(),
         evidence = nextReceipt(null, targets, true, at),
         publishesEvidence = false,
-        work = work.filterValues { it != WorkKind.Output },
     )
 }
 
@@ -232,6 +233,7 @@ internal fun EngineState.resuming(
     val held = pausedAt?.let { now - it } ?: Duration.ZERO
     return copy(
         pausedPosition = null,
+        resumePositionMissed = false,
         pausedAt = null,
         tempo = tempo?.copy(since = tempo.since + held),
         vibration = vibration?.copy(since = vibration.since + held),

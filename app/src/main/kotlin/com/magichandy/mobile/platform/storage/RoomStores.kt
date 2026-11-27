@@ -6,17 +6,16 @@ import com.magichandy.mobile.core.api.ChatSummary
 import com.magichandy.mobile.core.api.ConnectionId
 import com.magichandy.mobile.core.api.ConnectionStatus
 import com.magichandy.mobile.core.api.DeviceId
+import com.magichandy.mobile.core.api.EntryId
 import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.PersonaId
 import com.magichandy.mobile.core.api.PersonaRef
-import com.magichandy.mobile.core.ports.ChatArchive
 import com.magichandy.mobile.core.ports.ChatStore
 import com.magichandy.mobile.core.ports.DeviceRecords
 import com.magichandy.mobile.core.ports.ModelCatalog
 import com.magichandy.mobile.core.ports.ModelStore
 import com.magichandy.mobile.core.ports.PersonaChange
 import com.magichandy.mobile.core.ports.PreferenceEdit
-import com.magichandy.mobile.core.ports.SavedChat
 import com.magichandy.mobile.core.ports.SavedDevice
 import com.magichandy.mobile.core.ports.SavedModel
 import com.magichandy.mobile.core.ports.SettingsDocument
@@ -37,7 +36,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
@@ -61,9 +59,7 @@ internal class RoomStores(
     private val prefs = MutableStateFlow(SettingsDocument())
     private val catalog = MutableStateFlow(ModelCatalog())
     private val deviceRows = MutableStateFlow(emptyList<SavedDevice>())
-    private val archive = MutableStateFlow(ChatArchive())
-    private var page: ChatId? = null
-    private var pageLimit = 513
+    private val pages = RoomChatPages(dao, codec)
     private val ready =
         scope.async(io) {
             owner.withLock {
@@ -71,8 +67,7 @@ internal class RoomStores(
                     prefs.value = loadSettingsWithPersonas()
                     catalog.value = load("models", ModelCatalog())
                     deviceRows.value = load("devices", emptyList())
-                    page = dao.headers().firstOrNull()?.let { ChatId(it.id) }
-                    reloadChat()
+                    pages.restore()
                 } catch (failure: Exception) {
                     throw IOException("Database initialization failed", failure)
                 }
@@ -161,9 +156,7 @@ internal class RoomStores(
                     }
                 }
                 next.first?.let { prefs.value = it }
-                deleted?.let {
-                    archive.value = archive.value.copy(memory = archive.value.memory - it)
-                }
+                deleted?.let(pages::forget)
                 next.second
             }
 
@@ -260,71 +253,22 @@ internal class RoomStores(
             }
         }
 
-    private fun reloadChat() {
-        val headers = dao.headers()
-        val chats = headers.associate { h ->
-            val summary = codec.decodeFromString<ChatSummary>(h.payload)
-            val entries =
-                if (summary.id == page)
-                    dao.page(h.id, pageLimit).asReversed().map {
-                        codec.decodeFromString<ChatEntry>(it)
-                    }
-                else emptyList()
-            summary.id to SavedChat(summary, entries)
-        }
-        archive.value =
-            ChatArchive(chats, dao.memories().groupBy({ PersonaId(it.persona) }, { it.text }))
-    }
-
-    private fun publishAppend(
-        summary: ChatSummary,
-        entry: ChatEntry,
-        persona: PersonaId,
-        memories: List<String>,
-    ) {
-        val before = archive.value
-        val old = before.chats[summary.id]?.messages.orEmpty()
-        val visible = if (summary.id == page) (old + entry).takeLast(pageLimit) else emptyList()
-        val memory =
-            if (memories.isEmpty()) before.memory
-            else
-                before.memory +
-                    (persona to (before.memory[persona].orEmpty() + memories).distinct())
-        archive.value =
-            before.copy(
-                chats = before.chats + (summary.id to SavedChat(summary, visible)),
-                memory = memory,
-            )
-    }
-
     val chats =
         object : ChatStore {
-            override val state = archive.asStateFlow()
+            override val state = pages.state
 
-            override suspend fun loadPage(chat: ChatId) {
-                serialized {
-                    if (page != chat || pageLimit != 513) {
-                        page = chat
-                        pageLimit = 513
-                        reloadChat()
-                    }
-                }
+            override suspend fun loadPage(chat: ChatId) = serialized { pages.open(chat) }
+
+            override suspend fun opening(chat: ChatId, limit: Int): List<ChatEntry> = serialized {
+                require(limit >= 0)
+                dao.opening(chat.value, limit).map { codec.decodeFromString<ChatEntry>(it) }
             }
 
-            override suspend fun trimPages() {
-                serialized {
-                    pageLimit = 64
-                    val current = archive.value
-                    val id = page ?: return@serialized
-                    val chat = current.chats[id] ?: return@serialized
-                    archive.value =
-                        current.copy(
-                            chats =
-                                current.chats +
-                                    (id to chat.copy(messages = chat.messages.takeLast(pageLimit)))
-                        )
-                }
+            override suspend fun loadOlder(chat: ChatId, oldest: EntryId) = serialized {
+                pages.older(chat, oldest)
             }
+
+            override suspend fun trimPages() = serialized { pages.trim() }
 
             override suspend fun create(chat: ChatSummary) {
                 serialized {
@@ -335,9 +279,7 @@ internal class RoomStores(
                             chat.lastActivity.toEpochMilliseconds(),
                         )
                     )
-                    pageLimit = 513
-                    page = chat.id
-                    reloadChat()
+                    pages.created(chat)
                 }
             }
 
@@ -386,7 +328,7 @@ internal class RoomStores(
                             if (!admitted()) throw Denied()
                             true
                         }
-                        inserted?.let { publishAppend(it, entry, persona, added) }
+                        inserted?.let { pages.publishAppend(it, entry, persona, added) }
                         saved
                     }
                 } catch (_: Denied) {
@@ -397,7 +339,7 @@ internal class RoomStores(
             override suspend fun clearMemory(persona: PersonaId) {
                 serialized {
                     dao.forget(persona.value)
-                    archive.value = archive.value.copy(memory = archive.value.memory - persona)
+                    pages.forget(persona)
                 }
             }
 
@@ -408,8 +350,7 @@ internal class RoomStores(
                         dao.clearHeaders()
                         dao.clearMemories()
                     }
-                    page = null
-                    archive.value = ChatArchive()
+                    pages.clear()
                 }
             }
         }

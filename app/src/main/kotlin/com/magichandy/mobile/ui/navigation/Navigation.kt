@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.magichandy.mobile.core.api.ConnectionId
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.PersonaId
@@ -61,6 +62,12 @@ sealed interface Route {
 
     data object OpenRouterSetup : Route {
         override val key: String = "openrouter"
+    }
+
+    /** A saved OpenRouter connection's page (board V-OpenRouterSettings), opened from Models. */
+    data class OpenRouterConnection(val connection: ConnectionId) : Route {
+        override val key: String
+            get() = "openrouter:${connection.value}"
     }
 
     data object ChatGptSetup : Route {
@@ -124,6 +131,8 @@ sealed interface Route {
                             .toIntOrNull()
                             ?.takeIf { it in 1..4 }
                             ?.let(::Setup)
+                    key.startsWith("openrouter:") ->
+                        OpenRouterConnection(ConnectionId(key.removePrefix("openrouter:")))
                     key == NEW_PERSONA -> PersonaEditor(null)
                     key.startsWith("persona:") ->
                         PersonaEditor(PersonaId(key.removePrefix("persona:")))
@@ -154,6 +163,9 @@ enum class SheetPage {
 
     /** The speech model picker from Settings › Voice (V-VoiceModelSwitch). */
     VoiceModel,
+
+    /** The chat model's OpenRouter reasoning, from Chat model (V-OpenRouterReasoning). */
+    Reasoning,
 }
 
 /** The back stack and the open sheet. Back closes a sheet before it pops a route. */

@@ -8,7 +8,7 @@ import numpy as np
 from plot_style import BLUE, DARK, DURATION, GRAY, ORANGE, axis, clipped, load
 
 
-def application_plot(root, out):
+def application_plot(root, out, version):
     fig, axes = plt.subplots(4, 2, figsize=(13, 9), sharex="col")
     fig.subplots_adjust(top=0.885, bottom=0.07, hspace=0.36, wspace=0.22)
     fig.suptitle(
@@ -28,7 +28,7 @@ def application_plot(root, out):
     for i, case in enumerate(["cloud-manual", "cloud-chat", "ble-manual", "ble-chat"]):
         for folder, color, lab in [
             ("wire-before", ORANGE, "0.1.5"),
-            ("wire", BLUE, "updated"),
+            ("wire", BLUE, version),
         ]:
             trace = load(root / folder / (case + ".json"))
             stop = trace["stop_ms"] / 1000
@@ -154,7 +154,7 @@ def bridge_plot(root, out):
     plt.close(fig)
 
 
-def turnaround_plot(root, out):
+def turnaround_plot(root, out, version):
     fig, axs = plt.subplots(2, 2, figsize=(11, 6.6))
     fig.subplots_adjust(
         top=0.825, bottom=0.085, left=0.08, right=0.98, wspace=0.22, hspace=0.47
@@ -178,7 +178,7 @@ def turnaround_plot(root, out):
     fig.text(
         0.08,
         0.865,
-        "Amber = Android 0.1.5     •     Blue = Android 0.1.6     •     Dashed graphite = desktop",
+        f"Amber = Android 0.1.5     •     Blue = Android {version}     •     Dashed graphite = desktop",
         fontsize=9,
         color=GRAY,
     )
@@ -228,9 +228,9 @@ def turnaround_plot(root, out):
     plt.close(fig)
 
 
-def outlier_plot(root, out, row, title):
+def outlier_plot(root, out, row, title, version):
     case = row["id"] + ".json"
-    desktop = load(root / "reference" / case)
+    desktop = load(root / "reference" / (row["policy_id"] + ".json"))
     android = load(root / "after" / case)
     first = np.asarray(desktop["wire"])
     second = np.asarray(android["wire"])
@@ -258,12 +258,12 @@ def outlier_plot(root, out, row, title):
     fig.text(
         0.08,
         0.838,
-        f"Desktop and updated Android · {row['desktop']} and {row['after']} points in 12 s · {row['missing_turns']} missing turn times",
+        f"Policy reference and updated Android · {row['policy_points']} and {row['after']} points in 12 s · {row['missing_turns']} missing turn times",
         fontsize=9,
         color=GRAY,
     )
     for values, color, style, lab in [
-        (second, BLUE, "-", "Android 0.1.6"),
+        (second, BLUE, "-", f"Android {version}"),
         (first, DARK, "--", "Desktop"),
     ]:
         axs[0].plot(

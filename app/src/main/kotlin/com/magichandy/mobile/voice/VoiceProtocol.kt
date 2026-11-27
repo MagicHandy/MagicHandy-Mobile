@@ -2,33 +2,7 @@ package com.magichandy.mobile.voice
 
 import android.os.Bundle
 import android.os.Message
-
-/** Why listening ended. */
-enum class VoiceEnd {
-    /** End was tapped: in Chat, on the chip, or in the notification. */
-    User,
-
-    /** A Stop, spoken or not. Nothing heard after it can reach chat. */
-    Stop,
-
-    /** 15 minutes without speech while nothing played. */
-    Quiet,
-
-    /** Android gave the microphone to a call or another app, or its privacy switch turned off. */
-    MicTaken,
-
-    /** Microphone access was removed, or Android refused to start listening. */
-    MicDenied,
-
-    /** Reading the microphone failed. */
-    MicFailed,
-
-    /** The speech model's files were missing or damaged. */
-    ModelMissing,
-
-    /** The speech model failed to load, or ran out of memory. */
-    ModelFailed,
-}
+import com.magichandy.mobile.core.api.VoiceEnd
 
 /**
  * The messages the voice process sends the main process through [VoiceLinkService]
@@ -73,6 +47,15 @@ internal object VoiceProtocol {
                     putBoolean(HEARING, isHearing)
                     if (readout != null) putString(READOUT, readout)
                 },
+        )
+
+    const val LAST_SPEECH_MILLIS = "lastSpeechElapsedMillis"
+
+    fun spokenStop(session: Int, lastSpeechMillis: Long): Message =
+        message(
+            SPOKEN_STOP,
+            session,
+            data = Bundle().apply { putLong(LAST_SPEECH_MILLIS, lastSpeechMillis) },
         )
 
     fun turn(session: Int, text: String): Message =

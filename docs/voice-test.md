@@ -81,3 +81,16 @@ The meter's bars light up while the detector hears speech. Each result says how 
 - **Latency:** whether the time from the end of speech to text stays near a second on this phone.
 - **Stop:** whether Stop lines are caught reliably, and "Don't stop" never is.
 - **Battery and heat:** whether a screen-off session costs a reasonable amount of battery, without throttling.
+
+## Checking hands-free chat on a phone
+
+Use the **microphone in Chat** in MagicHandy Test for these checks. The separate Voice test screen measures the lab. The phone-test build logs routing, estimated spoken-Stop latency and session power measurements from the shipping voice path. Open this filtered log on your own phone:
+
+```sh
+adb logcat -v time -s MagicHandyVoiceQA:I
+```
+
+1. With devices disconnected, start Compact, read a normal sentence and confirm it arrives as one chat message. Read a longer passage, pause to close the turn, then say “Stop” while the app is still transcribing. Confirm listening ends, note the milliseconds from the last voiced audio to core Stop, and check that the earlier turn does not appear afterward. Repeat ten times. Record the median, ninth-fastest and slowest time alongside the phone, Android version and speech model. Counting both unheard commands and slow commands makes the result interpretable.
+2. Repeat with a paired Bluetooth headset and an attached wired headset, then with TalkBack enabled. Check for “Input route verified” at startup. Connect or remove a headset mid-sentence. The phone's own microphone should remain selected or the app should end listening and explain the route change.
+3. On a phone that offers **Full precision**, repeat the speech and Stop checks with each model. For battery and heat, unplug the charger, start hands-free and lock the screen for 30 minutes. Speak a short line at least once every ten minutes to keep the session active. End listening and record the elapsed time, starting and ending battery percentage, and peak Android thermal status in the log. A wireless debugging connection can read the log afterward with the phone unplugged during the run.
+4. Separately, leave a paused run silent for 16 minutes and confirm that the microphone indicator and listening notification disappear. Confirm that pressing Stop during **Download and start** still allows the file to finish without opening the microphone. A failed download started from Settings should also remain download-only on Retry.

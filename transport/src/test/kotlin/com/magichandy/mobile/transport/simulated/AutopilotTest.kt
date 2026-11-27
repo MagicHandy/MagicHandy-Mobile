@@ -2,15 +2,19 @@ package com.magichandy.mobile.transport.simulated
 
 import com.magichandy.mobile.core.api.AutopilotStatus
 import com.magichandy.mobile.core.api.Banner
+import com.magichandy.mobile.core.api.CapabilityLevel
 import com.magichandy.mobile.core.api.ChatEntry
+import com.magichandy.mobile.core.api.ChatId
 import com.magichandy.mobile.core.api.CheckIns
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.Explicitness
 import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.api.PersonaId
 import com.magichandy.mobile.core.api.Personality
 import com.magichandy.mobile.core.api.RunPhase
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.ports.ChatStore
 import com.magichandy.mobile.core.ports.ModelProvider
 import com.magichandy.mobile.core.ports.ModelRequest
 import com.magichandy.mobile.core.ports.NetworkState
@@ -19,6 +23,7 @@ import com.magichandy.mobile.core.ports.StructuredProvider
 import com.magichandy.mobile.core.ports.TextMessage
 import com.magichandy.mobile.core.ports.TextResult
 import com.magichandy.mobile.core.ports.builtInPersona
+import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -37,6 +42,99 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class AutopilotTest {
+    @Test
+    fun `a chat motion edit keeps a phrase interval while Autopilot prepares the next plan`() =
+        runTest {
+            val canned = SimulatedModelProvider()
+            val gate = CompletableDeferred<Unit>()
+            var holdPlans = false
+            val peer =
+                object : StructuredProvider by canned {
+                    override suspend fun plan(request: ModelRequest): TextResult {
+                        if (holdPlans) gate.await()
+                        return canned.plan(request)
+                    }
+
+                    override suspend fun complete(
+                        request: ModelRequest,
+                        preview: (String) -> Unit,
+                    ) =
+                        TextResult.Completed(
+                            """{"action":"update","edits":[{"geometry":"full_slider"},{"controls":{"speed_percent":35}}],"reply":"Changed."}"""
+                        )
+                }
+            val f = DebugFixture(this) { it.copy(provider = { peer }) }
+            f.onboard()
+            val saved = f.d.models.state.value.models.values.single()
+            f.d.models.save(saved.copy(info = saved.info.copy(capability = CapabilityLevel.Simple)))
+            f.connect(DeviceId("handy"))
+            f.send(UserIntent.StartMotion)
+            f.send(UserIntent.StartAutopilot)
+            advanceTimeBy(1500)
+            holdPlans = true
+            f.send(UserIntent.SendMessage("Change only the pace to 35 percent."))
+            advanceTimeBy(1000)
+            runCurrent()
+            val state = f.core.state.value
+            assertTrue(
+                state.chat.entries.filterIsInstance<ChatEntry.Message>().any {
+                    it.text == "Changed."
+                }
+            )
+            assertTrue((state.autopilot.nextChangeIn?.inWholeSeconds ?: 0) >= 4)
+            assertTrue(state.run.commandedPace?.value == 35 || state.run.pendingPace?.value == 35)
+            f.core.emergencyStop(StopSource.AppFooter)
+            gate.complete(Unit)
+            f.scope.cancel()
+        }
+
+    @Test
+    fun `check-in storage failure leaves the plan worker active and able to plan again`() =
+        runTest {
+            val canned = SimulatedModelProvider()
+            var plans = 0
+            var rejected = 0
+            val peer =
+                object : StructuredProvider by canned {
+                    override suspend fun plan(request: ModelRequest): TextResult {
+                        if ("Prepare the next" in request.messages.last().text) plans++
+                        return canned.plan(request)
+                    }
+                }
+            val f =
+                DebugFixture(this) { d ->
+                    d.copy(
+                        provider = { peer },
+                        chats =
+                            object : ChatStore by d.chats {
+                                override suspend fun append(
+                                    chat: ChatId,
+                                    entry: ChatEntry,
+                                    persona: PersonaId,
+                                    memories: List<String>,
+                                    admitted: () -> Boolean,
+                                ): Boolean {
+                                    rejected++
+                                    throw IOException("Synthetic disk failure")
+                                }
+                            },
+                    )
+                }
+            f.onboard()
+            f.connect(DeviceId("handy"))
+            f.send(UserIntent.SetCheckIns(CheckIns.Talk))
+            f.send(UserIntent.StartAutopilot)
+            advanceTimeBy(125000)
+            runCurrent()
+            assertTrue(rejected > 0)
+            val earlier = plans
+            advanceTimeBy(100000)
+            runCurrent()
+            assertTrue(plans > earlier)
+            assertEquals(AutopilotStatus.Active, f.core.state.value.autopilot.status)
+            f.scope.cancel()
+        }
+
     @Test
     fun `check in keeps its original speaker when selection changes while waiting for the model`() =
         runTest {

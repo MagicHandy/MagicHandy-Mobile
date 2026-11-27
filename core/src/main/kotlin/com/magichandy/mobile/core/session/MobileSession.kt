@@ -25,6 +25,7 @@ import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.core.api.isChatStopMessage
+import com.magichandy.mobile.core.api.isSpokenStop
 import com.magichandy.mobile.core.motion.EndedRun
 import com.magichandy.mobile.core.motion.MotionEngine
 import com.magichandy.mobile.core.motion.StopTarget
@@ -32,8 +33,10 @@ import com.magichandy.mobile.core.motion.WorkKind
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.DiagnosticReporter
 import com.magichandy.mobile.core.ports.Epoch
+import com.magichandy.mobile.core.ports.ModelCatalog
 import com.magichandy.mobile.core.ports.PreferenceEdit
 import com.magichandy.mobile.core.ports.PreferenceField
+import com.magichandy.mobile.core.ports.Preferences
 import com.magichandy.mobile.core.ports.activePersona
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -102,7 +105,8 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     private data class Queued(val epoch: Epoch, val intent: UserIntent)
 
     private val queue = Channel<Queued>(256)
-    private val accounts = ModelAccounts(d, ui, ::record, ::unavailable, ::storeFailed)
+    private val accounts =
+        ModelAccounts(d, ui, ::record, ::unavailable, ::storeFailed, autopilot::signedIn)
 
     private val diagnostics = DiagnosticsExport(d)
 
@@ -206,7 +210,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             }
         }
         d.scope.launch(d.dispatchers.session) {
-            var previous: com.magichandy.mobile.core.ports.Preferences? = null
+            var previous: Preferences? = null
             d.settings.state.collect {
                 val doc = d.settings.state.value
                 val preferences = doc.values
@@ -215,12 +219,23 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
                         builtInPersonality = preferences.builtInPersonality,
                         selectedPersona = preferences.selectedPersona,
                     ) != preferences
+                val replan =
+                    previous?.let { old ->
+                        old.mode != preferences.mode ||
+                            old.style != preferences.style ||
+                            old.limits != preferences.limits ||
+                            old.checkIns != preferences.checkIns ||
+                            old.frequency != preferences.frequency ||
+                            old.finishAfter != preferences.finishAfter ||
+                            old.memoryOn != preferences.memoryOn ||
+                            old.language != preferences.language
+                    } ?: true
                 previous = preferences
                 ui.update { state ->
                     val next = if (changed) state.preferences(preferences) else state
                     next.showPersonas(doc, d.chats.state.value)
                 }
-                if (changed) {
+                if (replan) {
                     if (preferences.mode == MotionMode.Off) {
                         stopForOffMode()
                         autopilot.off()
@@ -231,9 +246,19 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             }
         }
         d.scope.launch(d.dispatchers.session) {
+            var previous: ModelCatalog? = null
             d.models.state.collect { models ->
                 ui.update { it.models(models, d.network.observe().value) }
-                autopilot.refresh()
+                val old = previous
+                val planner = models.models[models.planner ?: models.chat]
+                if (
+                    old == null ||
+                        old.models[old.planner ?: old.chat] != planner ||
+                        (old.chat == planner?.info?.id) != (models.chat == planner?.info?.id)
+                ) {
+                    autopilot.refresh()
+                }
+                previous = models
             }
         }
         d.scope.launch(d.dispatchers.session) { d.chats.state.collect { chat.showArchive() } }
@@ -253,22 +278,42 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
 
     override suspend fun awaitEmergencyStop() {
         safety.awaitSettled()
-        hostRelease.get()?.join()
+        while (true) {
+            val closing = hostRelease.get() ?: return
+            closing.join()
+            if (hostRelease.compareAndSet(closing, null)) return
+        }
     }
 
-    override fun emergencyStop(source: StopSource) {
-        safety.emergencyStop(source)
-        d.devices.stopOpenBridges(engine.epoch)
-        if (source == StopSource.TaskRemoved || source == StopSource.ServiceLost) {
-            val release =
+    override val currentStopEpoch: Long
+        get() = engine.epoch.value
+
+    override fun emergencyStop(source: StopSource) = stop(source, null)
+
+    private fun stop(source: StopSource, expected: Epoch?) {
+        safety.emergencyStop(source, expected) { epoch ->
+            d.devices.stopOpenBridges(epoch)
+            if (source == StopSource.TaskRemoved || source == StopSource.ServiceLost) releaseHost()
+            record(DiagnosticKind.StopRequested)
+        }
+    }
+
+    private fun releaseHost() {
+        while (true) {
+            val previous = hostRelease.get()
+            val next =
                 d.scope.launch(d.dispatchers.session, start = CoroutineStart.LAZY) {
+                    previous?.join()
                     devices.releaseAfterHostLoss()
                 }
-            hostRelease.set(release)
-            release.invokeOnCompletion { hostRelease.compareAndSet(release, null) }
-            release.start()
+            if (!hostRelease.compareAndSet(previous, next)) {
+                next.cancel()
+                continue
+            }
+            next.invokeOnCompletion { hostRelease.compareAndSet(next, null) }
+            next.start()
+            return
         }
-        record(DiagnosticKind.StopRequested)
     }
 
     override fun setRefusalFallback(connection: ConnectionId?) {
@@ -358,6 +403,10 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
     }
 
     override fun dispatch(intent: UserIntent) {
+        if (intent is UserIntent.SendVoiceMessage && isSpokenStop(intent.text)) {
+            stop(StopSource.SpokenStop, Epoch(intent.stopEpoch))
+            return
+        }
         if (intent is UserIntent.SendMessage && isChatStopMessage(intent.text)) {
             emergencyStop(StopSource.TypedStop)
             return
@@ -379,6 +428,16 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
                 chat.send(epoch, intent.text)
                 autopilot.refresh()
             }
+            is UserIntent.SendVoiceMessage -> {
+                if (intent.stopEpoch == epoch.value && intent.chat == ui.value.chat.chatId) {
+                    chat.send(epoch, intent.text)
+                    autopilot.refresh()
+                }
+            }
+            is UserIntent.LoadOlderMessages ->
+                if (intent.chat == ui.value.chat.chatId) {
+                    d.chats.loadOlder(intent.chat, intent.oldest)
+                }
             UserIntent.SendAgain -> {
                 chat.send(epoch, null, retry = true)
                 autopilot.refresh()
@@ -435,6 +494,7 @@ internal class MobileSession(dependencies: CoreDependencies) : MagicHandyCore {
             UserIntent.StartChatGptSignIn -> accounts.startSignIn()
             UserIntent.StartChatGptSignInForChat -> accounts.startSignIn(selectForChat = true)
             UserIntent.CancelSignIn -> accounts.cancelSignIn()
+            UserIntent.LoadOpenRouterModels -> accounts.openRouter.loadCatalog()
             is UserIntent.StartScan -> setup.startScan(intent.family)
             UserIntent.StopScan -> setup.stopScan()
             is UserIntent.ConnectScanResult -> setup.select(intent)

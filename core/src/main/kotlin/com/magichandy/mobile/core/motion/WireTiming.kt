@@ -23,7 +23,11 @@ internal class WireTiming(
         return 0.5 + maxOf(0.0, positionTolerance - acceleration * gap * gap / 8e6)
     }
 
-    fun fit(samples: List<CurvePoint>, previous: CurvePoint?): List<CurvePoint> {
+    fun fit(
+        samples: List<CurvePoint>,
+        previous: CurvePoint?,
+        roundTurns: Boolean = false,
+    ): List<CurvePoint> {
         val trimmed = removeDuplicates(if (previous == null) samples else samples.drop(1))
         if (previous != null) {
             var i = 0
@@ -45,7 +49,54 @@ internal class WireTiming(
             align(fitted, start, end)
             start = end
         }
-        return if (previous == null) fitted else fitted.drop(1)
+        val result = if (roundTurns) roundReversals(fitted, previous) else fitted
+        return if (previous == null) result else result.drop(1)
+    }
+
+    /** Keep authored times fixed and describe the slowest whole-percent step on either side. */
+    private fun roundReversals(points: List<CurvePoint>, previous: CurvePoint?): List<CurvePoint> {
+        val previousTurn = previous?.timeMillis?.takeIf { it in path.knotTimes(it, it + 1) }
+        return buildList {
+            add(points.first())
+            for (i in 1 until points.size) {
+                val left = last()
+                val right = points[i]
+                if (left.timeMillis in mandatory || left.timeMillis == previousTurn)
+                    turnPoint(left, right, departing = true)?.let(::add)
+                if (right.timeMillis in mandatory)
+                    turnPoint(last(), right, departing = false)?.let(::add)
+                add(right)
+            }
+        }
+    }
+
+    private fun turnPoint(left: CurvePoint, right: CurvePoint, departing: Boolean): CurvePoint? {
+        val travel = right.encoded - left.encoded
+        if (abs(travel) <= 1) return null
+        val direction = if (travel > 0) 1 else -1
+        val mark = if (departing) left.encoded + direction else right.encoded - direction
+        var low = left.timeMillis
+        var high = right.timeMillis
+        while (high - low > 1) {
+            val mid = low + (high - low) / 2
+            if ((path.sampleAt(mid).position - mark) * direction < 0) low = mid else high = mid
+        }
+        val at =
+            if (abs(path.sampleAt(low).position - mark) < abs(path.sampleAt(high).position - mark))
+                low
+            else high
+        val nearTurn = if (departing) at - left.timeMillis else right.timeMillis - at
+        // Spend a point only when it reduces the final or initial segment speed by at least 25%.
+        // Shorter one-percent steps add bursts of points to fast or narrow strokes.
+        if (nearTurn < 40) return null
+        if (nearTurn * abs(travel) * 3 < (right.timeMillis - left.timeMillis) * 4) return null
+        val point = CurvePoint(at, mark.toDouble())
+        return point.takeIf {
+            at - left.timeMillis >= minimum(left, it) &&
+                right.timeMillis - at >= minimum(it, right) &&
+                fits(left, it, tolerance) &&
+                fits(it, right, tolerance)
+        }
     }
 
     private fun removeDuplicates(samples: List<CurvePoint>): MutableList<CurvePoint> {

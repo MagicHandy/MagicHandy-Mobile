@@ -16,7 +16,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.magichandy.mobile.R
-import com.magichandy.mobile.voice.DownloadPhase
+import com.magichandy.mobile.core.api.DownloadPhase
 import kotlinx.coroutines.delay
 
 /**

@@ -21,6 +21,7 @@ import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.ConnectionId
 import com.magichandy.mobile.core.api.ModelConnection
 import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.ReasoningChoice
 import com.magichandy.mobile.core.api.UserIntent
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
@@ -31,6 +32,7 @@ import com.magichandy.mobile.ui.components.SettingRow
 import com.magichandy.mobile.ui.components.ToggleRow
 import com.magichandy.mobile.ui.format.PersonaWords
 import com.magichandy.mobile.ui.format.Words
+import com.magichandy.mobile.ui.models.reasoningName
 import com.magichandy.mobile.ui.navigation.AppNavigator
 import com.magichandy.mobile.ui.navigation.SheetPage
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
@@ -94,6 +96,14 @@ internal fun ChatModelPage(
         description = { connectionLine(it) },
         onSelect = { onIntent(UserIntent.SetChatConnection(it.id)) },
     )
+    if (chat != null && chat.provider == ProviderKind.OpenRouter) {
+        SettingRow(
+            label = stringResource(R.string.router_reasoning),
+            value = reasoningName(ReasoningChoice(chat.isReasoningOn, chat.reasoningEffort)),
+            onClick = { nav.pushSheet(SheetPage.Reasoning) },
+            isFirst = false,
+        )
+    }
     // Only a model that runs online can refuse in a way a local server might not.
     if (chat != null && !chat.provider.isLocal) {
         SettingRow(
@@ -231,7 +241,7 @@ internal fun ChatsPage(state: AppState, onIntent: (UserIntent) -> Unit, onClose:
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    chat.title,
+                    chat.title.ifBlank { stringResource(R.string.chats_new) },
                     style = MagicHandyTheme.type.body,
                     fontWeight = if (isOpen) FontWeight.SemiBold else FontWeight.Normal,
                 )

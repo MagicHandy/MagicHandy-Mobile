@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Autopilot holds after the model refused for a reason that needs a fix -->
+    <string name="banner_failed_body" formatted="true">%1$s %2$s</string>
+    <string name="banner_failed_playing">El segmento actual sigue sonando.</string>
+    <string name="banner_failed_stopped">El movimiento queda en espera.</string>
+    <string name="banner_failed_action">Reintentar</string>
+    <string name="planning_failed_sign_in">La sesión del modelo ha caducado. Vuelve a iniciar sesión en Modelos y reintenta.</string>
+    <string name="planning_failed_permission">Esta cuenta no puede usar el modelo de planificación. Elige otro en Modelos o revisa el plan de la cuenta.</string>
+    <string name="planning_failed_limit">El modelo de planificación alcanzó su límite de uso. Reintenta más tarde o elige otro modelo en Modelos.</string>
+    <string name="planning_failed_model">El modelo de planificación no está disponible para esta cuenta. Elige otro en Modelos y reintenta.</string>
+    <string name="planning_failed_request">El proveedor rechazó la solicitud de Autopilot. Revisa el modelo en Modelos y reintenta.</string>
+    <string name="planning_failed_service">El servicio del modelo no responde.</string>
+    <string name="planning_failed_reply">El modelo envió un plan que Autopilot no pudo usar.</string>
+    <string name="planning_failed_billing">El proveedor de planificación requiere un pago o créditos. Revisa la facturación y vuelve a intentarlo.</string>
+    <string name="planning_failed_rate">El proveedor de planificación ha recibido demasiadas solicitudes. Se reintentará en breve.</string>
+</resources>

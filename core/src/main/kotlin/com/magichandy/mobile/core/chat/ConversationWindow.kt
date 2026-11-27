@@ -4,6 +4,8 @@ package com.magichandy.mobile.core.chat
 
 import com.magichandy.mobile.core.api.CapabilityLevel
 import com.magichandy.mobile.core.api.MotionMode
+import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.ports.SavedModel
 import com.magichandy.mobile.core.ports.TextMessage
 
 /** Row and UTF-8 content limits count prior dialogue. The current user turn is separate. */
@@ -14,10 +16,13 @@ private constructor(
     val historyBytes: Int,
 ) {
     /** Read only the suffix needed from storage, newest first. Never split a stored message. */
-    fun recent(newestFirst: Sequence<TextMessage>): List<TextMessage> {
-        var remaining = historyBytes.toLong()
+    fun recent(
+        newestFirst: Sequence<TextMessage>,
+        opening: TextMessage? = null,
+    ): List<TextMessage> {
+        var remaining = historyBytes.toLong() - (opening?.text?.utf8Length() ?: 0L)
         return newestFirst
-            .take(messages)
+            .take(messages - if (opening == null) 0 else 1)
             .takeWhile {
                 remaining -= it.text.utf8Length()
                 remaining >= 0
@@ -27,6 +32,16 @@ private constructor(
     }
 
     companion object {
+        /** Hosted OpenRouter limits can be smaller than a capability tier's normal window. */
+        fun forModel(model: SavedModel): ConversationWindow {
+            if (model.info.provider != ProviderKind.OpenRouter)
+                return named(model.info.capability, model.contextTokens)
+            val limit = model.contextTokens.takeIf { it > 0 } ?: 65536
+            val window = named(model.info.capability, limit)
+            return if (window.contextTokens == limit) window
+            else ConversationWindow(limit, window.messages, window.historyBytes)
+        }
+
         fun named(level: CapabilityLevel, contextTokens: Int = 0): ConversationWindow {
             val floor =
                 when (level) {

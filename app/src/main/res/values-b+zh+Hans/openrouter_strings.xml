@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- OpenRouter page (boards V-OpenRouterSetup and V-OpenRouterSettings) -->
+    <string name="router_lead">用一个 OpenRouter 账户，就能从数百个模型中选择。用多少，就向 OpenRouter 付多少。</string>
+    <string name="router_key_hint">在 openrouter.ai 的 Keys 页面创建或复制密钥。</string>
+    <string name="router_key_saved">已保存的密钥</string>
+    <string name="router_key_keep">留空即可继续使用已保存的密钥。</string>
+    <string name="router_model_choose">选择模型</string>
+    <string name="router_model_change">模型：%1$s。更改</string>
+    <string name="router_price">每 100 条回复约 %1$s</string>
+    <string name="router_price_free">免费</string>
+    <string name="router_privacy">你的密钥会加密保存在本机。MagicHandy 只使用声明不保存你的聊天、也不用它们训练的提供商。</string>
+    <string name="router_loading">正在加载模型…</string>
+    <string name="router_unreachable">无法连接 OpenRouter。请检查网络连接。</string>
+    <string name="router_try_again">重试</string>
+    <string name="router_remove">移除此连接</string>
+    <string name="router_remove_title">移除%1$s？</string>
+    <string name="router_remove_body">它的密钥会从本机删除。你在 openrouter.ai 上的密钥不受影响。</string>
+    <string name="router_remove_confirm">移除</string>
+    <string name="back_to_openrouter">返回 OpenRouter</string>
+
+    <!-- Reasoning -->
+    <string name="router_reasoning">推理</string>
+    <string name="router_reasoning_off">关</string>
+    <string name="router_reasoning_on">开</string>
+    <string name="router_level_minimal">最低</string>
+    <string name="router_level_low">低</string>
+    <string name="router_level_medium">中</string>
+    <string name="router_level_high">高</string>
+    <string name="router_level_extra_high">很高</string>
+    <string name="router_level_max">最高</string>
+    <string name="router_reasoning_hint">动作要等完整回复，所以关闭推理时最快。</string>
+    <string name="router_reasoning_default">动作要等完整回复，所以关闭推理时最快。此模型默认的推理级别为“%1$s”。</string>
+    <string name="router_reasoning_required">此模型必须使用推理。级别越低，回复越快，费用也越低。</string>
+    <string name="router_reasoning_always">此模型总是使用推理。</string>
+    <string name="router_reasoning_applies">从你的下一条消息开始生效。</string>
+
+    <!-- Refusals on the OpenRouter page -->
+    <string name="router_refused_key">OpenRouter 不接受这个密钥。请检查，或在 openrouter.ai 上新建一个。</string>
+    <string name="router_refused_model">OpenRouter 无法为 MagicHandy 运行这个模型。请换一个。</string>
+    <string name="router_refused_unreachable">无法连接 OpenRouter。请检查网络连接后重试。</string>
+    <string name="router_refused_duplicate">这个模型已经用这个密钥保存过了。</string>
+
+    <!-- Choosing a model (board V-OpenRouterModels) -->
+    <string name="router_pick_title">选择模型</string>
+    <string name="router_search">搜索模型</string>
+    <string name="router_search_hint">名称或 ID</string>
+    <string name="router_search_clear">清除搜索</string>
+    <string name="router_sort_popular">热门</string>
+    <string name="router_sort_price">价格最低</string>
+    <string name="router_filter_optional">可关闭推理</string>
+    <string name="router_price_note">价格为 100 条回复的估算，推理另计。</string>
+    <string name="router_suggested_title">适合动作的推荐</string>
+    <string name="router_all_title">全部模型</string>
+    <string name="router_no_match">没有匹配的模型。</string>
+    <string name="router_tag_optional">可关闭推理</string>
+    <string name="router_tag_required">必须推理</string>
+    <string name="router_tested_deepseek">快速又便宜。关闭推理时效果最好。</string>
+    <string name="router_tested_terra">在我们的测试中动作最可靠，但速度较慢。</string>
+    <string name="router_manual">输入模型 ID</string>
+    <string name="router_manual_use">使用此模型</string>
+    <string name="router_list_note">只列出能在 MagicHandy 中使用、且由不保存聊天的提供商运行的模型。</string>
+
+    <!-- Models -->
+    <string name="connection_offline">离线</string>
+    <string name="router_connection_line">OpenRouter · %1$s · 推理：%2$s</string>
+    <string name="router_reasoning_none">此模型不使用推理。</string>
+    <string name="router_model_default">模型默认值</string>
+</resources>

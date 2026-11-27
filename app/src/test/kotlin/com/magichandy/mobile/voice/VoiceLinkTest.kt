@@ -2,7 +2,11 @@ package com.magichandy.mobile.voice
 
 import android.app.Application
 import android.content.Intent
+import com.magichandy.mobile.core.api.Detector
+import com.magichandy.mobile.core.api.MicSource
 import com.magichandy.mobile.core.api.StopSource
+import com.magichandy.mobile.core.api.VoiceConfig
+import com.magichandy.mobile.core.api.VoiceEnd
 import kotlin.test.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,6 +17,19 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
 internal class VoiceLinkTest {
+    @Test
+    fun `only audio routed to a built-in input is accepted`() {
+        assertEquals(true, isBuiltInMicrophone(android.media.AudioDeviceInfo.TYPE_BUILTIN_MIC))
+        for (route in
+            listOf(
+                null,
+                android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+            )) {
+            assertEquals(false, isBuiltInMicrophone(route))
+        }
+    }
+
     @Test
     fun `a spoken Stop stops every device before voice input hears of it`() {
         val events = mutableListOf<String>()

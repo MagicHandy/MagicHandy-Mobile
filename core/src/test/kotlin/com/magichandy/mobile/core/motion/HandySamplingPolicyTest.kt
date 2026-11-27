@@ -33,8 +33,8 @@ internal class HandySamplingPolicyTest {
         )
 
     @Test
-    fun `twelve seconds of HSP positions and timestamps match the hardware-specific desktop fixtures`() {
-        // SHA-256 of the pinned desktop engine's output, one decimal "time,position" line per
+    fun `twelve seconds of HSP positions and timestamps match the route-specific fixtures`() {
+        // SHA-256 of the reviewed route output, one decimal "time,position" line per
         // point.
         fun verify(
             model: HandyModel,
@@ -74,21 +74,21 @@ internal class HandySamplingPolicyTest {
             56,
             "430921598646f099b3e5bc5c07b18920cdbf7840a36f57f4242a7c73944f87bb",
         )
-        // A single Original Handy plays the same sparse fit over Bluetooth as over Cloud. Desktop
-        // alpha.89 sends its precise fit over Bluetooth (149 points, the linked case below).
+        // The single Original BLE route keeps sparse mid-strokes and rounds the two sides of a
+        // turn.
         verify(
             HandyModel.Original,
             listOf(ble),
             null,
-            36,
-            "8b61202436c0f15b2fd3273bdf90108ed3952e1761232a8f4d41fa0bf35d2fa3",
+            51,
+            "4063cb3e9bc9d28ecf5b7f49a5726282a0b2ec0def3f8c89f1d8ba95ec8da0f8",
         )
         verify(
             HandyModel.Original,
             listOf(ble),
             full,
-            56,
-            "430921598646f099b3e5bc5c07b18920cdbf7840a36f57f4242a7c73944f87bb",
+            83,
+            "56752fd7aecc2fe00210f0eb04fac388837c9c2709154005ae0d061ac73ac0c8",
         )
         verify(
             HandyModel.Original,
@@ -124,6 +124,47 @@ internal class HandySamplingPolicyTest {
             58,
             "05e3108db21a399fb3bbdc93ad54de02deca3b4e68ef4af7fe629766bf88df7c",
         )
+    }
+
+    @Test
+    fun `long Original Bluetooth replay retains every reversal with precise tip velocity and fewer points`() {
+        val timeline = ScoreTimeline(25, HandyModel.Original, PlaybackPosition())
+        val end = 715000L
+        fun capture(devices: List<DeviceRef>): List<MotionFrame> {
+            val sampler = timeline.bufferedSampler(devices)
+            return buildList {
+                while (sampler.nextSampleMillis < end) addAll(sampler.nextChunk())
+            }
+                .filter { it.timeMillis < end }
+        }
+        val mobile = capture(listOf(ble))
+        val precise = capture(listOf(ble, cloud))
+        val sparse = capture(listOf(cloud))
+        fun turns(frames: List<MotionFrame>) =
+            frames.windowed(3).mapNotNull { (a, b, c) ->
+                val before =
+                    1000.0 * (b.position.value - a.position.value) / (b.timeMillis - a.timeMillis)
+                val after =
+                    1000.0 * (c.position.value - b.position.value) / (c.timeMillis - b.timeMillis)
+                if (before * after < 0) b.timeMillis to abs(after - before) else null
+            }
+        val reversals = turns(mobile)
+        val reference = turns(precise)
+        assertEquals(787, reversals.size)
+        assertEquals(reference.map { it.first }, reversals.map { it.first })
+        assertTrue(
+            mobile.zipWithNext().all { (a, b) ->
+                b.timeMillis > a.timeMillis && b.position != a.position
+            }
+        )
+        val mobileVelocity = reversals.map { it.second }.sorted()[reversals.size / 2]
+        val desktopVelocity = reference.map { it.second }.sorted()[reference.size / 2]
+        assertEquals(desktopVelocity, mobileVelocity, 0.1)
+        assertTrue(mobileVelocity in 34.0..35.0)
+        assertTrue(mobile.size in sparse.size + 1..precise.size * 6 / 10)
+        assertEquals(83, mobile.count { it.timeMillis < 12000 })
+        assertEquals(149, precise.count { it.timeMillis < 12000 })
+        assertEquals(56, sparse.count { it.timeMillis < 12000 })
     }
 
     @Test

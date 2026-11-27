@@ -80,7 +80,7 @@ fun ColumnScope.VoiceSetupPage(voice: VoiceUi, onClose: () -> Unit) {
             colors.accent,
             stringResource(
                 R.string.voice_setup_download,
-                fileSize(downloadBytes(VoiceModel.Compact)),
+                fileSize(voice.downloadBytes(VoiceModel.Compact)),
             ),
             stringResource(R.string.voice_setup_download_detail),
         )
@@ -196,6 +196,7 @@ fun ColumnScope.VoicePickerPage(
     ) {
         VoiceModel.entries.forEach { model ->
             ModelCard(
+                voice = voice,
                 model = model,
                 tag =
                     when {
@@ -210,13 +211,13 @@ fun ColumnScope.VoicePickerPage(
             )
         }
     }
-    val size = fileSize(downloadBytes(selected))
+    val size = fileSize(voice.downloadBytes(selected))
     if (isFromSettings) {
         if (selected != installed) {
             Text(
                 stringResource(
                     R.string.voice_switch_note,
-                    fileSize(neededBytes(selected)),
+                    fileSize(voice.neededBytes(selected)),
                     modelName(installed ?: VoiceModel.Compact),
                 ),
                 style = MagicHandyTheme.type.small,
@@ -263,6 +264,7 @@ fun ColumnScope.VoicePickerPage(
 
 @Composable
 private fun ModelCard(
+    voice: VoiceUi,
     model: VoiceModel,
     tag: String?,
     isInstalled: Boolean,
@@ -272,7 +274,7 @@ private fun ModelCard(
     val colors = MagicHandyTheme.colors
     val dimens = MagicHandyTheme.dimens
     val shape = MagicHandyTheme.shapes.card
-    val size = fileSize(downloadBytes(model))
+    val size = fileSize(voice.downloadBytes(model))
     val detail =
         when (model) {
             VoiceModel.Compact ->

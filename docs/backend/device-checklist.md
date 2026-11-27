@@ -19,7 +19,7 @@ Install the update with the Bluetooth fix. Make sure the Handy is safe to put in
 
 Once connected, start manual motion at a low speed, press **Stop** and check that the receipt confirms Stop for the Handy. Then disconnect it from its device page.
 
-To judge motion quality, compare Bluetooth with Handy Cloud on the same Handy, speed and stroke window: manual Start at 25%, then steady full sweeps from chat at 25%, then a repeating two-short/one-full phrase. Use one connection at a time and Stop between runs. Note whether any stutter is continuous, only at turns, or only when a new pattern arrives. A single Original Handy now gets the same sparse fit on both routes. Also note how each run starts: over Bluetooth the Handy moves to the first point at its own speed, while Cloud eases in.
+To judge motion quality, compare Bluetooth with Handy Cloud on the same Handy, speed and stroke window: manual Start at 25%, then steady full sweeps from chat at 25%, then a repeating two-short/one-full phrase. Use one connection at a time and Stop between runs. Note whether any stutter is continuous, only at turns, or only when a new pattern arrives. A single Original Handy uses a sparse fit on Cloud. Bluetooth adds points near slow reversals. At 25%, expect 56 Cloud points and 83 Bluetooth points in the first 12 seconds. Also note how each run starts: over Bluetooth the Handy moves to the first point at its own speed, while Cloud eases in.
 
 ## Verify Handy Cloud on a second phone
 
@@ -57,3 +57,7 @@ Install the current update over the previous MagicHandy Test APK. If ChatGPT is 
 - Type a name and a 500-character description with emoji, combining marks and a Japanese IME. Check the counter, rejection focus, keyboard and Stop footer. Exercise all five locales, TalkBack and large type.
 - Switch personas during a debug reply, then during a check-in. Read each saved speaker in the transcript. Clear one persona's memory, duplicate another, and delete the active one. Check that the fallback speaker is MagicHandy and older messages keep their names.
 - Share a diagnostics report to a local viewer. Inspect its persona count and three settings. Search for the distinctive test persona names and memories. Check the established cloud-backup and device-transfer exclusions on supported Android versions.
+
+## Original Handy Bluetooth motion
+
+On the owner's Original Handy, use the same stroke limits and 25% speed for both manual Start and a chat start. Compare turnaround smoothness with the same pattern on Cloud and with the desktop baseline. Note the firmware, route, pauses felt, and whether Stop is acknowledged. The Android transport fixture emits 56 points in the first 12 seconds in each of those four cases. The motion atlas measures the transmitted commands. The hands-free phone checks are in [the voice test guide](../voice-test.md#checking-hands-free-chat-on-a-phone).

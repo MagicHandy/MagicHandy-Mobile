@@ -13,6 +13,14 @@ public interface MagicHandyCore {
     /** The latest immutable snapshot of everything the UI shows. */
     public val state: StateFlow<AppState>
 
+    /** UI contract for the platform's optional on-device voice feature. */
+    public val voice: VoiceControls
+        get() = unavailableVoice
+
+    /** Current motion-engine Stop epoch, available synchronously before UI projection. */
+    public val currentStopEpoch: Long
+        get() = state.value.stopEpoch
+
     /** Read a redacted report of at most 256 KiB. Sharing is an explicit UI action. */
     public suspend fun diagnosticsReport(): DiagnosticsReport =
         DiagnosticsReport("MagicHandy-diagnostics.txt", "Diagnostics unavailable\n")
@@ -135,3 +143,5 @@ public enum class StopSource {
     /** A spoken "stop", recognized on the phone by voice input before any inference. */
     SpokenStop,
 }
+
+private val unavailableVoice: VoiceControls = VoiceControls.Fixed()

@@ -18,7 +18,7 @@
   - each thing you say is sent when you pause, like a typed message;
   - listening carries on with the screen off.
 - **A spoken "Stop" stops every device at once,** as the Stop button does.
-- **Any Stop, spoken or not, also ends listening.** So does 15 minutes without speech while nothing is playing.
+- **Any Stop, spoken or not, also ends listening.** After 15 minutes without speech, listening ends if motion is idle or paused. Playing and edging reset the timer.
 - **On the phone:** Parakeet v3 recognizes the speech. Audio never leaves the phone and is never saved.
 
 ## 2. What the voice test settled
@@ -218,16 +218,17 @@ The setting itself, its wiring and its row already exist.
 
 **The Stop fence:**
 
-- `AppState.stopEpoch` (additive) is a counter that every Stop advances, including the ones that leave no receipt.
-- A turn carries the epoch it started under.
-- The main process drops the turn if the epoch has changed by the time it would be sent.
+- Every Stop advances the motion engine's epoch synchronously. The UI observes the same value later in `AppState.stopEpoch`.
+- An explicit start captures `MagicHandyCore.currentStopEpoch`. A transcript carries that value and its chat ID into the core. The core checks them at admission and checks the epoch again when saving the message and admitting motion.
+- Stop, End, cancellation or leaving the app revokes a pending microphone start. Retrying a download preserves the original microphone choice.
 
 **Hearing Stop quickly.** The Stop checks have their own fixed values, which the hidden settings (§5.2) don't change:
 
 - **Short sounds:** spans of 0.1–0.25 s are checked for Stop only, and are never sent to chat, so a short, sharp "Stop!" isn't thrown away as a click.
 - **Starting the checks:** they begin as soon as the detector's confidence reaches 0.5, or the turn's own threshold if that's lower. A stricter "Speech starts at" can't hide a quiet Stop.
 - **During a turn:** from the start of speech, and through the pause before a turn ends, the last 1.5 s is checked for Stop every 0.4 s, keeping only the latest check. So Stop doesn't wait for the chosen silence, or for a long turn to finish.
-- **Queue order:** Stop checks go ahead of chat turns waiting for the recognizer.
+- The worker alternates short-sound and recent-audio Stop checks. When a chat turn is waiting, it gets a decode slice after at most two checks. Ordinary sentences up to six seconds are recognized whole. Longer turns yield between slices of at most six seconds of audio. The split favors a quiet interval between words and preserves enough context for the final slice. The complete transcript is delivered once, in order.
+- The queue holds up to 45 seconds of waiting turns, eight waiting turns, eight short sounds and one latest tail, in addition to the current turn. If the worker cannot keep up, listening ends with a visible notice. The user can start a new session.
 - **Target:** Stop within about 1 s of the word, measured in the voice test, with the compact model and with full precision.
 
 **What counts as Stop: `isSpokenStop(text)`.** It's in `core.api`, with its own list rather than the typed one.
@@ -264,7 +265,7 @@ The setting itself, its wiring and its row already exist.
 - **Silenced:** `AudioRecordingCallback` notices when Android silences the recording, for a call, another app, or the privacy toggle. The session ends with a notice.
 - **Read errors** end the session too, rather than retrying in a loop.
 
-**Microphones:** only the phone's own. No Bluetooth headset microphones, because switching to a headset's call audio would disrupt Bluetooth timing for The Handy and the Coyote, and change the levels.
+Recording requests the phone's built-in microphone. Audio reaches speech detection only after Android reports that input as the actual route. Startup allows up to one second for the route to resolve and discards those samples. A later route loss or a switch to an external input ends listening with a notice. This applies with TalkBack and with a wired or paired headset.
 
 **TalkBack:** TalkBack reads replies aloud, and the microphone would hear them and send them back as your words.
 
@@ -292,17 +293,17 @@ The setting itself, its wiring and its row already exist.
 The voice process holds:
 
 - `VoiceService`;
-- `VoiceCapture`, which records at 16 kHz and reports read errors and silencing;
+- `MicCapture`, which records at 16 kHz, verifies the input route and reports read errors and silencing;
 - `AutoLevel`, `Endpointer`, `AudioHistory` and `SpeechSegmenter`, which are pure Kotlin with JVM tests, all set from `VoiceConfig` (§5.2);
-- `Transcriber`, which runs Parakeet through sherpa-onnx, with the Stop checks first in its queue;
+- `Transcriber`, which runs Parakeet through sherpa-onnx, and `VoiceDecoder`, which processes the bounded queue;
 - `SpeechModel`, the pinned, checked and resumable download. It uses the app's `OkHttpClient` with `HttpsOnly`, checks free space first, and checks the files again when loading fails.
 
-The main process holds `VoiceLink`, the bound service the voice process talks to. It:
+The voice process sends events to `VoiceLinkService` in the main process. The service and controller:
 
 - calls `emergencyStop` for a spoken Stop;
-- checks `stopEpoch`;
-- dispatches every other turn as `UserIntent.SendMessage`;
-- publishes the voice state to the UI.
+- check the listening session's original epoch against the motion engine;
+- dispatch a transcript with `UserIntent.SendVoiceMessage` and the original epoch and destination;
+- publish voice state through `MagicHandyCore.voice` in `core.api`.
 
 **`core.api`, additively:**
 
@@ -312,7 +313,7 @@ The main process holds `VoiceLink`, the bound service the voice process talks to
 - `setVoiceActive(Boolean)`;
 - the chosen speech model in `AppState`, with the intent that changes it, but only if full precision ships (§5.1).
 
-Chat itself doesn't change. The hidden settings stay out of `core.api` (§5.2). `VoiceLink` passes the voice process its `VoiceConfig` when listening starts.
+`core.api` owns the UI-facing `VoiceControls`, `VoiceState`, and `VoiceConfig` types. Android owns service lifetime, model-file specifications, downloads and preference storage. The selected configuration crosses the process boundary when listening starts.
 
 **From the voice test:**
 
@@ -377,7 +378,7 @@ What the build does that this sketch didn't spell out, or does differently:
 
 - **Silero** comes with the speech model's download rather than in the APK (§3).
 - **The chosen model** is a saved setting: `AppSettingsState.voiceModel` and `UserIntent.SetVoiceModel` in `core.api`, both additive. The model in use is the chosen one once it's complete, and otherwise the other model on the phone.
-- **Downloads** run while the app is on screen, pause when it leaves and resume when it returns, after a restart too. In Chat, the first download sits above the composer, so typing still works, and the microphone waits for it. A switch shows only in Settings › Voice.
+- **Downloads** run while the app is on screen, pause when it leaves and resume when it returns, after a restart too. A resumed writer waits for the old writer to close. The final file is checked for length and SHA-256 before its atomic rename. In Chat, the first download sits above the composer, so typing still works, and the microphone waits for it. A switch shows only in Settings › Voice.
 - **Cancel** deletes the model's files but keeps Silero, which both models use. **Remove** deletes the whole voice folder.
 - **Notices** sit above the composer with their next step and a Close button. Ending with End or a Stop leaves no notice; the Stop receipt says "voice ended" instead (V-VoiceStop).
 - **Turns:** a turn waits while a reply streams, and for up to 3 s after it's sent until its reply starts, since the core takes one turn at a time.

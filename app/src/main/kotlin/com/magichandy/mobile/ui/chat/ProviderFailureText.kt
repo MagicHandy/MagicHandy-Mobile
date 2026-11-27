@@ -11,6 +11,10 @@ internal fun providerFailureText(failure: ProviderReplyFailure): String {
     val message =
         stringResource(
             when (failure.reason) {
+                Reason.ContextLimit -> R.string.provider_context_limit
+                Reason.CredentialsRejected -> R.string.reply_provider_credentials
+                Reason.BillingRequired -> R.string.reply_provider_billing
+                Reason.RateLimited -> R.string.reply_provider_rate
                 Reason.SignInRequired -> R.string.reply_provider_sign_in
                 Reason.PermissionDenied -> R.string.reply_provider_permission
                 Reason.UsageLimit -> R.string.reply_provider_limit

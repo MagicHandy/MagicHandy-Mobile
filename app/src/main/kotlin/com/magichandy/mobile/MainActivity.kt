@@ -36,7 +36,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             MagicHandyRoot(
                 core,
-                voice = app.voice,
                 openLive = openLive,
                 onLiveOpened = { openLive = false },
             )

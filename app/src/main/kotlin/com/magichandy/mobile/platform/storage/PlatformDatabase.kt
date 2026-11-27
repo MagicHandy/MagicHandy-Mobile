@@ -60,10 +60,23 @@ internal interface RecordsDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE) fun append(row: Entry): Long
 
+    @Query("SELECT payload FROM messages WHERE chatId = :id ORDER BY sequence LIMIT :limit")
+    fun opening(id: String, limit: Int): List<String>
+
     @Query("SELECT payload FROM messages WHERE chatId = :id ORDER BY sequence DESC LIMIT :limit")
     fun page(id: String, limit: Int): List<String>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE) fun remember(rows: List<Memory>)
+
+    @Query(
+        "SELECT payload FROM messages WHERE chatId = :id AND sequence < (SELECT sequence FROM messages WHERE chatId = :id AND entryId = :before) ORDER BY sequence DESC LIMIT :limit"
+    )
+    fun before(id: String, before: String, limit: Int): List<String>
+
+    @Query(
+        "SELECT * FROM messages WHERE chatId = :id AND sequence > :after ORDER BY sequence LIMIT 32"
+    )
+    fun nextForTitle(id: String, after: Long): List<Entry>
 
     @Query("SELECT text FROM memories WHERE persona = :persona ORDER BY rowid")
     fun memoryFor(persona: String): List<String>

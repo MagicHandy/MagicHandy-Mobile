@@ -1,0 +1,45 @@
+# Android OpenRouter and Autopilot integration review
+
+*Links into `build/` open verification artifacts in a local checkout. Public Android downloads are on the [releases page](https://github.com/MagicHandy/MagicHandy-Mobile/releases).*
+
+November 27, 2026. Claude’s `openrouter-settings` and `autopilot-failures` worktrees both started at the v0.1.8 tag, `3abba0d`. Their uncommitted source, tests, design boards and preview baselines are now integrated in the local 0.1.9 test candidate alongside the chat, voice and motion changes already there.
+
+Gemini 4 Neon reviewed the combined source at XHigh effort in two independent passes. The first packet reached its input limit during the device manager. The second covered the production OpenRouter and other provider clients, Android settings, voice IPC, foreground service and related tests. The findings below were checked against the working implementation, including files each pass could not see. [Neon’s core assessment](../../build/reviews/openrouter-autopilot/neon-core-review.md) · [Neon’s provider and Android assessment](../../build/reviews/openrouter-autopilot/neon-android-provider-review.md)
+
+## OpenRouter and chat
+
+| Finding | Integrated behavior |
+|---|---|
+| The picker and runtime used different catalogs. An eligible model could disappear behind the unfiltered catalog’s default page. | The picker lists eligible models. Runtime looks up a saved author/model directly. A bounded catalog lookup handles older identifiers and aliases. Requests keep zero data retention, deny data collection, and require the parameters they send. |
+| A reasoning metadata object could cause an unsupported wire parameter to exclude every host. | Supported parameters govern whether the app sends a reasoning control. A model that always reasons can retain an output reserve even when the host exposes no control. An existing automatic choice stays automatic when editing another setting. |
+| A changed API key could overwrite the working key before the catalog transaction succeeded. A key-only change could also leave a refused planner asleep. | Replacement uses a new encrypted credential slot. The saved model switches to that slot in one catalog write. A rejected write clears the staged slot and preserves the original. A successful swap wakes the affected planner and fences old-account replies. A reasoning-only edit applies on the next message and lets the current reply finish. |
+| A malformed key-check success could be accepted. | The account adapter validates header-safe characters before HTTP. It distinguishes management keys, valid chat keys and unreadable service responses. Error presentation uses local categories. |
+| Small models and small completion caps could reject requests that fit, or cause repeated requests that could never fit. | Chat and Autopilot use the saved model’s effective context, capped at the mobile default of 65,536 tokens for newly configured connections. The wire budget reserves the actual capped completion allowance. A request whose essential content is too large returns an actionable context-limit error. |
+| A provider error inside an HTTP 200 stream lost its billing, credential or rate-limit cause. | Known numeric error codes retain their recovery action. A status carried in an event is distinguished from the HTTP response status. ChatGPT’s explicit rate-limit code is distinguished from its subscription usage limit. |
+
+The single-model lookup and outbound privacy parameters follow OpenRouter’s API. Regression tests use in-memory HTTP and assert the actual method, path and payload. [OpenRouter model lookup](https://openrouter.ai/docs/api/api-reference/models/get-a-model-by-its-slug) · [Provider routing](https://openrouter.ai/docs/guides/routing/provider-selection) · [OpenRouter transport tests](../../transport/src/test/kotlin/com/magichandy/mobile/transport/providers/OpenRouterReasoningTest.kt) · [Connection edit tests](../../transport/src/test/kotlin/com/magichandy/mobile/transport/simulated/OpenRouterSetupTest.kt)
+
+## Autopilot and motion
+
+| Finding | Integrated behavior |
+|---|---|
+| Permanent failures retried on unrelated catalog, chat or settings changes. Spoken check-in failures could also escape the hold. | An account, billing, permission, unavailable-model, rejected-request or context error holds the affected planning connection. Explicit retry, a relevant connection change or successful reauthentication can resume it. Temporary service failures and rate limits back off. |
+| Re-entering the planner reset the next change to now. A scheduled tempo plan could supersede a later tempo or air adjustment. | The change deadline belongs to the session. A chat motion edit receives its own interval. Visual settings and unrelated accounts leave the scheduler alone. Applying a pending step rechecks the stroke plan, tempo plan and air balance. |
+| An empty eligible roster spent a model call, and a failed check-in write could terminate the planning worker. | Autopilot checks run membership and motion mode before the first call. An unplayable proposal pauses planning for user action. A check-in storage failure records a diagnostic and leaves the planning worker alive. An unavailable service is reported as a service failure. |
+| Pause could retire a healthy transport when an already submitted write acknowledged just after the pause fence closed. | Pause sends its first halt immediately. A known late acceptance supersedes that halt with a fresh halt on the same owner, within the original deadline. Resume requires the new acknowledgement and an empty in-flight set. Ambiguous delivery or an expired safety window still invokes recovery. |
+| A returning VacuGlide could remain marked as awaiting Stop after confirming on its live connection. | Both a footer Stop and journal-less recovery use the live owner and clear only the matching return obligation on acknowledgement. |
+| A structured model Stop could be reported as a provider error. | The Stop epoch takes precedence when settling an interrupted turn. The regression exercises the Tempo model’s Stop through the real proposal validator. |
+
+The shipping startup journal is an independent atomic file. Its read reaches disk on every inspection, so delaying cold-start recovery behind Room initialization would add latency. A confirmed transport Stop already waits for outstanding writes in `StopDelivery`. After an unconfirmed timeout, disconnect remains available to release a stuck transport. [Journal implementation](../../app/src/main/kotlin/com/magichandy/mobile/platform/storage/FileJournal.kt) · [Stop delivery](../../core/src/main/kotlin/com/magichandy/mobile/core/motion/StopDelivery.kt) · [Pause and Stop tests](../../core/src/test/kotlin/com/magichandy/mobile/core/motion/MotionEngineTest.kt) · [Autopilot regressions](../../transport/src/test/kotlin/com/magichandy/mobile/transport/simulated/AutopilotTest.kt)
+
+## Voice and service lifecycle
+
+Spoken Stop already had a direct decoder and IPC path. The core now also recognizes Stop in a transcribed voice intent before queueing it, checks the originating Stop epoch atomically, and leaves a newer run alone if the transcript is stale. A late voice-process greeting or binder death cannot terminate a newer listening session. An interruption displayed from an earlier turn no longer discards subsequent speech during admission. [Core boundary tests](../../transport/src/test/kotlin/com/magichandy/mobile/transport/simulated/RunBoundaryTest.kt) · [Android voice tests](../../app/src/test/kotlin/com/magichandy/mobile/voice/VoiceAdmissionTest.kt)
+
+Overlapping host shutdowns now wait for all outstanding device disconnects. The foreground service holds the CPU awake for active planning before the first motion and releases it when stationary and held or paused. The idle and failed-start paths also end notification observation. Catalog and release-check errors return the UI to a retryable state. [Service tests](../../app/src/test/kotlin/com/magichandy/mobile/platform/ServiceTest.kt)
+
+## Verification
+
+The verification uses simulated devices, local HTTP fixtures, Room and Robolectric. It covers saved connections and replacement failures, catalog and wire negotiation, active-turn edits, planner retries and scheduling, Stop during output, voice IPC, foreground service behavior and all five localized resource sets. A physical-phone OpenRouter account session is outside this test evidence.
+
+All **1,153 tests passed** (327 core, 289 transport, 537 app). Spotless, lint, screenshot verification, release and device-test APK content checks, signature verification and 16 KiB alignment passed. The device-test package uses the same signing certificate as the previous MagicHandy Test build. Its SHA-256 is `50946f953460a83afcffd05a11be0f346d40094d71d1cbb832f59bd805e0fe94`. [Signed test APK](../../build/device-test/MagicHandy-Test-0.1.9-openrouter-autopilot.apk) · [Verification details](../../build/reviews/openrouter-autopilot/verification.json)

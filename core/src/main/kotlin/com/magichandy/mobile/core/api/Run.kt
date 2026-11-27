@@ -10,8 +10,8 @@ import kotlin.time.Instant
  * @property source who set the current motion; null while nothing plays.
  * @property limits caps that apply to every source: you, chat and Autopilot.
  * @property recentChanges meaningful changes in this run, newest first, bounded.
- * @property isPlanningHeld the model connection dropped during Autopilot. [phase] says whether the
- *   current segment still plays.
+ * @property isPlanningHeld Autopilot's planning is held: the model connection dropped, or the model
+ *   refused for a reason that needs a fix. [phase] says whether the current segment still plays.
  */
 public data class RunState(
     public val phase: RunPhase,
@@ -20,6 +20,11 @@ public data class RunState(
     public val limits: Limits,
     public val recentChanges: List<RunEvent>,
     public val isPlanningHeld: Boolean,
+    /**
+     * An accepted stroke pace waiting for an output batch. [commandedPace] still describes the last
+     * dispatched batch.
+     */
+    public val pendingPace: Percent? = null,
 )
 
 /** The run's motion state. Edging is the gentle hold. */
@@ -87,7 +92,10 @@ public data class AutopilotState(
     public val checkIns: CheckIns,
 )
 
-/** Autopilot's state. Held means planning waits for the model connection. */
+/**
+ * Autopilot's state. Held means planning waits: for the model connection to return, or, after
+ * [Banner.PlanningFailed], for the person to fix what the model refused.
+ */
 public enum class AutopilotStatus {
     Off,
     Active,

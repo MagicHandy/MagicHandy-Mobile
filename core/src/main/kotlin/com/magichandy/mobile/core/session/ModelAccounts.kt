@@ -6,18 +6,16 @@ import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.CapabilityLevel
 import com.magichandy.mobile.core.api.ConnectionId
 import com.magichandy.mobile.core.api.ConnectionStatus
-import com.magichandy.mobile.core.api.FormReason
-import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.ModelConnection
 import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.SignInFailure
 import com.magichandy.mobile.core.api.SignInStage
 import com.magichandy.mobile.core.api.SignInState
-import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.api.UpdateCheck
 import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.SavedModel
-import com.magichandy.mobile.core.ports.matches
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -30,8 +28,12 @@ internal class ModelAccounts(
     private val record: (DiagnosticKind) -> Unit,
     private val unavailable: () -> Unit,
     private val storeFailed: () -> Unit,
+    private val signedIn: (ConnectionId) -> Unit,
 ) {
     private var signIn: Job? = null
+
+    /** OpenRouter connections and the catalog their pages choose from. */
+    val openRouter = OpenRouterSetup(d, ui, record)
 
     fun startSignIn(selectForChat: Boolean = false) {
         val action = d.signIn ?: return unavailable()
@@ -65,6 +67,7 @@ internal class ModelAccounts(
                     )
                 try {
                     d.models.save(SavedModel(info, d.signInCredential), selectForChat)
+                    signedIn(info.id)
                     ui.update { state ->
                         state.copy(
                             models =
@@ -86,50 +89,6 @@ internal class ModelAccounts(
             }
     }
 
-    suspend fun saveOpenRouter(intent: UserIntent.SaveOpenRouter): FormResult {
-        val name = intent.model.trim()
-        if (
-            name.isEmpty() ||
-                name.length > 200 ||
-                name.any { it.isWhitespace() || it.isISOControl() }
-        )
-            return reject(FormReason.InvalidModel)
-        val key = intent.apiKey.reveal()
-        if (key.length !in 1..2048 || key.any { it.code !in 33..126 })
-            return reject(FormReason.InvalidKey)
-        for (saved in d.models.state.value.models.values) {
-            if (
-                saved.info.provider == ProviderKind.OpenRouter &&
-                    saved.info.model == name &&
-                    saved.credential?.let { d.vault.matches(it, intent.apiKey) } == true
-            )
-                return reject(FormReason.Duplicate)
-        }
-        val id = ConnectionId(java.util.UUID.randomUUID().toString())
-        val handle = com.magichandy.mobile.core.ports.SecretHandle("router-" + id.value)
-        val info =
-            ModelConnection(
-                id,
-                "OpenRouter",
-                ProviderKind.OpenRouter,
-                name,
-                name.substringAfterLast('/'),
-                intent.capability,
-                intent.isReasoningOn,
-                true,
-                ConnectionStatus.Ready,
-            )
-        d.vault.put(handle, intent.apiKey)
-        try {
-            val saved = SavedModel(info, handle)
-            if (intent.selectForChat) d.models.save(saved, selectForChat = true)
-            else d.models.save(saved)
-        } finally {
-            if (id !in d.models.state.value.models) d.vault.remove(handle)
-        }
-        return FormResult.Accepted
-    }
-
     private fun setSignIn(value: SignInState) {
         ui.update { it.copy(models = it.models.copy(signIn = value)) }
     }
@@ -144,17 +103,19 @@ internal class ModelAccounts(
     }
 
     fun checkRelease() {
-        if (ui.value.app.update == com.magichandy.mobile.core.api.UpdateCheck.Checking) return
+        if (ui.value.app.update == UpdateCheck.Checking) return
         ui.update {
-            it.copy(app = it.app.copy(update = com.magichandy.mobile.core.api.UpdateCheck.Checking))
+            it.copy(app = it.app.copy(update = UpdateCheck.Checking))
         }
         d.scope.launch(d.dispatchers.io) {
             val result =
                 try {
-                    d.releases?.check(d.versionName)
-                        ?: com.magichandy.mobile.core.api.UpdateCheck.Failed
-                } catch (_: IOException) {
-                    com.magichandy.mobile.core.api.UpdateCheck.Failed
+                    d.releases?.check(d.versionName) ?: UpdateCheck.Failed
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    record(DiagnosticKind.ProviderUnavailable)
+                    UpdateCheck.Failed
                 }
             ui.update { it.copy(app = it.app.copy(update = result)) }
         }

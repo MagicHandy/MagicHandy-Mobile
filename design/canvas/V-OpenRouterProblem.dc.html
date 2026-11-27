@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OpenRouter: a reply that failed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+.app{width:390px;height:844px;box-sizing:border-box;background:#0e0f11;color:#e9e7e2;font-family:Inter,system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.hdr{display:flex;align-items:center;gap:10px;padding:14px 12px 8px 16px}
+.sess{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;border:0;background:transparent;padding:0;text-align:left;min-height:48px;justify-content:center}
+.sess b{font-size:17px;display:flex;align-items:center;gap:4px}
+.sess span{font-size:12px;color:#9aa1a9;margin-top:2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:12px;color:#c9c6c0;white-space:nowrap}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.ok{background:#4fc06d}.idle{background:#9aa1a9}
+.log{flex:1;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:14px;justify-content:flex-end}
+.msg{display:flex;flex-direction:column;max-width:86%}
+.me{align-self:flex-end;align-items:flex-end}
+.meta{font-size:12px;color:#9aa1a9;margin-bottom:4px}
+.bub{background:#1d2024;border:1px solid #353b43;border-radius:10px 10px 10px 4px;padding:9px 12px;line-height:1.45}
+.me .bub{background:#1b2634;border-color:#2c3e52;border-radius:10px 10px 4px 10px}
+.rc{margin-top:6px;font-size:12px;color:#9aa1a9}
+.warn{border-color:#d8b66a}
+.acts{display:flex;gap:8px;margin-top:8px}
+.btn{height:40px;padding:0 14px;border:1px solid #353b43;border-radius:6px;background:transparent;font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px}
+.btn.pri{background:#5b9dd9;border-color:transparent;color:#0b131c}
+.deck{background:#16181b;border-top:1px solid #353b43;border-radius:10px 10px 0 0;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.strip{height:48px;border:1px solid #262a30;border-radius:6px;background:#0b0c0e;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;font-size:14px;text-align:left}
+.strip .up{margin-left:auto;width:36px;height:36px;display:grid;place-items:center}
+.field{display:flex;align-items:center;gap:8px;background:#0b0c0e;border:1px solid #4b5159;border-radius:10px;padding:2px 2px 2px 12px}
+.field span{flex:1;height:44px;display:flex;align-items:center;color:#6b7178;font-size:16px}
+.send{width:44px;height:44px;border:0;border-radius:6px;background:#5b9dd9;display:grid;place-items:center}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px 12px;background:#121417;border-top:1px solid #262a30}
+.tab{height:52px;border:0;border-radius:6px;background:transparent;color:#9aa1a9;font-size:12px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.tab.on{background:rgba(91,157,217,.15);color:#e9e7e2;font-weight:600}
+.stopbar{background:#121417;padding:0 12px 12px}
+.stop{width:100%;height:60px;border:0;border-radius:6px;background:#c43c36;color:#ffffff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+</style>
+</helmet>
+<div class="app">
+  <header class="hdr">
+    <button class="sess" type="button" aria-label="Chats: Evening"><b>Evening<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#9aa1a9" stroke-width="1.8" aria-hidden="true"><path d="M4 6l4 4 4-4"></path></svg></b><span>MagicHandy · DeepSeek V4.1 Flash 1017</span></button>
+    <div class="dv"><span><i class="dot ok"></i> Bedroom Handy · Playing</span></div>
+  </header>
+  <main class="log">
+    <div class="msg me"><div class="meta">You · 4:40 PM</div><div class="bub">Slow it down a little and keep the strokes long.</div></div>
+    <div class="msg"><div class="meta">MagicHandy · 4:40 PM</div><div class="bub">Easing off. Long, unhurried strokes for a while.</div><div class="rc mono">Pace 62 → 48 · Stroke 15–85 · commanded</div></div>
+    <div class="msg me"><div class="meta">You · 4:52 PM</div><div class="bub">A little faster now, and a bit deeper.</div></div>
+    <div class="msg">
+      <div class="bub warn">This OpenRouter key has reached its spending limit. Raise the limit on openrouter.ai, then send again.</div>
+      <div class="acts"><button class="btn pri" type="button">Open OpenRouter<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0b131c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.5h4.5V7M13.5 2.5 7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"></path></svg></button><button class="btn" type="button">Send again</button></div>
+    </div>
+  </main>
+  <div class="deck">
+    <button class="strip" type="button"><i class="dot ok"></i>Playing · Live controls<span class="up"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#c9c6c0" stroke-width="1.8" aria-hidden="true"><path d="M4 10l4-4 4 4"></path></svg></span></button>
+    <div class="field"><span>Message</span><button class="send" type="button" aria-label="Send"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#0b131c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M4 7l4-4 4 4"></path></svg></button></div>
+  </div>
+  <nav class="tabs" aria-label="Main">
+    <button class="tab on" type="button" aria-current="page"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#5b9dd9" stroke-width="1.5" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"></path></svg>Chat</button>
+    <button class="tab" type="button"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="5" height="10" rx="1.5"></rect><rect x="9" y="5" width="5" height="8" rx="1.5"></rect></svg>Devices</button>
+    <button class="tab" type="button" aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 4.5h12M2 11.5h12"></path><circle cx="6" cy="4.5" r="1.8" fill="#121417"></circle><circle cx="10.5" cy="11.5" r="1.8" fill="#121417"></circle></svg>Settings</button>
+  </nav>
+  <div class="stopbar"><button class="stop" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#ffffff"></rect></svg>Stop</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

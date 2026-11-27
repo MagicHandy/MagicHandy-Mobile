@@ -90,4 +90,6 @@
 
     <string name="receipt_voice_ended">语音已结束</string>
     <string name="receipt_and_voice_ended">%1$s · 语音已结束</string>
+    <string name="voice_ended_overloaded">语音识别跟不上，已结束聆听。请尝试缩短句子或使用精简模型。</string>
+    <string name="voice_ended_input_changed">手机内置麦克风不可用，已结束聆听。请检查音频输入后重新开始。</string>
 </resources>

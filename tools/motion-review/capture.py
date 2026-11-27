@@ -145,6 +145,28 @@ def main():
         env,
     )
 
+    version = re.search(
+        r'^\s*versionName\s*=\s*"([^"]+)"',
+        (PROJECT / "app/build.gradle.kts").read_text(encoding="utf8"),
+        re.MULTILINE,
+    )
+    if not version:
+        raise ValueError("Missing Android versionName")
+    metadata = {
+        "android_version": version.group(1),
+        "android_commit": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=PROJECT, text=True
+        ).strip(),
+        "modified": bool(
+            subprocess.check_output(
+                ["git", "status", "--porcelain", "--untracked-files=normal"],
+                cwd=PROJECT,
+            )
+        ),
+        "desktop_commit": REVISION,
+    }
+    (work / "capture.json").write_text(json.dumps(metadata, indent=2), encoding="utf8")
+
 
 if __name__ == "__main__":
     main()

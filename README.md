@@ -2,7 +2,7 @@
 
 Chat with an AI companion that can set the pace of your connected intimate devices, or take over with manual controls. **For adults 18 and older.**
 
-**[Download MagicHandy for Android 12 or later](https://github.com/MagicHandy/MagicHandy-Mobile/releases/latest)**
+**[Download MagicHandy for 64-bit ARM phones running Android 12 or later](https://github.com/MagicHandy/MagicHandy-Mobile/releases/latest)**
 
 Under **Assets**, tap the file ending in `.apk` and open it. If Android asks, allow installation from the browser or file manager you used. On first launch, confirm your age and try Stop with nothing connected. You can choose a model and add a device during setup or return to either later.
 

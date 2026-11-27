@@ -8,7 +8,7 @@ The public APK uses the package ID `com.magichandy.mobile` and appears as **Magi
 
 Run `./gradlew :app:assembleDeviceTest :app:checkDeviceTestContents`. The installable APK is `app/build/outputs/apk/deviceTest/app-deviceTest.apk`. It uses the production core, is minified, and is signed with this workstation’s Android development key. Its app ID is `com.magichandy.mobile.devicetest` and its launcher name is **MagicHandy Test**. It has its own storage and can be installed alongside the public app. Use the same workstation key for subsequent test updates.
 
-Install 0.1.8 over the existing MagicHandy Test app. It preserves saved devices and the signed-in account. It adds voice input in Chat, whose speech model downloads apart from the voice test's, and Settings › Voice › Advanced shows the hidden settings. [Voice design](voice-design.md) · [Voice test](voice-test.md#a-test-session)
+Install a newer phone-test APK over the existing MagicHandy Test app to preserve its local data. The APK requires Android 12 or later on a 64-bit ARM device. Chat and the separate Voice test download their own speech models. Settings › Voice › Advanced shows the test controls. [Voice design](voice-design.md) · [Voice test](voice-test.md#a-test-session)
 
 The release script builds the minified APK, checks its packaged contents, verifies its signature with Android SDK `apksigner verify --print-certs`, and writes the APK and its SHA-256 checksum. Publishing is a separate owner action.
 

@@ -1,6 +1,8 @@
 package com.magichandy.mobile.voice
 
+import com.magichandy.mobile.core.api.Detector
 import com.magichandy.mobile.core.api.VoiceModel
+import com.magichandy.mobile.core.api.VoiceModelStorage
 
 /**
  * A file voice input downloads: where it comes from, its size and its SHA-256. [path] is where it
@@ -116,10 +118,19 @@ object ModelFiles {
 }
 
 /** The speech detectors that end a turn, with the window each one reads at a time. */
-enum class Detector(val model: ModelFile, val window: Int) {
-    Silero(ModelFiles.silero, 512),
-    Ten(ModelFiles.ten, 256),
-}
+val Detector.model: ModelFile
+    get() =
+        when (this) {
+            Detector.Silero -> ModelFiles.silero
+            Detector.Ten -> ModelFiles.ten
+        }
+
+val Detector.window: Int
+    get() =
+        when (this) {
+            Detector.Silero -> 512
+            Detector.Ten -> 256
+        }
 
 /** The Parakeet files behind this model. */
 val VoiceModel.parakeet: ParakeetFiles
@@ -131,3 +142,9 @@ val VoiceModel.parakeet: ParakeetFiles
 
 /** What listening with this model needs on the phone: Parakeet and the speech detector. */
 fun VoiceModel.files(detector: Detector): List<ModelFile> = parakeet.all + detector.model
+
+internal fun voiceModelStorage(): Map<VoiceModel, VoiceModelStorage> =
+    VoiceModel.entries.associateWith { model ->
+        val bytes = model.files(Detector.Silero).sumOf { it.bytes }
+        VoiceModelStorage(bytes, bytes + ModelStore.HEADROOM_BYTES)
+    }

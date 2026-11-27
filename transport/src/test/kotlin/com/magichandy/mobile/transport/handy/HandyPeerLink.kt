@@ -17,6 +17,10 @@ internal class HandyPeerLink : BluetoothLink {
     val events = Channel<ByteArray>(Channel.UNLIMITED)
     val methods = mutableListOf<Int>()
     var replyIdDelta = 0
+    var foreignStreamMethod: Int? = null
+    var missingStateMethod: Int? = null
+    private var hspStreamId = 0L
+    private var playing = false
     var negotiation = true
     var blockSetup = false
     val nativeClose = CompletableDeferred<Unit>()
@@ -64,6 +68,20 @@ internal class HandyPeerLink : BluetoothLink {
                     ?.value
         if (method == 860) delay(setupDelayMillis)
         if (method == 860 && blockSetup) withContext(NonCancellable) { nativeClose.await() }
+        when (method) {
+            715,
+            864 -> playing = false
+            860 -> {
+                hspStreamId =
+                    requireNotNull(
+                        fields(requireNotNull(packet.single { it.number == method }.data))
+                            .single { it.number == 1 }
+                            .value
+                    )
+                playing = false
+            }
+            863 -> playing = true
+        }
         val id = requireNotNull(packet.single { it.number == 2 }.value)
         events.send(
             ProtoWriter()
@@ -74,7 +92,18 @@ internal class HandyPeerLink : BluetoothLink {
                         // Firmware answers RPC 715, which has no result type, with a blank
                         // response.
                         if (method != 715)
-                            message(method) { if (method == 712) clockMillis?.let { uint(1, it) } }
+                            message(method) {
+                                if (method == 712) clockMillis?.let { uint(1, it) }
+                                if (method in 860..867 && method != missingStateMethod)
+                                    message(1) {
+                                        uint(1, if (playing) 1 else 2)
+                                        uint(
+                                            10,
+                                            if (method == foreignStreamMethod) hspStreamId + 1
+                                            else hspStreamId,
+                                        )
+                                    }
+                            }
                     }
                 }
                 .bytes()

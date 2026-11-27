@@ -27,6 +27,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.Detector
+import com.magichandy.mobile.core.api.DownloadPhase
+import com.magichandy.mobile.core.api.MicSource
+import com.magichandy.mobile.core.api.VoiceConfig
+import com.magichandy.mobile.core.api.VoiceDownload
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.Caption
 import com.magichandy.mobile.ui.components.Card
@@ -38,11 +43,6 @@ import com.magichandy.mobile.ui.components.Segmented
 import com.magichandy.mobile.ui.components.SettingRow
 import com.magichandy.mobile.ui.components.ToggleRow
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
-import com.magichandy.mobile.voice.Detector
-import com.magichandy.mobile.voice.DownloadPhase
-import com.magichandy.mobile.voice.MicSource
-import com.magichandy.mobile.voice.VoiceConfig
-import com.magichandy.mobile.voice.VoiceDownload
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -82,13 +82,13 @@ fun VoiceSettingsScreen(voice: VoiceUi, onBack: () -> Unit, modifier: Modifier =
                             stringResource(
                                 R.string.voice_model_value,
                                 stringResource(R.string.voice_in_use),
-                                fileSize(downloadBytes(installed)),
+                                fileSize(voice.downloadBytes(installed)),
                             )
                         else ->
                             stringResource(
                                 R.string.voice_model_value,
                                 modelName(installed),
-                                fileSize(downloadBytes(installed)),
+                                fileSize(voice.downloadBytes(installed)),
                             )
                     },
                 valueTone = if (installed != null) DotTone.Ok else null,

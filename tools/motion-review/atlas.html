@@ -9,7 +9,7 @@ select{min-width:138px;max-width:100%;font:inherit;font-size:.95rem;background:w
 figure{margin:14px 0;background:white;border:1px solid #d9e1e6;border-radius:7px;overflow:hidden}figure img{display:block;width:100%;height:auto}figcaption{padding:8px 14px 11px;font-size:.88rem;color:#485967}
 .metric{display:flex;flex-wrap:wrap;gap:8px 24px;margin:10px 0}.metric span{font-size:.88rem;color:#526474}.metric b{display:block;color:#1d2b38;font-size:1.3rem}.warn{color:#933c10}footer{margin-top:26px;color:#526474;font-size:.87rem}
 </style></head><body><main>
-<header><h1>Handy motion review</h1><p>Desktop alpha.89, Android 0.1.5 and the updated Android build, compared at the same requested speed, device calibration and stroke window.</p>
+<header><h1>Handy motion review</h1><p>Desktop alpha.89, Android 0.1.5 and Android <span id="version"></span>, compared at the same requested speed, device calibration and stroke window.</p>
 <nav><a href="#steady">Steady motion</a><a href="#runtime">Application playback</a><a href="#bridge">Intiface</a><a href="#sheets">Overview sheets</a><a href="metrics.csv">Metrics CSV</a><a href="captures.zip">Raw captures</a><a hidden id="neon" href="gemini-neon-review.zip">Neon review</a></nav></header>
 <section id="steady"><h2>Steady motion</h2><p>Choose a matched run to see the whole loop, the first 12 seconds of encoded points and a close view of its first reversal.</p>
 <div class="controls"><label>Handy model<select id="model"></select></label><label>Connection<select id="route"></select></label><label>Motion<select id="shape"></select></label><label>Requested speed<select id="speed"></select></label></div>
@@ -23,14 +23,15 @@ figure{margin:14px 0;background:white;border:1px solid #d9e1e6;border-radius:7px
 </main><script>
 const atlas=/*ATLAS*/{};
 const $=id=>document.getElementById(id);
+$('version').textContent=atlas.version_label;
 $('neon').hidden=!atlas.has_neon;if(atlas.outlier_difference!==null){$('outlier').hidden=false;$('difference').textContent='The maximum difference between the two interpolated command paths is '+atlas.outlier_difference+' percentage points of stroke.';}
 function options(id,rows){const select=$(id);select.replaceChildren(...rows.map(([v,t])=>new Option(t,v)));}
 options('model',Object.entries(atlas.models));options('route',[['cloud','Handy Cloud'],['ble','Native Bluetooth']]);options('shape',Object.entries(atlas.shapes));
 function speeds(){const old=$('speed').value;const rows=atlas.cases.filter(r=>r.model===$('model').value&&r.route===$('route').value&&r.shape===$('shape').value);options('speed',rows.map(r=>r.speed).sort((a,b)=>a-b).map(v=>[v,v+'%']));if(rows.some(r=>r.speed===Number(old)))$('speed').value=old;else if(rows.some(r=>r.speed===25))$('speed').value=25;update()}
 function update(){const r=atlas.cases.find(r=>r.model===$('model').value&&r.route===$('route').value&&r.shape===$('shape').value&&r.speed===Number($('speed').value));if(!r)return;
 const line=$('numbers');line.replaceChildren();if(r.error){$('caption').textContent=r.error;$('detail').removeAttribute('src');return;}
-for(const [k,v] of [['Desktop points',r.desktop],['Previous Android',r.before],['Updated Android',r.after],['Missing turn times',r.missing_turns],['Max wire error',r.max_error_pct+'%']]){const node=document.createElement('span');const b=document.createElement('b');b.textContent=v;node.append(b,k);line.append(node)}
-$('detail').src='plots/'+r.id+'.png';$('caption').textContent=(r.exact?'Every updated point matches the desktop timestamp and position in the first 12 seconds.':'The updated output differs from desktop at one or more optional points. Inspect the close view and raw data.')+' Counts include time zero and end just before 12 seconds.';}
+for(const [k,v] of [['Desktop '+r.route.toUpperCase(),r.desktop],['Fit baseline '+r.policy_route.toUpperCase(),r.policy_points],['Previous Android',r.before],['Updated Android',r.after],['Missing turn times',r.missing_turns],['Max wire error',r.max_error_pct+'%']]){const node=document.createElement('span');const b=document.createElement('b');b.textContent=v;node.append(b,k);line.append(node)}
+$('detail').src='plots/'+r.id+'.png';$('caption').textContent=(r.sampling_policy==='SparseWithRoundedTurns'?'Android starts with the sparse Cloud fit and adds points around slow reversals.':r.exact?'Every updated point matches the desktop fit baseline in the first 12 seconds.':'The updated output differs from the desktop fit baseline. Inspect the close view and raw data.')+(r.same_route_exact?' The desktop connection also matches.':' The desktop connection differs from Android.')+' Counts include time zero and end just before 12 seconds.';}
 options('sheet',atlas.sheets.map(([title,file])=>[file,title]));$('sheet').onchange=()=>$('overview').src=$('sheet').value;$('sheet').onchange();
 for(const id of ['model','route','shape'])$(id).onchange=speeds;$('speed').onchange=update;$('shape').value='full';speeds();
 </script></body></html>

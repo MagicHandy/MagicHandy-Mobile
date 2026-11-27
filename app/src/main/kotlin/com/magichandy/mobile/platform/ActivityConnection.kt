@@ -13,6 +13,7 @@ import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.MagicHandyCore
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.api.VoiceControls
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -26,6 +27,9 @@ internal class ActivityConnection(
     private val app: MagicHandyApp,
     private val simulated: Boolean,
 ) : MagicHandyCore by app.core {
+    override val voice: VoiceControls
+        get() = app.voice
+
     private var waiting: UserIntent.StartScan? = null
     private val bluetooth =
         activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {

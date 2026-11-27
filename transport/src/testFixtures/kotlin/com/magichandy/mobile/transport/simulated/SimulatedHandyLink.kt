@@ -18,6 +18,8 @@ internal class SimulatedHandyLink(
 ) : BluetoothLink {
     private val closed = AtomicBoolean()
     private val notifications = Channel<ByteArray>(Channel.UNLIMITED)
+    private var streamId = 0L
+    private var playing = false
     private var stream = false
     private var pointCount = 0L
 
@@ -68,6 +70,7 @@ internal class SimulatedHandyLink(
                 712,
                 841 -> true
                 860 -> {
+                    streamId = requireNotNull(body.single { it.number == 1 }.value)
                     stream = true
                     pointCount = 0
                     true
@@ -84,6 +87,13 @@ internal class SimulatedHandyLink(
                 863 -> stream && pointCount > 0
                 else -> false
             }
+        if (accepted)
+            when (method.number) {
+                715,
+                860,
+                864 -> playing = false
+                863 -> playing = true
+            }
         val reply =
             ProtoWriter()
                 .apply {
@@ -95,6 +105,11 @@ internal class SimulatedHandyLink(
                         // response.
                         else if (method.number != 715)
                             message(method.number) {
+                                if (method.number in 860..867)
+                                    message(1) {
+                                        uint(1, if (playing) 1 else 2)
+                                        uint(10, streamId)
+                                    }
                                 if (method.number == 712) uint(1, clockMillis() and 0xffff_ffffL)
                             }
                     }

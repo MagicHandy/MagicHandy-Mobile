@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import com.magichandy.mobile.core.api.MicSource
+import com.magichandy.mobile.core.api.VoiceConfig
+import com.magichandy.mobile.core.api.VoiceEnd
 import com.magichandy.mobile.core.api.VoiceModel
-import com.magichandy.mobile.core.api.isSpokenStop
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -17,7 +19,8 @@ import kotlin.concurrent.thread
  *
  * Three threads take part: [start]'s loader, which loads the models and starts recording; the
  * microphone's, which levels and judges the audio and queues what the recognizer should hear; and
- * the recognizer's, which hears it, Stop checks first. Each frees what it uses when it ends.
+ * the recognizer's, which alternates bounded chat slices and Stop checks. Each frees what it uses
+ * when it ends.
  */
 internal class VoiceSession(
     private val context: Context,
@@ -33,7 +36,7 @@ internal class VoiceSession(
 
         fun level(loudness: Float, isHearing: Boolean, readout: String?)
 
-        fun spokenStop()
+        fun spokenStop(lastSpeechElapsedMillis: Long)
 
         fun turn(text: String)
 
@@ -45,6 +48,8 @@ internal class VoiceSession(
     private val queue = RecognizerQueue()
     private val lock = Any()
     private var capture: MicCapture? = null
+    @Volatile private var firstCaptureSample = -1L
+    private var lastSpeechSample = 0L
     private var loader: Thread? = null
     private var recognizer: Thread? = null
 
@@ -112,7 +117,10 @@ internal class VoiceSession(
             MicCapture(
                 context,
                 source,
-                onAudio = { samples, _, _ -> hear(segmenter, watch, samples) },
+                onAudio = { samples, _, first ->
+                    if (firstCaptureSample < 0) firstCaptureSample = first
+                    hear(segmenter, watch, samples)
+                },
                 onEnd = { ending -> captureEnded(segmenter, ending) },
             )
         val started =
@@ -136,7 +144,13 @@ internal class VoiceSession(
             val granted =
                 context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED
-            end(if (granted) VoiceEnd.MicFailed else VoiceEnd.MicDenied)
+            end(
+                when {
+                    microphone.endReason == CaptureEnd.InputChanged -> VoiceEnd.InputChanged
+                    granted -> VoiceEnd.MicFailed
+                    else -> VoiceEnd.MicDenied
+                }
+            )
             return
         }
         if (!isEnded.get()) events.listening()
@@ -147,13 +161,24 @@ internal class VoiceSession(
         if (isEnded.get()) return
         val heard =
             segmenter.accept(samples) { probability ->
+                if (probability >= minOf(config.threshold, SpokenStopWatch.STOP_THRESHOLD))
+                    lastSpeechSample = segmenter.position
                 if (watch.accept(probability, segmenter.isSpeaking)) {
                     val now = segmenter.position
-                    queue.checkTail(segmenter.recent(now - SpokenStopWatch.tailSamples, now))
+                    queue.checkTail(
+                        segmenter.recent(now - SpokenStopWatch.tailSamples, now),
+                        lastSpeechSample,
+                    )
                 }
             }
         for (utterance in heard.utterances) {
-            if (utterance.isShort) queue.checkShort(utterance.samples) else queue.addTurn(utterance)
+            val accepted =
+                if (utterance.isShort) queue.checkShort(utterance.samples, utterance.end)
+                else queue.addTurn(utterance)
+            if (!accepted) {
+                end(VoiceEnd.Overloaded)
+                return
+            }
         }
         val readout = if (config.showLevels) readout(segmenter, samples) else null
         events.level(loudness(heard.levelled), segmenter.isSpeaking, readout)
@@ -165,28 +190,19 @@ internal class VoiceSession(
         when (ending) {
             CaptureEnd.Stopped -> Unit
             CaptureEnd.Silenced -> end(VoiceEnd.MicTaken)
+            CaptureEnd.InputChanged -> end(VoiceEnd.InputChanged)
             CaptureEnd.Failed -> end(VoiceEnd.MicFailed)
         }
     }
 
-    /** The recognizer's thread: hears each job, Stop checks first, then frees Parakeet. */
+    /** The recognizer's thread: decodes the queue and frees Parakeet when listening ends. */
     private fun recognize(transcriber: Transcriber) {
         try {
-            while (!isEnded.get()) {
-                when (val job = queue.take(WAIT_MILLIS) ?: continue) {
-                    is RecognizerJob.StopCheck -> {
-                        val text = transcriber.transcribe(job.samples).text
-                        if (isSpokenStop(text)) spokenStop()
-                    }
-                    is RecognizerJob.Turn -> {
-                        val text = transcriber.transcribe(job.utterance.samples).text
-                        when {
-                            isSpokenStop(text) -> spokenStop()
-                            text.isNotBlank() && !isEnded.get() -> events.turn(text)
-                        }
-                    }
+            val decoder =
+                VoiceDecoder(queue, { transcriber.transcribe(it).text }, ::spokenStop) {
+                    if (!isEnded.get()) events.turn(it)
                 }
-            }
+            while (!isEnded.get()) queue.take(WAIT_MILLIS)?.let(decoder::decode)
         } catch (failure: RuntimeException) {
             Log.w(TAG, "Recognition failed", failure)
             end(VoiceEnd.ModelFailed)
@@ -196,9 +212,15 @@ internal class VoiceSession(
     }
 
     /** A spoken Stop: the main process stops every device first, then listening ends. */
-    private fun spokenStop() {
+    private fun spokenStop(lastSpeechSample: Long) {
         if (isEnded.get()) return
-        events.spokenStop()
+        val start = synchronized(lock) { capture?.startedAt } ?: 0L
+        events.spokenStop(
+            if (start > 0)
+                start +
+                    (firstCaptureSample.coerceAtLeast(0L) + lastSpeechSample) * 1000 / SAMPLE_RATE
+            else 0L
+        )
         end(VoiceEnd.Stop)
     }
 

@@ -212,7 +212,7 @@ A Stop can jump ahead of queued operations and retire a stalled generation.
 - **A device in the run** (Handy Cloud, Autoblow, or an Intiface server on the LAN): mark it Lost and stop the whole run. The Handy also pauses by itself when its buffer runs out.
 - **VacuGlide:** send Stop immediately (it may fail), alert, and send Stop again when the network returns and on the next cold start.
 - **Chat turn:** abort the turn and show "Reply interrupted". Keep the message you sent with Send again; never resend automatically.
-- A transient planner failure holds the current segment and retries after 2 seconds with backoff up to 30 seconds within the same run.
+- A transient planner failure holds the current segment and retries after 2 seconds with backoff up to 30 seconds within the same run. A failure the model reports that trying again won't fix, such as an expired sign-in or a model the account can't use, holds planning without retrying. Its banner names the cause and offers Try again, and a changed model connection also wakes it.
 
 **Autopilot:** hold planning. The strip shows "Planning held" alongside what is actually happening, such as "Current segment still playing" on Bluetooth devices. Planning resumes only within the same run.
 
@@ -246,12 +246,14 @@ A hosted refusal can send the current message once to the explicitly selected LA
 
 **Interruption.** Stop cancels the turn and discards any uncommitted reply with a plain notice, as on desktop. Discarded text can never execute later.
 
-A transient planner failure holds the current segment and retries after 2 seconds with backoff up to 30 seconds within the same run.
+A transient planner failure holds the current segment and retries after 2 seconds with backoff up to 30 seconds within the same run. A failure the model reports that trying again won't fix, such as an expired sign-in or a model the account can't use, holds planning without retrying. Its banner names the cause and offers Try again, and a changed model connection also wakes it.
+
+A refusal that requires an account or model change belongs to that planning connection. A chat message or a change of palette leaves the hold in place. Try again, a repaired credential or a different planning connection wakes the planner. An accepted chat motion edit starts a new phrase interval. Autopilot may prepare the next plan during that interval. A pending plan is discarded if the stroke, tempo plan or air setting changes before application.
 
 **Autopilot:**
 
 - Lives in `CoreService`, so it keeps running with the screen off.
-- Holds a wake lock only during an active run; the foreground service keeps network access under Doze.
+- Holds a wake lock during playback or active planning, including the first plan before motion begins. A stationary paused or held planner releases it.
 - Check-ins use one choice: Off, Talk, or Talk and adjust. The planner picks when to check in.
 - An optional finish target, when set, goes to the planner as a structured target, and Live shows the time remaining. You can clear or change it.
 - While the app is in the background, the private notification shows the next change ("changes in 0:40").

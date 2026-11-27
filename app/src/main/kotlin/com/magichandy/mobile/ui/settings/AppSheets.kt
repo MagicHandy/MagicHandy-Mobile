@@ -89,6 +89,7 @@ fun BoxScope.AppSheets(
             SheetPage.VoiceSetup -> VoiceSetupPage(voice, nav::closeSheet)
             SheetPage.VoicePicker -> VoicePickerPage(voice, isFromSettings = false, nav::closeSheet)
             SheetPage.VoiceModel -> VoicePickerPage(voice, isFromSettings = true, nav::closeSheet)
+            SheetPage.Reasoning -> ReasoningPage(state, onIntent, calls.submit)
         }
     }
 }
@@ -112,6 +113,7 @@ private fun sheetTitle(page: SheetPage, state: AppState): String =
         SheetPage.VoiceSetup -> stringResource(R.string.voice_setup_title)
         SheetPage.VoicePicker -> stringResource(R.string.voice_pick_title)
         SheetPage.VoiceModel -> stringResource(R.string.voice_model)
+        SheetPage.Reasoning -> stringResource(R.string.router_reasoning)
     }
 
 @Composable

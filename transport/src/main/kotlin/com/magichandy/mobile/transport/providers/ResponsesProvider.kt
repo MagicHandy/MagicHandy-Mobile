@@ -87,7 +87,9 @@ internal constructor(
             return TextResult.Interrupted
         val admitted =
             budget.admit(messages, preserveTailMessages = contract?.preserveTail ?: 1)
-                ?: return TextResult.Interrupted
+                ?: return TextResult.Failed(
+                    ProviderReplyFailure(ProviderReplyFailure.Reason.ContextLimit)
+                )
         return try {
             val token =
                 tokens.token()

@@ -22,6 +22,8 @@ public data class ChatState(
     public val reply: ReplyState,
     public val chats: List<ChatSummary>,
     public val sendBlockedBy: SendBlock?,
+    /** Earlier entries are on disk and can be requested with [UserIntent.LoadOlderMessages]. */
+    public val hasOlderMessages: Boolean = false,
 )
 
 /** The largest ordinary chat message the core can accept, in UTF-16 code units. */
@@ -74,7 +76,28 @@ public enum class Author {
 
 /** What a reply commanded, shown under it: "Pace 62 → 48 · Stroke 15–85 · commanded". */
 @kotlinx.serialization.Serializable
-public data class CommandReceipt(public val changes: List<ValueChange>)
+public data class CommandReceipt(
+    public val changes: List<ValueChange>,
+    /** Stroke geometry accepted for this turn, present when the pattern changed. */
+    public val pattern: StrokePatternReceipt? = null,
+)
+
+/** The requested stroke pattern within the saved stroke limits, in mounting-neutral coordinates. */
+@kotlinx.serialization.Serializable
+public data class StrokePatternReceipt(
+    public val low: Int,
+    public val high: Int,
+    /** An ordered repeating phrase. An empty list reports only the enclosing stroke range. */
+    public val groups: List<StrokeGroupReceipt> = emptyList(),
+)
+
+/** Number of strokes between [low] and [high] in this part of the phrase. */
+@kotlinx.serialization.Serializable
+public data class StrokeGroupReceipt(
+    public val count: Int,
+    public val low: Int,
+    public val high: Int,
+)
 
 /** One commanded value. [from] is null when the control had no earlier value in this run. */
 @kotlinx.serialization.Serializable

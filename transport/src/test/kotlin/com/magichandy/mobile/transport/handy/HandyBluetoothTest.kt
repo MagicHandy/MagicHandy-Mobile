@@ -18,6 +18,8 @@ import com.magichandy.mobile.core.ports.DiagnosticKind
 import com.magichandy.mobile.core.ports.DiagnosticReporter
 import com.magichandy.mobile.core.ports.StopEvidence
 import com.magichandy.mobile.transport.ble.BluetoothConnector
+import com.magichandy.mobile.transport.ble.BluetoothLink
+import com.magichandy.mobile.transport.simulated.DebugFixture
 import com.magichandy.mobile.transport.simulated.SimulatedDevices
 import com.magichandy.mobile.transport.simulated.simulatedDependencies
 import java.io.IOException
@@ -29,8 +31,11 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -330,5 +335,88 @@ internal class HandyBluetoothTest {
             }
             assertEquals(1, opened)
             assertTrue(written.retired)
+        }
+
+    @Test
+    fun blankMotionReplyDoesNotAuthorizePlayback() = runTest {
+        val reference = HandyPeerLink()
+        val methods = mutableListOf<Int>()
+        val blank =
+            object : BluetoothLink by reference {
+                override suspend fun write(
+                    characteristic: String,
+                    bytes: ByteArray,
+                    withResponse: Boolean,
+                    admitted: () -> Boolean,
+                ) {
+                    check(admitted())
+                    val fields =
+                        fields(requireNotNull(fields(bytes).single { it.number == 2 }.data))
+                    methods += fields.single { it.data != null }.number
+                    val id = requireNotNull(fields.single { it.number == 2 }.value)
+                    reference.events.send(
+                        ProtoWriter()
+                            .apply {
+                                uint(1, 3)
+                                message(4) { uint(1, id) }
+                            }
+                            .bytes()
+                    )
+                }
+            }
+        val f = bluetoothFixture(blank)
+        try {
+            f.onboard()
+            f.connect(DeviceId("handy"))
+            f.send(UserIntent.StartMotion)
+            assertTrue(841 in methods && 861 !in methods && 863 !in methods)
+            assertEquals(RunPhase.Idle, f.core.state.value.run.phase)
+        } finally {
+            f.core.emergencyStop(StopSource.AppFooter)
+            f.scope.cancel()
+        }
+    }
+
+    @Test
+    fun missingOrForeignPlaybackStateCannotAuthorizeMotion() = runTest {
+        for (method in listOf(860, 861, 863)) for (missing in listOf(true, false)) {
+            val peer =
+                HandyPeerLink().apply {
+                    if (missing) missingStateMethod = method else foreignStreamMethod = method
+                }
+            val f = bluetoothFixture(peer)
+            try {
+                f.onboard()
+                f.connect(DeviceId("handy"))
+                f.send(UserIntent.StartMotion)
+                assertTrue(method in peer.methods)
+                assertEquals(RunPhase.Idle, f.core.state.value.run.phase)
+                assertEquals(715, peer.methods.last())
+                if (method != 863) assertTrue(863 !in peer.methods)
+            } finally {
+                f.scope.cancel()
+            }
+        }
+    }
+
+    private fun TestScope.bluetoothFixture(link: BluetoothLink): DebugFixture =
+        DebugFixture(this) { d ->
+            d.copy(
+                devices =
+                    object : DeviceDirectory by d.devices {
+                        override suspend fun connect(
+                            device: DeviceId,
+                            ownerScope: CoroutineScope,
+                        ): DeviceTransport {
+                            val ref = d.devices.saved.first { it.ref.id == device }.ref
+                            return HandyBluetoothSession.connect(
+                                ref,
+                                ScanResultId("fake"),
+                                BluetoothConnector { _, _, _ -> link },
+                                ownerScope,
+                            )
+                        }
+                    }
+            )
         }
 }

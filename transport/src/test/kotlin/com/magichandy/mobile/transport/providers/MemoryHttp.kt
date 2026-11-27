@@ -32,11 +32,11 @@ internal class MemoryHttp(val respond: (Request) -> Response?) : Call.Factory {
         }
 }
 
-internal fun Request.reply(text: String, type: String = "application/json") =
+internal fun Request.reply(text: String, type: String = "application/json", code: Int = 200) =
     Response.Builder()
         .request(this)
         .protocol(Protocol.HTTP_1_1)
-        .code(200)
+        .code(code)
         .message("OK")
         .body(text.toResponseBody(type.toMediaType()))
         .build()

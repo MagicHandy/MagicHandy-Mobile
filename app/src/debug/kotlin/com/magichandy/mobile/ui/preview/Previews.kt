@@ -378,7 +378,14 @@ private fun AddServerFailed(@PreviewParameter(PaletteProvider::class) palette: P
 @Preview(widthDp = 390, heightDp = 844)
 @Composable
 private fun OpenRouter(@PreviewParameter(PaletteProvider::class) palette: Palette) =
-    InFrame(palette) { OpenRouterScreen(submit = CoreCalls.None.submit, onBack = {}) }
+    InFrame(palette) {
+        OpenRouterScreen(
+            SampleStates.playing.models,
+            CoreCalls.None.submit,
+            onIntent = {},
+            onBack = {},
+        )
+    }
 
 @Preview(widthDp = 390, heightDp = 844)
 @Composable

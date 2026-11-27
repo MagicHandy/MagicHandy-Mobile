@@ -16,6 +16,7 @@ import com.magichandy.mobile.core.api.ReplyState
 import com.magichandy.mobile.core.api.maximumMessageLength
 import com.magichandy.mobile.core.chat.ConversationWindow
 import com.magichandy.mobile.core.chat.requestedMemory
+import com.magichandy.mobile.core.chat.turnHistory
 import com.magichandy.mobile.core.motion.EndedRun
 import com.magichandy.mobile.core.motion.EngineState
 import com.magichandy.mobile.core.motion.MotionEngine
@@ -26,9 +27,7 @@ import com.magichandy.mobile.core.ports.Epoch
 import com.magichandy.mobile.core.ports.ModelProvider
 import com.magichandy.mobile.core.ports.SavedModel
 import com.magichandy.mobile.core.ports.StructuredProvider
-import com.magichandy.mobile.core.ports.TextMessage
 import com.magichandy.mobile.core.ports.TextResult
-import com.magichandy.mobile.core.ports.TextRole
 import com.magichandy.mobile.core.ports.activePersona
 import com.magichandy.mobile.core.ports.builtInPersona
 import com.magichandy.mobile.core.speakingProvider
@@ -110,6 +109,7 @@ internal class ChatTurns(
                         chatId = chat?.summary?.id,
                         title = chat?.summary?.title.orEmpty(),
                         entries = chat?.messages.orEmpty().withHistoricalSpeakers(),
+                        hasOlderMessages = chat?.hasOlderMessages == true,
                         reply =
                             if (
                                 completed != null &&
@@ -175,7 +175,7 @@ internal class ChatTurns(
         val chat = ui.value.chat.chatId ?: newChat(message.take(48), persona)
         d.chats.loadPage(chat)
         if (engine.epoch != expected) return
-        if (!retry && !saveUserMessage(chat, message)) return
+        if (!retry && !saveUserMessage(chat, message, expected)) return
         val turn = Turn(chat, expected, message, settings.values.memoryOn, persona)
         val authority = engine.state.value
         active.value = turn
@@ -184,11 +184,10 @@ internal class ChatTurns(
             interrupt(InterruptCause.MotionStopped)
             return
         }
-        val window = ConversationWindow.named(model.info.capability, model.contextTokens)
-        val history = history(chat, window, message)
+        val window = ConversationWindow.forModel(model)
         job =
             engine.launchWork(expected, WorkKind.Turn, d.dispatchers.io) {
-                stream(turn, provider, history, model, authority)
+                stream(turn, provider, window, model, authority)
             }
     }
 
@@ -204,47 +203,28 @@ internal class ChatTurns(
         return message?.takeIf { it.isNotBlank() && it.length <= maximumMessageLength }
     }
 
-    private suspend fun saveUserMessage(chat: ChatId, message: String): Boolean {
+    private suspend fun saveUserMessage(chat: ChatId, message: String, expected: Epoch): Boolean {
         val entry = ChatEntry.Message(entryId(), d.clock.now(), Author.You, message, null)
-        if (!d.chats.append(chat, entry, builtInPersona.id, emptyList()) { true }) return false
+        if (
+            !d.chats.append(chat, entry, builtInPersona.id, emptyList()) {
+                engine.epoch == expected
+            }
+        )
+            return false
         showArchive()
         return true
-    }
-
-    private fun history(
-        chat: ChatId,
-        window: ConversationWindow,
-        message: String,
-    ): List<TextMessage> {
-        val newest =
-            d.chats.state.value.chats[chat]
-                ?.messages
-                .orEmpty()
-                .asReversed()
-                .asSequence()
-                .filterIsInstance<ChatEntry.Message>()
-        // The current message was already committed, including on Send again.
-        val previous =
-            newest
-                .dropWhile { it.author != Author.You }
-                .drop(1)
-                .map {
-                    TextMessage(
-                        if (it.author == Author.You) TextRole.User else TextRole.Assistant,
-                        it.text,
-                    )
-                }
-        return window.recent(previous) + TextMessage(TextRole.User, message)
     }
 
     private suspend fun stream(
         turn: Turn,
         provider: ModelProvider,
-        history: List<TextMessage>,
+        window: ConversationWindow,
         model: SavedModel,
         authority: EngineState,
     ) {
         try {
+            val history = d.chats.turnHistory(turn.chat, window, turn.message)
+            if (!valid(turn)) return
             val previewLock = Any()
             val buffer = StringBuilder()
             var lastUpdate = -Duration.INFINITE
@@ -313,7 +293,11 @@ internal class ChatTurns(
                     is ProposalCompletion.ProviderFailed ->
                         markInterrupted(turn, InterruptCause.ProviderError, reply.error)
                 }
-            } else finish(turn, provider.stream(history, openPreview({ true }, reset = false)))
+            } else
+                finish(
+                    turn,
+                    provider.stream(history.messages, openPreview({ true }, reset = false)),
+                )
         } catch (cancelled: CancellationException) {
             markInterrupted(turn, InterruptCause.MotionStopped)
             throw cancelled
@@ -409,8 +393,15 @@ internal class ChatTurns(
         providerFailure: ProviderReplyFailure? = null,
     ) {
         if (active.compareAndSet(turn, null))
-            ui.update {
-                it.copy(chat = it.chat.copy(reply = ReplyState.Interrupted(cause, providerFailure)))
+            ui.update { state ->
+                if (state.chat.chatId != turn.chat || active.value != null) state
+                else {
+                    val interrupted =
+                        if (engine.epoch != turn.epoch)
+                            ReplyState.Interrupted(InterruptCause.MotionStopped)
+                        else ReplyState.Interrupted(cause, providerFailure)
+                    state.copy(chat = state.chat.copy(reply = interrupted))
+                }
             }
     }
 

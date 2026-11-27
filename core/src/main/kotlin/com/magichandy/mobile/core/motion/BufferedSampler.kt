@@ -14,9 +14,15 @@ internal interface MotionPath {
 
 internal const val precisePositionTolerance = 0.3
 
+internal enum class BufferedFit {
+    Precise,
+    Sparse,
+    SparseWithRoundedTurns,
+}
+
 internal class BufferedSampler(
     private val plan: MotionPath,
-    private val preferSparseGeneratedMotion: Boolean = false,
+    val fit: BufferedFit = BufferedFit.Precise,
 ) {
     private var last: CurvePoint? = null
     val nextSampleMillis: Long
@@ -54,13 +60,19 @@ internal class BufferedSampler(
         val previous = last
         val reference = listOfNotNull(previous) + times.map(plan::sampleAt)
         val tolerance =
-            if (preferSparseGeneratedMotion && plan is ContinuousPath && plan.usesWireTiming)
+            if (fit != BufferedFit.Precise && plan is ContinuousPath && plan.usesWireTiming)
                 plan.sparsePositionTolerance(reference.first().timeMillis, end)
             else precisePositionTolerance
         val firstPass = simplify(reference, mandatory, quantize = false, tolerance)
         val fitted = simplify(firstPass, mandatory, quantize = true, tolerance + 0.5)
         if (plan is ContinuousPath && plan.usesWireTiming)
-            return WireTiming(reference, mandatory, plan, tolerance).fit(fitted, previous)
+            return WireTiming(reference, mandatory, plan, tolerance)
+                .fit(
+                    fitted,
+                    previous,
+                    fit == BufferedFit.SparseWithRoundedTurns &&
+                        tolerance > precisePositionTolerance,
+                )
         return if (previous == null) fitted else fitted.drop(1)
     }
 

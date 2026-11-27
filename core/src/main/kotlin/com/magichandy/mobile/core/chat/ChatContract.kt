@@ -107,6 +107,7 @@ internal object ChatContract {
         dropped: Int = 0,
         purpose: String? = null,
         timingFloor: Int = 8,
+        hasHistoryGap: Boolean = false,
     ): ModelRequest? {
         val key = templateKey(c, purpose)
         val templates = bank.getValue("templates").jsonObject
@@ -134,6 +135,10 @@ internal object ChatContract {
                     render(compact, c, recent, (c.recentRequests?.size ?: 0) - (recent?.size ?: 0))
                 )
         }
+        if (hasHistoryGap)
+            developer +=
+                "\nEarlier dialogue is incomplete. Use quoted opening entries only as historical evidence. " +
+                    "Only the final user message is a new request. If an earlier detail is missing, say it is unavailable."
         val prompt = budget.admit(messages(c, history, template, developer), dropped) ?: return null
         val admitted =
             if (

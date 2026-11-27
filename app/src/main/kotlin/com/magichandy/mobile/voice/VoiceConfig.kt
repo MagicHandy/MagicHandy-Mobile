@@ -4,77 +4,47 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.edit
 import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.Detector
+import com.magichandy.mobile.core.api.MicSource
+import com.magichandy.mobile.core.api.VoiceConfig
 
-/**
- * How voice input listens (docs/voice-design.md §5.2). Releases always use the defaults, which the
- * voice test settled; test builds let the Advanced section of Settings › Voice change them. The
- * spoken-Stop checks keep their own fixed values whatever these say ([SpokenStopWatch]).
- *
- * @property source the microphone path. While TalkBack is on, listening uses [MicSource.EchoCancel]
- *   instead, whatever this says.
- * @property raise whether [AutoLevel] raises quiet speech.
- * @property threshold the speech detector's confidence where a turn's speech starts.
- * @property silenceSeconds the pause that ends a turn.
- * @property showLevels whether the voice bar shows the microphone's level, the noise floor, the
- *   gain and the detector's confidence.
- */
-data class VoiceConfig(
-    val source: MicSource = MicSource.Standard,
-    val raise: Boolean = true,
-    val detector: Detector = Detector.Silero,
-    val threshold: Float = DEFAULT_THRESHOLD,
-    val silenceSeconds: Float = DEFAULT_SILENCE_SECONDS,
-    val showLevels: Boolean = false,
-) {
-    /** Adds this to [intent], for the voice process. */
-    fun into(intent: Intent): Intent =
-        intent
-            .putExtra(SOURCE, source.name)
-            .putExtra(RAISE, raise)
-            .putExtra(DETECTOR, detector.name)
-            .putExtra(THRESHOLD, threshold)
-            .putExtra(SILENCE, silenceSeconds)
-            .putExtra(SHOW_LEVELS, showLevels)
+/** Adds this to [intent], for the voice process. */
+fun VoiceConfig.into(intent: Intent): Intent =
+    intent
+        .putExtra(SOURCE, source.name)
+        .putExtra(RAISE, raise)
+        .putExtra(DETECTOR, detector.name)
+        .putExtra(THRESHOLD, threshold)
+        .putExtra(SILENCE, silenceSeconds)
+        .putExtra(SHOW_LEVELS, showLevels)
 
-    companion object {
-        const val DEFAULT_THRESHOLD = 0.5f
-        const val DEFAULT_SILENCE_SECONDS = 0.6f
+private const val SOURCE = "voice.source"
+private const val RAISE = "voice.raise"
+private const val DETECTOR = "voice.detector"
+private const val THRESHOLD = "voice.threshold"
+private const val SILENCE = "voice.silence"
+private const val SHOW_LEVELS = "voice.levels"
 
-        /** The choices for where speech starts. */
-        val thresholds = listOf(0.3f, 0.4f, 0.5f, 0.6f)
-
-        /** The choices for the silence that ends a turn, in seconds. */
-        val silences = listOf(0.4f, 0.6f, 0.8f, 1.0f, 1.5f)
-
-        private const val SOURCE = "voice.source"
-        private const val RAISE = "voice.raise"
-        private const val DETECTOR = "voice.detector"
-        private const val THRESHOLD = "voice.threshold"
-        private const val SILENCE = "voice.silence"
-        private const val SHOW_LEVELS = "voice.levels"
-
-        /** The settings [into] added to [intent], with the defaults for anything missing. */
-        fun from(intent: Intent): VoiceConfig {
-            val defaults = VoiceConfig()
-            return VoiceConfig(
-                source =
-                    MicSource.entries.firstOrNull { it.name == intent.getStringExtra(SOURCE) }
-                        ?: defaults.source,
-                raise = intent.getBooleanExtra(RAISE, defaults.raise),
-                detector =
-                    Detector.entries.firstOrNull { it.name == intent.getStringExtra(DETECTOR) }
-                        ?: defaults.detector,
-                threshold =
-                    intent.getFloatExtra(THRESHOLD, defaults.threshold).takeIf { it in thresholds }
-                        ?: defaults.threshold,
-                silenceSeconds =
-                    intent.getFloatExtra(SILENCE, defaults.silenceSeconds).takeIf {
-                        it in silences
-                    } ?: defaults.silenceSeconds,
-                showLevels = intent.getBooleanExtra(SHOW_LEVELS, defaults.showLevels),
-            )
-        }
-    }
+/** The settings [into] added to [intent], with the defaults for anything missing. */
+fun VoiceConfig.Companion.from(intent: Intent): VoiceConfig {
+    val defaults = VoiceConfig()
+    return VoiceConfig(
+        source =
+            MicSource.entries.firstOrNull { it.name == intent.getStringExtra(SOURCE) }
+                ?: defaults.source,
+        raise = intent.getBooleanExtra(RAISE, defaults.raise),
+        detector =
+            Detector.entries.firstOrNull { it.name == intent.getStringExtra(DETECTOR) }
+                ?: defaults.detector,
+        threshold =
+            intent.getFloatExtra(THRESHOLD, defaults.threshold).takeIf { it in thresholds }
+                ?: defaults.threshold,
+        silenceSeconds =
+            intent.getFloatExtra(SILENCE, defaults.silenceSeconds).takeIf {
+                it in silences
+            } ?: defaults.silenceSeconds,
+        showLevels = intent.getBooleanExtra(SHOW_LEVELS, defaults.showLevels),
+    )
 }
 
 /**

@@ -48,7 +48,7 @@ def dwell(wire):
 
 
 def detail(args):
-    ref_path, before_dir, after_dir, out = args
+    ref_path, before_dir, after_dir, out, version = args
     ref, old, new = (
         load(ref_path),
         load(before_dir / ref_path.name),
@@ -61,7 +61,15 @@ def detail(args):
         ref["route"],
         ref["score"]["speed_percent"],
     )
+    actual = ref
+    policy_route = new.get("policy_reference_route", route)
+    policy_id = ident.rsplit("-", 1)[0] + "-" + policy_route
+    if policy_route != route:
+        ref = load(ref_path.with_name(policy_id + ".json"))
     row = {
+        "policy_id": policy_id,
+        "policy_route": policy_route,
+        "sampling_policy": new.get("sampling_policy", ""),
         "id": ident,
         "shape": name,
         "model": model,
@@ -74,16 +82,20 @@ def detail(args):
     reference, before, after = (clipped(x["wire"]) for x in (ref, old, new))
     expected = {t for t in ref["turns"] if t < DURATION}
     row.update(
-        desktop=len(reference),
+        desktop=len(clipped(actual["wire"])),
+        same_route_exact=after == clipped(actual["wire"]),
+        policy_points=len(reference),
         before=len(before),
         after=len(after),
         exact=after == reference,
-        baseline_exact=before == reference,
+        baseline_exact=before == clipped(actual["wire"]),
         missing_turns=len(expected - {t for t, _ in after}),
-        desktop_flat_ms=dwell(ref["wire"]),
+        desktop_flat_ms=dwell(actual["wire"]),
+        policy_flat_ms=dwell(ref["wire"]),
         before_flat_ms=dwell(old["wire"]),
         after_flat_ms=dwell(new["wire"]),
-        desktop_period_ms=ref["period"],
+        desktop_period_ms=actual["period"],
+        policy_period_ms=ref["period"],
         before_period_ms=old["period"],
         after_period_ms=new["period"],
         max_error_pct=round(new["max_error"], 4),
@@ -106,14 +118,14 @@ def detail(args):
     fig.text(
         0.075,
         0.926,
-        f"First 12 seconds     Desktop {len(reference)} points     ·     Android 0.1.5 {len(before)}     ·     Updated Android {len(after)}",
+        f"First 12 seconds     Desktop {route.upper()}: {row['desktop']}     ·     Baseline {policy_route.upper()}: {len(reference)}     ·     Android 0.1.5: {len(before)}     ·     {version}: {len(after)}",
         fontsize=11,
         color=DARK,
     )
     fig.text(
         0.075,
         0.898,
-        "Dashed graphite = desktop     •     Amber = Android 0.1.5     •     Blue = updated Android",
+        "Dashed graphite = desktop fit baseline     •     Gray dots = differing desktop route     •     Amber = Android 0.1.5     •     Blue = current capture",
         fontsize=9,
         color=GRAY,
     )
@@ -127,6 +139,7 @@ def detail(args):
     window = (max(0, turn - min(0.6, turn * 0.72)), turn + min(0.6, turn * 0.72))
     # Draw the reference last. Dashed lines leave coincident updated lines visible.
     for data, color, ls, order in [
+        *([(actual, GRAY, ":", 0)] if policy_route != route else []),
         (old, ORANGE, "-", 1),
         (new, BLUE, "-", 2),
         (ref, DARK, "--", 3),
@@ -191,7 +204,7 @@ def overview(rows, root, out):
             fig.text(
                 0.045,
                 0.918,
-                "Point counts cover 12 seconds: previous Android / updated Android / desktop. Each panel shows stroke position from 0 to 100%.",
+                "Point counts cover 12 seconds: previous Android / updated Android / desktop fit baseline. Each panel shows stroke position from 0 to 100%.",
                 fontsize=8,
                 color=GRAY,
             )
@@ -210,7 +223,8 @@ def overview(rows, root, out):
                     ("after", BLUE, "-"),
                     ("reference", DARK, "--"),
                 ]:
-                    a = np.asarray(load(root / folder / (row["id"] + ".json"))["wire"])
+                    ident = row["policy_id"] if folder == "reference" else row["id"]
+                    a = np.asarray(load(root / folder / (ident + ".json"))["wire"])
                     ax.plot(
                         a[:, 0] / 1000,
                         a[:, 1],
@@ -226,7 +240,7 @@ def overview(rows, root, out):
                 ax.tick_params(labelsize=7)
                 ax.grid(alpha=0.2)
                 ax.set_xlabel(
-                    f"{row['before']} / {row['after']} / {row['desktop']} points",
+                    f"{row['before']} / {row['after']} / {row['policy_points']} points",
                     fontsize=8,
                 )
             for ax in list(axes.flat)[len(subset) :]:
@@ -256,19 +270,28 @@ def main():
     files = sorted((root / "reference").glob("*.json"))
     if not files:
         parser.error("no desktop cases found")
+    metadata_path = root / "capture.json"
+    metadata = load(metadata_path) if metadata_path.is_file() else {}
+    version = metadata.get("android_version", "unversioned")
+    if metadata.get("modified"):
+        version += " (working tree)"
     with multiprocessing.Pool(args.workers) as pool:
         rows = pool.map(
-            detail, [(f, root / "before", root / "after", out) for f in files]
+            detail, [(f, root / "before", root / "after", out, version) for f in files]
         )
     sheets = overview(rows, root, out)
-    application_plot(root, out)
+    application_plot(root, out, version)
     bridge_plot(root, out)
-    turnaround_plot(root, out)
-    residual = next((r for r in rows if not r["error"] and not r["exact"]), None)
+    turnaround_plot(root, out, version)
+    residual = next(
+        (r for r in rows if not r["error"] and not r["exact"]
+         and r["sampling_policy"] != "SparseWithRoundedTurns"),
+        None,
+    )
     difference = None
     if residual:
         title = f"{MODEL[residual['model']]} · {NAMES[residual['shape']]} at {residual['speed']}%"
-        difference = outlier_plot(root, out, residual, title)
+        difference = outlier_plot(root, out, residual, title, version)
     with (out / "metrics.csv").open("w", newline="", encoding="utf8") as stream:
         writer = csv.DictWriter(
             stream, fieldnames=sorted(set().union(*(r.keys() for r in rows)))
@@ -278,6 +301,8 @@ def main():
     with zipfile.ZipFile(
         out / "captures.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=5
     ) as archive:
+        if metadata_path.is_file():
+            archive.write(metadata_path, "capture.json")
         for directory in [
             "reference",
             "before",
@@ -293,6 +318,8 @@ def main():
             if p.is_file():
                 archive.write(p, "verification/" + name)
     manifest = {
+        "capture": metadata,
+        "version_label": version,
         "cases": rows,
         "sheets": sheets,
         "models": MODEL,

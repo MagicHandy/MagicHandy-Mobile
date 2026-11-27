@@ -8,8 +8,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.DownloadPhase
 import com.magichandy.mobile.core.api.Palette
+import com.magichandy.mobile.core.api.VoiceControls
+import com.magichandy.mobile.core.api.VoiceDownload
+import com.magichandy.mobile.core.api.VoiceEnd
+import com.magichandy.mobile.core.api.VoiceListening
+import com.magichandy.mobile.core.api.VoiceMeter
 import com.magichandy.mobile.core.api.VoiceModel
+import com.magichandy.mobile.core.api.VoiceNotice
+import com.magichandy.mobile.core.api.VoiceState
 import com.magichandy.mobile.ui.AppContent
 import com.magichandy.mobile.ui.components.AppFrame
 import com.magichandy.mobile.ui.components.SheetHeader
@@ -20,14 +28,6 @@ import com.magichandy.mobile.ui.voice.VoicePickerPage
 import com.magichandy.mobile.ui.voice.VoiceSettingsScreen
 import com.magichandy.mobile.ui.voice.VoiceSetupPage
 import com.magichandy.mobile.ui.voice.VoiceUi
-import com.magichandy.mobile.voice.DownloadPhase
-import com.magichandy.mobile.voice.VoiceControls
-import com.magichandy.mobile.voice.VoiceDownload
-import com.magichandy.mobile.voice.VoiceEnd
-import com.magichandy.mobile.voice.VoiceListening
-import com.magichandy.mobile.voice.VoiceMeter
-import com.magichandy.mobile.voice.VoiceNotice
-import com.magichandy.mobile.voice.VoiceState
 
 /** Voice input's screens (docs/voice-design.md; boards V-Voice*), each beside its board. */
 private object VoiceSamples {
@@ -92,7 +92,7 @@ private object VoiceSamples {
     val takenNotice = ready.copy(notice = VoiceNotice(VoiceEnd.MicTaken, VoiceModel.Compact))
 
     fun ui(state: VoiceState, meter: VoiceMeter = VoiceMeter()) =
-        VoiceUi.of(VoiceControls.Fixed(state, meter))
+        VoiceUi.of(VoiceControls.Fixed(state.copy(storage = previewStorage), meter))
 }
 
 @Composable
@@ -103,7 +103,12 @@ private fun WholeAppWithVoice(
     meter: VoiceMeter = VoiceMeter(),
 ) {
     MagicHandyTheme(palette) {
-        AppContent(state, onIntent = {}, onStop = {}, voice = VoiceControls.Fixed(voice, meter))
+        AppContent(
+            state,
+            onIntent = {},
+            onStop = {},
+            voice = VoiceControls.Fixed(voice.copy(storage = previewStorage), meter),
+        )
     }
 }
 
@@ -228,3 +233,11 @@ private fun VoiceDownloading() =
 @Composable
 private fun VoiceEnded() =
     WholeAppWithVoice(SampleStates.playing, VoiceSamples.takenNotice, Palette.SteelAzure)
+
+private val previewStorage =
+    mapOf(
+        VoiceModel.Compact to
+            com.magichandy.mobile.core.api.VoiceModelStorage(671220638L, 1171220638L),
+        VoiceModel.Full to
+            com.magichandy.mobile.core.api.VoiceModelStorage(2550516374L, 3050516374L),
+    )

@@ -42,6 +42,7 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
         model: HandyModel,
         test: Boolean,
         position: PlaybackPosition,
+        onStoppedAway: (suspend () -> Unit)?,
         commanded: (MotionBatch, ManualTarget) -> Unit,
     ) {
         if (test) scheduleMotorStop(stream)
@@ -63,6 +64,7 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                         owners,
                         ScoreTimeline(initial.value, model, position),
                         test,
+                        onStoppedAway,
                         commanded,
                     )
             }
@@ -84,6 +86,7 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
         owners: List<DeviceTransport>,
         timeline: ScoreTimeline,
         test: Boolean,
+        onStoppedAway: (suspend () -> Unit)?,
         commanded: (MotionBatch, ManualTarget) -> Unit,
     ) {
         val stream = initialPosition.stream
@@ -150,11 +153,7 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                 DiagnosticReporter.record(DiagnosticKind.TransportWriteFailed)
                 return engine.stop(null, stream = stream)
             }
-            if (
-                batch.isFirst &&
-                    !sendToOwners(stream, owners.filter { it.startupPosition != null }, batch, true)
-            )
-                return engine.stop(null, stream = stream)
+            if (batch.isFirst && !prepare(stream, owners, batch, onStoppedAway)) return
             val linked = batch.isFirst && owners.size > 1 && buffered.any { it.linkedStart != null }
             if (
                 linked &&
@@ -241,11 +240,39 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
         )
     }
 
+    /** The entire roster finishes positioning before any owner can receive main motion. */
+    private suspend fun prepare(
+        stream: PlaybackStream,
+        owners: List<DeviceTransport>,
+        batch: MotionBatch,
+        onStoppedAway: (suspend () -> Unit)?,
+    ): Boolean {
+        val results = coroutineScope {
+            owners
+                .filter { it.startupPosition != null }
+                .map { owner ->
+                    async(d.dispatchers.io) {
+                        engine.prepare(stream, owner, batch, onStoppedAway != null)
+                    }
+                }
+                .awaitAll()
+        }
+        if (results.all { it == StartupResult.Ready }) return true
+        if (
+            onStoppedAway != null &&
+                results.all {
+                    it == StartupResult.Ready || it == StartupResult.StoppedAway
+                }
+        )
+            onStoppedAway()
+        else engine.stop(null, stream = stream)
+        return false
+    }
+
     private suspend fun sendToOwners(
         stream: PlaybackStream,
         owners: List<DeviceTransport>,
         batch: MotionBatch,
-        prepare: Boolean = false,
         origin: Duration? = null,
         linearBatches: Map<LinearSampling, MotionBatch> = emptyMap(),
     ): Boolean = coroutineScope {
@@ -260,7 +287,6 @@ internal class ManualPlayback(private val d: CoreDependencies, private val engin
                             owner,
                             linearBatches[owner.linearSampling]?.copy(deferPlay = batch.deferPlay)
                                 ?: batch,
-                            prepare,
                         )
                 }
             }

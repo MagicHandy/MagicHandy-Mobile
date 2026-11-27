@@ -5,8 +5,6 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.IBinder
 import android.os.Message
 import android.os.RemoteException
@@ -15,31 +13,33 @@ import android.os.storage.StorageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityManager
 import com.magichandy.mobile.core.api.AppState
-import com.magichandy.mobile.core.api.AutopilotStatus
-import com.magichandy.mobile.core.api.ChatId
 import com.magichandy.mobile.core.api.MagicHandyCore
-import com.magichandy.mobile.core.api.ReplyState
+import com.magichandy.mobile.core.api.MicSource
 import com.magichandy.mobile.core.api.RunPhase
 import com.magichandy.mobile.core.api.StartupState
-import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.api.VoiceConfig
+import com.magichandy.mobile.core.api.VoiceControls
+import com.magichandy.mobile.core.api.VoiceEnd
+import com.magichandy.mobile.core.api.VoiceListening
+import com.magichandy.mobile.core.api.VoiceMeter
 import com.magichandy.mobile.core.api.VoiceModel
-import com.magichandy.mobile.core.api.maximumMessageLength
+import com.magichandy.mobile.core.api.VoiceNotice
+import com.magichandy.mobile.core.api.VoiceState
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Voice input's side in the main process (docs/voice-design.md §4–§8): what Chat and Settings show,
@@ -57,9 +57,10 @@ internal class VoiceController(
     private val context: Context,
     private val core: MagicHandyCore,
     private val scope: CoroutineScope,
+    modelStore: ModelStore? = null,
 ) : VoiceControls {
     private val folder = VoiceService.modelFolder(context)
-    private val store = ModelStore(folder, freeBytes = ::freeBytes)
+    private val store = modelStore ?: ModelStore(folder, freeBytes = ::freeBytes)
     private val tuning = VoiceTuning(context)
     private val ui = Dispatchers.Main.immediate
     private val mutableState: MutableStateFlow<VoiceState>
@@ -69,7 +70,13 @@ internal class VoiceController(
     override val meter: StateFlow<VoiceMeter> = mutableMeter.asStateFlow()
 
     /** The listening session, from the tap until it ends. */
-    private class Session(val id: Int, val epoch: Long, val model: VoiceModel, val startedAt: Long)
+    private class Session(
+        val id: Int,
+        val epoch: Long,
+        val model: VoiceModel,
+        val startedAt: Long,
+        val turns: VoiceTurns,
+    )
 
     private var session: Session? = null
     private var sessions = 0
@@ -78,28 +85,22 @@ internal class VoiceController(
     private val current = AtomicInteger(0)
     private val lastHeard = AtomicLong(0)
     private var lastPlaying = 0L
-    private var voiceProcess: IBinder? = null
-    private val processDied = IBinder.DeathRecipient { scope.launch(ui) { voiceProcessDied() } }
 
-    private var downloading: Job? = null
+    private class VoiceProcess(val binder: IBinder, val death: IBinder.DeathRecipient)
 
-    /** Deleting what a cancelled download fetched; a new download waits for it. */
-    private var discarding: Job? = null
+    private var voiceProcess: VoiceProcess? = null
+
     private var ticking: Job? = null
     private var isShown = false
-    private var isSettled = false
-    private var coreChoice: VoiceModel? = null
 
-    /** The model to delete when listening ends: the one a finished switch replaced. */
-    private var retiring: VoiceModel? = null
+    private data class StartRequest(val model: VoiceModel, val epoch: Long)
 
-    /** Turns waiting for the streaming reply, and the chat they were heard in. */
-    private val waiting = mutableListOf<String>()
-    private var waitingChat: ChatId? = null
+    private var pendingStart: StartRequest? = null
+    private var detectorJob: Job? = null
+    override val stopEpoch: Long
+        get() = core.currentStopEpoch
 
-    /** When a turn was sent, until its reply is seen streaming. */
-    private var sentAt: Long? = null
-
+    private val downloads: VoiceDownloads
     /** The epoch of the session a Stop ended, until the Stop's own epoch is seen. */
     private var stoppedUnder: Long? = null
 
@@ -115,7 +116,18 @@ internal class VoiceController(
                     canChooseModel = memory >= FULL_MEMORY_BYTES,
                     showsHiddenSettings = tuning.isShown,
                     config = tuning.read(),
+                    storage = voiceModelStorage(),
                 )
+            )
+        downloads =
+            VoiceDownloads(
+                context,
+                core,
+                scope,
+                mutableState,
+                store,
+                { session?.model },
+                ::modelReady,
             )
         state = mutableState.asStateFlow()
         scope.launch(ui) { core.state.collect { observe(it) } }
@@ -123,83 +135,88 @@ internal class VoiceController(
 
     // The app
 
-    /** The app came on screen: a paused download resumes. */
     fun appShown() = onUi {
         isShown = true
-        if (isSettled) resumePaused()
+        downloads.appShown()
     }
 
-    /** The app left the screen: a download pauses, and won't start listening when it finishes. */
     fun appHidden() = onUi {
         isShown = false
-        val download = mutableState.value.download ?: return@onUi
-        if (download.phase == DownloadPhase.Running) {
-            downloading?.cancel()
-            downloading = null
-            setDownload(download.copy(phase = DownloadPhase.Paused, startsListening = false))
-        }
+        revokeStart()
+        downloads.appHidden()
     }
 
-    // What the UI asks
-
     override fun start() = onUi {
-        val now = mutableState.value
-        val model = now.installed
-        if (now.listening != null || model == null) return@onUi
+        val model = state.value.installed ?: return@onUi
+        if (session != null || !isShown) return@onUi
+        val request = StartRequest(model, stopEpoch)
+        if (pendingStart != request) {
+            revokeStart()
+            pendingStart = request
+        }
+        modelReady(model)
+    }
+
+    private fun revokeStart() {
+        pendingStart = null
+        detectorJob?.cancel()
+        detectorJob = null
+        downloads.disarm()
+    }
+
+    private fun modelReady(model: VoiceModel) {
+        val request = pendingStart ?: return
+        if (request.model != model || request.epoch != stopEpoch || !isShown || session != null)
+            return
         if (!isGranted()) {
+            revokeStart()
             notice(VoiceNotice(VoiceEnd.MicDenied, model))
-            return@onUi
+            return
         }
         val config = tuning.read()
         if (!store.has(config.detector.model)) {
-            fetchDetectorThenStart(config.detector)
-            return@onUi
+            if (detectorJob?.isActive != true)
+                detectorJob =
+                    scope.launch(ui) {
+                        try {
+                            store.download(listOf(config.detector.model)) { _, _ -> }
+                            if (pendingStart === request) modelReady(model)
+                        } catch (failure: IOException) {
+                            currentCoroutineContext().ensureActive()
+                            if (pendingStart === request) {
+                                pendingStart = null
+                                notice(VoiceNotice(VoiceEnd.ModelMissing, model))
+                            }
+                        }
+                    }
+            return
         }
-        listen(model, if (isTalkBackOn()) config.copy(source = MicSource.EchoCancel) else config)
+        pendingStart = null
+        listen(request, if (isTalkBackOn()) config.copy(source = MicSource.EchoCancel) else config)
     }
 
-    override fun end() = onUi { endListening(VoiceEnd.User) }
+    override fun end() = onUi {
+        revokeStart()
+        endListening(VoiceEnd.User)
+    }
 
     override fun download(model: VoiceModel, andStart: Boolean) = onUi {
-        val now = mutableState.value
-        choose(model)
-        val download = now.download
-        if (download != null && download.model != model) discardDownload(download.model)
-        when {
-            now.installed == model -> if (andStart) start()
-            download?.model == model && downloading?.isActive == true -> Unit
-            else -> fetch(model, startsListening = andStart && isShown)
-        }
+        revokeStart()
+        if (andStart && isShown) pendingStart = StartRequest(model, stopEpoch)
+        downloads.download(model, andStart && pendingStart != null)
     }
 
     override fun cancelDownload() = onUi {
-        val download = mutableState.value.download ?: return@onUi
-        discardDownload(download.model)
-        choose(mutableState.value.installed ?: VoiceModel.Compact)
+        revokeStart()
+        downloads.cancelDownload()
     }
 
-    override fun retryDownload() = onUi {
-        val download = mutableState.value.download ?: return@onUi
-        fetch(
-            download.model,
-            startsListening = mutableState.value.installed == null && isShown,
-        )
-    }
+    override fun retryDownload() = onUi { downloads.retryDownload() }
 
     override fun remove() = onUi {
+        revokeStart()
         endListening(VoiceEnd.User)
-        val running = downloading
-        downloading = null
-        retiring = null
-        mutableState.update { it.copy(installed = null, download = null, notice = null) }
-        choose(VoiceModel.Compact)
-        val before = discarding
-        discarding =
-            scope.launch(ui) {
-                before?.join()
-                running?.cancelAndJoin()
-                withContext(Dispatchers.IO) { folder.deleteRecursively() }
-            }
+        downloads.remove()
     }
 
     override fun dismissNotice() = onUi { mutableState.update { it.copy(notice = null) } }
@@ -221,7 +238,7 @@ internal class VoiceController(
         when (message.what) {
             VoiceProtocol.HELLO -> {
                 val binder = message.replyTo?.binder
-                if (binder != null) onUi { watch(binder) }
+                if (binder != null) onUi { if (session?.id == id) watch(id, binder) }
             }
             VoiceProtocol.LEVEL -> {
                 if (id != current.get()) return
@@ -251,29 +268,37 @@ internal class VoiceController(
         }
     }
 
-    private fun watch(binder: IBinder) {
-        if (binder == voiceProcess) return
-        voiceProcess?.unlinkToDeath(processDied, 0)
-        voiceProcess =
-            try {
-                binder.linkToDeath(processDied, 0)
-                binder
-            } catch (_: RemoteException) {
-                // It's gone already.
-                voiceProcessDied()
-                null
+    private fun watch(id: Int, binder: IBinder) {
+        if (voiceProcess?.binder === binder) return
+        unwatch()
+        val death = IBinder.DeathRecipient {
+            onUi {
+                if (session?.id == id && voiceProcess?.binder === binder) {
+                    voiceProcess = null
+                    endListening(VoiceEnd.ModelFailed)
+                }
             }
+        }
+        voiceProcess = VoiceProcess(binder, death)
+        try {
+            binder.linkToDeath(death, 0)
+        } catch (_: RemoteException) {
+            voiceProcess = null
+            endListening(VoiceEnd.ModelFailed)
+        }
     }
 
-    /** The voice process ended without a word: a native crash, or out of memory. */
-    private fun voiceProcessDied() {
+    private fun unwatch() {
+        val previous = voiceProcess ?: return
         voiceProcess = null
-        if (session != null) endListening(VoiceEnd.ModelFailed)
+        previous.binder.unlinkToDeath(previous.death, 0)
     }
 
     // Listening
 
-    private fun listen(model: VoiceModel, config: VoiceConfig) {
+    private fun listen(request: StartRequest, config: VoiceConfig) {
+        if (stopEpoch != request.epoch) return
+        val model = request.model
         val id = ++sessions
         val intent =
             config.into(
@@ -291,13 +316,26 @@ internal class VoiceController(
             return
         }
         val now = SystemClock.elapsedRealtime()
-        session = Session(id, core.state.value.stopEpoch, model, now)
+        session =
+            Session(
+                id,
+                request.epoch,
+                model,
+                now,
+                VoiceTurns(core, request.epoch, ::setListening) {
+                    endListening(VoiceEnd.Overloaded)
+                },
+            )
         current.set(id)
         lastHeard.set(now)
         core.setVoiceActive(true)
         mutableMeter.value = VoiceMeter()
         mutableState.update {
             it.copy(listening = VoiceListening(model), notice = null, endedByStop = null)
+        }
+        if (stopEpoch != request.epoch) {
+            endListening(VoiceEnd.Stop)
+            return
         }
         ticking?.cancel()
         ticking =
@@ -312,14 +350,12 @@ internal class VoiceController(
     private fun endListening(reason: VoiceEnd) {
         val ended = session ?: return
         session = null
+        unwatch()
         current.set(0)
         ticking?.cancel()
         ticking = null
         context.stopService(Intent(context, VoiceService::class.java))
         core.setVoiceActive(false)
-        waiting.clear()
-        waitingChat = null
-        sentAt = null
         mutableMeter.value = VoiceMeter()
         if (reason == VoiceEnd.Stop) stoppedUnder = ended.epoch
         val notice =
@@ -329,22 +365,7 @@ internal class VoiceController(
                 else -> VoiceNotice(reason, ended.model)
             }
         mutableState.update { it.copy(listening = null, notice = notice) }
-        retiring?.let { old ->
-            retiring = null
-            if (old != mutableState.value.installed) deleteModel(old)
-        }
-    }
-
-    private fun fetchDetectorThenStart(detector: Detector) {
-        scope.launch(ui) {
-            try {
-                store.download(listOf(detector.model)) { _, _ -> }
-                start()
-            } catch (failure: IOException) {
-                Log.w(TAG, "The speech detector didn't download", failure)
-                notice(VoiceNotice(VoiceEnd.ModelMissing, mutableState.value.installed))
-            }
-        }
+        downloads.listeningEnded()
     }
 
     /** A turn from session [id]. */
@@ -352,87 +373,36 @@ internal class VoiceController(
         val listening = session ?: return
         val now = core.state.value
         // The Stop fence: nothing heard before a Stop reaches chat.
-        if (listening.id != id || now.stopEpoch != listening.epoch) return
+        if (listening.id != id || stopEpoch != listening.epoch) return
         lastHeard.set(SystemClock.elapsedRealtime())
-        if (isReplyBusy(now) || waiting.isNotEmpty()) {
-            if (waiting.isEmpty()) waitingChat = now.chat.chatId
-            waiting += text
-            setListening { it.copy(isWaiting = true) }
-            return
-        }
-        send(text, now)
-    }
-
-    private fun send(text: String, now: AppState) {
-        val blocked = now.chat.sendBlockedBy
-        if (blocked != null) {
-            setListening { it.copy(cantSend = blocked, isWaiting = false) }
-            return
-        }
-        core.dispatch(UserIntent.SendMessage(text.take(maximumMessageLength)))
-        sentAt = SystemClock.elapsedRealtime()
-        setListening { it.copy(cantSend = null, isWaiting = false) }
-    }
-
-    /**
-     * True while a reply streams, or a sent turn hasn't started streaming yet: the core takes one
-     * turn at a time and drops a message sent during another.
-     */
-    private fun isReplyBusy(now: AppState): Boolean {
-        if (now.chat.reply is ReplyState.Streaming) return true
-        val sent = sentAt ?: return false
-        return SystemClock.elapsedRealtime() - sent < SEND_GRACE_MILLIS
+        listening.turns.heard(text, now)
     }
 
     /** Follows the core: Stops, the chosen model, the reply, and whether anything plays. */
     private fun observe(now: AppState) {
         val listening = session
-        if (listening != null && now.stopEpoch != listening.epoch) endListening(VoiceEnd.Stop)
+        if (listening != null && stopEpoch != listening.epoch) endListening(VoiceEnd.Stop)
         stoppedUnder?.let { epoch ->
             if (now.stopEpoch > epoch) {
                 stoppedUnder = null
                 mutableState.update { it.copy(endedByStop = now.stopEpoch) }
             }
         }
-        if (now.startup == StartupState.Ready) {
-            if (!isSettled) {
-                isSettled = true
-                coreChoice = now.app.voiceModel
-                settle(now.app.voiceModel)
-            } else if (now.app.voiceModel != coreChoice) {
-                coreChoice = now.app.voiceModel
-                mutableState.update { it.copy(chosen = now.app.voiceModel) }
-            }
-        }
+        if (pendingStart?.let { it.epoch != stopEpoch } == true) revokeStart()
+        if (now.startup == StartupState.Ready) downloads.observe(now.app.voiceModel)
         if (isPlaying(now)) lastPlaying = SystemClock.elapsedRealtime()
-        val reply = now.chat.reply
-        if (reply is ReplyState.Streaming) sentAt = null
-        if (waiting.isNotEmpty()) {
-            when {
-                now.chat.chatId != waitingChat || reply is ReplyState.Interrupted -> {
-                    waiting.clear()
-                    setListening { it.copy(isWaiting = false) }
-                }
-                !isReplyBusy(now) -> flushWaiting(now)
-            }
-        }
-        if (now.chat.sendBlockedBy == null) {
-            setListening { if (it.cantSend == null) it else it.copy(cantSend = null) }
-        }
-    }
-
-    private fun flushWaiting(now: AppState) {
-        val text = waiting.joinToString(" ")
-        waiting.clear()
-        waitingChat = null
-        send(text, now)
+        session?.turns?.observe(now)
     }
 
     /** Every few seconds: sends turns a quick reply left waiting, and ends 15 quiet minutes. */
     private fun tick() {
         val listening = session ?: return
         val now = core.state.value
-        if (waiting.isNotEmpty() && !isReplyBusy(now)) flushWaiting(now)
+        if (stopEpoch != listening.epoch) {
+            endListening(VoiceEnd.Stop)
+            return
+        }
+        listening.turns.observe(now)
         if (isPlaying(now)) lastPlaying = SystemClock.elapsedRealtime()
         val clock = SystemClock.elapsedRealtime()
         val quietSince = maxOf(lastHeard.get(), lastPlaying, listening.startedAt)
@@ -444,174 +414,7 @@ internal class VoiceController(
         }
     }
 
-    // Models
-
-    /**
-     * Once the settings have loaded: finds the model on the phone and removes any other, in case
-     * the app stopped mid-switch. A download it finds part done resumes while the app is on screen.
-     */
-    private fun settle(chosen: VoiceModel) {
-        scope.launch(ui) {
-            val found =
-                withContext(Dispatchers.IO) {
-                    val others = VoiceModel.entries - chosen
-                    if (isComplete(chosen)) {
-                        others.forEach { store.delete(it.parakeet.all) }
-                        chosen
-                    } else {
-                        others.filterNot(::isComplete).forEach { store.delete(it.parakeet.all) }
-                        others.firstOrNull(::isComplete)
-                    }
-                }
-            val partial =
-                if (found == chosen) 0L
-                else withContext(Dispatchers.IO) { store.present(chosen.parakeet.all) }
-            mutableState.update {
-                it.copy(
-                    installed = found,
-                    chosen = chosen,
-                    download =
-                        if (partial > 0) {
-                            VoiceDownload(
-                                chosen,
-                                partial,
-                                chosen.files(Detector.Silero).sumOf { file -> file.bytes },
-                                DownloadPhase.Paused,
-                            )
-                        } else {
-                            null
-                        },
-                )
-            }
-            if (isShown) resumePaused()
-        }
-    }
-
-    private fun isComplete(model: VoiceModel): Boolean = store.hasAll(model.files(Detector.Silero))
-
-    private fun resumePaused() {
-        val download = mutableState.value.download ?: return
-        if (download.phase == DownloadPhase.Paused && downloading?.isActive != true) {
-            fetch(download.model, startsListening = false)
-        }
-    }
-
-    private fun choose(model: VoiceModel) {
-        if (mutableState.value.chosen == model) return
-        mutableState.update { it.copy(chosen = model) }
-        core.dispatch(UserIntent.SetVoiceModel(model))
-    }
-
-    private fun fetch(model: VoiceModel, startsListening: Boolean) {
-        downloading?.cancel()
-        val files = model.files(Detector.Silero)
-        val total = files.sumOf { it.bytes }
-        val before = mutableState.value.download?.takeIf { it.model == model }?.done ?: 0L
-        setDownload(
-            VoiceDownload(model, before, total, DownloadPhase.Running, null, startsListening)
-        )
-        val cleaning = discarding
-        downloading =
-            scope.launch(ui) {
-                cleaning?.join()
-                try {
-                    var shownAt = 0L
-                    store.download(files) { done, _ ->
-                        val now = SystemClock.elapsedRealtime()
-                        if (now - shownAt >= PROGRESS_MILLIS || done == total) {
-                            shownAt = now
-                            mutableState.update { state ->
-                                val download = state.download
-                                if (download?.model == model) {
-                                    state.copy(download = download.copy(done = done))
-                                } else {
-                                    state
-                                }
-                            }
-                        }
-                    }
-                    downloaded(model)
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (failure: DownloadFailure.NotEnoughSpace) {
-                    failed(
-                        model,
-                        DownloadProblem.NotEnoughSpace(
-                            failure.neededBytes,
-                            roomFrom(model, failure),
-                        ),
-                    )
-                } catch (failure: DownloadFailure.Damaged) {
-                    Log.w(TAG, "A model file was damaged", failure)
-                    failed(model, DownloadProblem.Damaged)
-                } catch (failure: IOException) {
-                    Log.w(TAG, "The model download failed", failure)
-                    failed(
-                        model,
-                        if (isOnline()) DownloadProblem.Failed else DownloadProblem.NoConnection,
-                    )
-                }
-            }
-    }
-
-    /** The installed model, when removing it would make room for [model]. */
-    private fun roomFrom(model: VoiceModel, failure: DownloadFailure.NotEnoughSpace): VoiceModel? {
-        val installed = mutableState.value.installed ?: return null
-        if (installed == model) return null
-        return installed.takeIf { failure.freeBytes + it.parakeet.bytes >= failure.neededBytes }
-    }
-
-    private fun failed(model: VoiceModel, problem: DownloadProblem) {
-        downloading = null
-        val download = mutableState.value.download ?: return
-        if (download.model != model) return
-        setDownload(
-            download.copy(phase = DownloadPhase.Failed, problem = problem, startsListening = false)
-        )
-    }
-
-    private fun downloaded(model: VoiceModel) {
-        downloading = null
-        val before = mutableState.value
-        val startsListening = before.download?.startsListening == true
-        mutableState.update { it.copy(installed = model, download = null) }
-        val old = before.installed
-        if (old != null && old != model) {
-            if (session?.model == old) retiring = old else deleteModel(old)
-        }
-        if (startsListening && isShown && session == null) start()
-    }
-
-    /**
-     * Stops any download of [model] and deletes what it fetched, unless it's the model in use. The
-     * speech detector stays: both models use it.
-     */
-    private fun discardDownload(model: VoiceModel) {
-        val running = downloading
-        downloading = null
-        mutableState.update { it.copy(download = null) }
-        if (model == mutableState.value.installed) {
-            running?.cancel()
-            return
-        }
-        val before = discarding
-        discarding =
-            scope.launch(ui) {
-                before?.join()
-                running?.cancelAndJoin()
-                withContext(Dispatchers.IO) { store.delete(model.parakeet.all) }
-            }
-    }
-
-    private fun deleteModel(model: VoiceModel) {
-        scope.launch(Dispatchers.IO) { store.delete(model.parakeet.all) }
-    }
-
     // Small things
-
-    private fun setDownload(download: VoiceDownload?) = mutableState.update {
-        it.copy(download = download)
-    }
 
     private fun setListening(change: (VoiceListening) -> VoiceListening) =
         mutableState.update { state ->
@@ -632,14 +435,6 @@ internal class VoiceController(
     private fun isTalkBackOn(): Boolean =
         context.getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled
 
-    private fun isOnline(): Boolean {
-        val connectivity = context.getSystemService(ConnectivityManager::class.java)
-        val network = connectivity.activeNetwork ?: return false
-        return connectivity
-            .getNetworkCapabilities(network)
-            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-    }
-
     private fun freeBytes(): Long {
         folder.mkdirs()
         val storage = context.getSystemService(StorageManager::class.java)
@@ -658,10 +453,6 @@ internal class VoiceController(
 
         const val METER_LEVELS = 18
         const val TICK_MILLIS = 1_000L
-        const val PROGRESS_MILLIS = 250L
-
-        /** A sent turn that hasn't started streaming by then was refused or already answered. */
-        const val SEND_GRACE_MILLIS = 3_000L
 
         /** 15 minutes without speech while nothing plays ends listening. */
         const val QUIET_MILLIS = 15 * 60 * 1_000L
@@ -670,6 +461,6 @@ internal class VoiceController(
         const val READY_WAIT_MILLIS = 90_000L
 
         fun isPlaying(state: AppState): Boolean =
-            state.run.phase != RunPhase.Idle || state.autopilot.status != AutopilotStatus.Off
+            state.run.phase == RunPhase.Playing || state.run.phase == RunPhase.Edging
     }
 }

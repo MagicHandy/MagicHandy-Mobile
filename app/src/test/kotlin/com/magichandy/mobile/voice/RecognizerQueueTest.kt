@@ -1,5 +1,6 @@
 package com.magichandy.mobile.voice
 
+import com.magichandy.mobile.core.api.SpeechLevel
 import kotlin.concurrent.thread
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -76,6 +77,78 @@ internal class RecognizerQueueTest {
         queue.checkTail(tail)
         taker.join(5_000)
         assertEquals(tail, (taken as RecognizerJob.StopCheck).samples)
+    }
+
+    @Test
+    fun `continuous Stop checks allow completed turns to progress and bound each decode`() {
+        val queue = RecognizerQueue()
+        val samples = FloatArray(SAMPLE_RATE * 20) { (it % 17).toFloat() }
+        assertTrue(queue.addTurn(Utterance(0, samples.size.toLong(), samples, SpeechLevel(0f, 0f))))
+        var copied = 0
+        var checks = 0
+        var completed = 0
+        while (completed == 0) {
+            queue.checkTail(floatArrayOf(1f))
+            when (val next = requireNotNull(queue.take(0))) {
+                is RecognizerJob.StopCheck -> {
+                    checks++
+                    assertTrue(checks <= 2)
+                }
+                is RecognizerJob.Turn -> {
+                    checks = 0
+                    val part = next.nextAudio()
+                    assertTrue(part.size <= RecognizerJob.Turn.maximumSliceSamples)
+                    assertTrue(samples.copyOfRange(copied, copied + part.size).contentEquals(part))
+                    copied += part.size
+                    if (next.finished) completed++ else queue.continueTurn(next)
+                }
+            }
+        }
+        assertEquals(samples.size, copied)
+    }
+
+    @Test
+    fun `an ordinary sentence stays whole and a long turn yields inside a sustained pause`() {
+        fun turn(audio: FloatArray) =
+            RecognizerJob.Turn(Utterance(0, audio.size.toLong(), audio, SpeechLevel(0f, 0f)))
+        val ordinary = FloatArray(SAMPLE_RATE * 5) { 0.25f }
+        val sentence = turn(ordinary)
+        assertTrue(ordinary.contentEquals(sentence.nextAudio()))
+        assertTrue(sentence.finished)
+
+        val pause = SAMPLE_RATE * 5 until SAMPLE_RATE * 5 + SAMPLE_RATE / 4
+        val long = FloatArray(SAMPLE_RATE * 11) { if (it in pause) 0f else 0.25f }
+        val passage = turn(long)
+        val first = passage.nextAudio()
+        assertTrue(first.size in pause)
+        val second = passage.nextAudio()
+        assertTrue(passage.finished)
+        assertTrue(long.contentEquals(first + second))
+    }
+
+    @Test
+    fun `backpressure bounds short sounds and retained turn samples`() {
+        val queue = RecognizerQueue()
+        repeat(8) { assertTrue(queue.checkShort(FloatArray(32))) }
+        assertFalse(queue.checkShort(FloatArray(32)))
+        val speech = Utterance(0, 320000, FloatArray(320000), SpeechLevel(0f, 0f))
+        assertTrue(queue.addTurn(speech))
+        assertTrue(queue.addTurn(speech))
+        assertFalse(queue.addTurn(speech))
+    }
+
+    @Test
+    fun `a Stop arriving during a long turn gets the next decode`() {
+        val queue = RecognizerQueue()
+        queue.addTurn(Utterance(0, 320000, FloatArray(320000), SpeechLevel(0f, 0f)))
+        val running = queue.take(0) as RecognizerJob.Turn
+        val firstSlice = running.nextAudio()
+        queue.checkTail(floatArrayOf(1f))
+        queue.continueTurn(running)
+        assertFalse(running.finished)
+        assertTrue(firstSlice.size <= RecognizerJob.Turn.maximumSliceSamples)
+        assertTrue(queue.take(0) is RecognizerJob.StopCheck)
+        assertSame(running, queue.take(0))
     }
 
     private fun utterance() = Utterance(0, 0, FloatArray(0), SpeechLevel(0f, 0f))

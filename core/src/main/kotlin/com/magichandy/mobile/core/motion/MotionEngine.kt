@@ -171,14 +171,29 @@ internal class MotionEngine(
      * Close output admission before independently halting the participating owners. Keep the turn
      * and roster.
      */
-    fun pause(expected: Epoch, position: PlaybackPosition): RunJournal? {
+    fun pause(
+        expected: Epoch,
+        position: PlaybackPosition,
+        missedResume: PlaybackStream? = null,
+    ): RunJournal? {
         while (true) {
             val s = current.value
             val journal = s.journal ?: return null
-            val paused = s.pausing(expected, position, clock.elapsed(), clock.now()) ?: return null
+            if (missedResume != null && !s.plays(missedResume)) return null
+            val paused =
+                s.pausing(expected, position, clock.elapsed(), clock.now())
+                    ?.copy(resumePositionMissed = missedResume != null) ?: return null
             if (!current.compareAndSet(s, paused)) continue
             paused.pending.values.forEach(stops::send)
             scope.launch(stopIo) {
+                // The independent halt is already on its way. Give a submitted write its bounded
+                // acknowledgement window so that a known late acceptance can be halted again.
+                if (s.inFlight.isNotEmpty())
+                    state.first { current ->
+                        current.epoch != expected ||
+                            current.pending.isEmpty() ||
+                            s.inFlight.keys.none { it in current.inFlight }
+                    }
                 s.work.filterValues { it == WorkKind.Output }.keys.forEach { it.cancel() }
             }
             return journal
@@ -194,18 +209,27 @@ internal class MotionEngine(
         }
     }
 
+    suspend fun prepare(
+        stream: PlaybackStream,
+        owner: DeviceTransport,
+        batch: MotionBatch,
+        resuming: Boolean,
+    ): StartupResult {
+        val link = owner.startupPosition ?: return StartupResult.Ready
+        var preparation = StartupResult.Uncertain
+        val evidence =
+            admittedWrite(stream, owner) { fence ->
+                preparation = reconcileStartup(link, batch, fence, resuming)
+                preparation.evidence
+            }
+        return if (evidence == WriteResult.Accepted) preparation else evidence.asStartupResult()
+    }
+
     suspend fun write(
         stream: PlaybackStream,
         owner: DeviceTransport,
         batch: MotionBatch,
-        prepare: Boolean = false,
-    ): WriteResult =
-        admittedWrite(stream, owner) { fence ->
-            if (prepare)
-                owner.startupPosition?.let { reconcileStartup(it, batch, fence) }
-                    ?: WriteResult.Accepted
-            else owner.write(batch, fence)
-        }
+    ): WriteResult = admittedWrite(stream, owner) { fence -> owner.write(batch, fence) }
 
     suspend fun startBuffered(
         stream: PlaybackStream,
@@ -300,20 +324,42 @@ internal class MotionEngine(
                     record(DiagnosticKind.TransportWriteFailed)
                     WriteResult.Uncertain
                 }
-            if (
-                result == WriteResult.Uncertain ||
-                    (result == WriteResult.Accepted && !fence.isCurrent())
-            ) {
-                recover(owner)
-            } else if (result == WriteResult.Stale && !hostRunning()) {
-                stop(StopSource.ServiceLost, stream = stream)
+            if (result == WriteResult.Accepted && !fence.isCurrent()) {
+                if (!haltLatePausedWrite(stream, owner)) recover(owner)
+                return result
             }
+            if (result == WriteResult.Uncertain) recover(owner)
+            else if (result == WriteResult.Stale && !hostRunning())
+                stop(StopSource.ServiceLost, stream = stream)
             return result
         } catch (cancelled: CancellationException) {
             recover(owner)
             throw cancelled
         } finally {
             current.update { it.copy(inFlight = it.inFlight - ticket) }
+        }
+    }
+
+    /** A known write crossed Pause. Supersede the first halt, keeping its original deadline. */
+    private fun haltLatePausedWrite(stream: PlaybackStream, owner: DeviceTransport): Boolean {
+        val id = owner.device.id
+        while (true) {
+            val s = current.value
+            val halt = s.pending[id] ?: return false
+            if (
+                !hostRunning() ||
+                    s.epoch != stream.epoch ||
+                    s.pausedPosition == null ||
+                    s.streamGeneration != stream.generation + 1 ||
+                    s.owners[id] !== owner ||
+                    halt.wholeBridge ||
+                    clock.elapsed() - halt.pressedAt >= halt.target.timeout
+            )
+                return false
+            val next = StopAttempt(s.epoch, halt.target, halt.pressedAt, wholeBridge = false)
+            if (!current.compareAndSet(s, s.copy(pending = s.pending + (id to next)))) continue
+            stops.send(next)
+            return true
         }
     }
 
@@ -336,6 +382,7 @@ internal class MotionEngine(
         disconnecting: DeviceTransport? = null,
         stream: PlaybackStream? = null,
         lostDevice: String? = null,
+        onFenced: ((Epoch) -> Unit)? = null,
     ) {
         while (true) {
             val old = current.value
@@ -368,6 +415,7 @@ internal class MotionEngine(
                 .forEach(stops::send)
             if (!isolated && old.work.isNotEmpty())
                 scope.launch(stopIo) { old.work.keys.forEach { it.cancel() } }
+            onFenced?.invoke(next)
             return
         }
     }

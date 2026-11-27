@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Autopilot holds after the model refused for a reason that needs a fix -->
+    <string name="banner_failed_body" formatted="true">%1$s %2$s</string>
+    <string name="banner_failed_playing">The current segment keeps playing.</string>
+    <string name="banner_failed_stopped">Motion is held.</string>
+    <string name="banner_failed_action">Try again</string>
+    <string name="planning_failed_sign_in">The model\'s sign-in expired. Sign in again in Models, then try again.</string>
+    <string name="planning_failed_permission">This account can\'t use the planning model. Choose another one in Models, or check the account\'s plan.</string>
+    <string name="planning_failed_limit">The planning model\'s usage limit is reached. Try again later, or choose another model in Models.</string>
+    <string name="planning_failed_model">The planning model isn\'t available to this account. Choose another one in Models, then try again.</string>
+    <string name="planning_failed_request">The provider rejected Autopilot\'s request. Check the model in Models, then try again.</string>
+    <string name="planning_failed_service">The model service isn\'t responding.</string>
+    <string name="planning_failed_reply">The model sent a plan Autopilot couldn\'t use.</string>
+    <string name="planning_failed_billing">The planning provider requires payment or credits. Check billing, then try again.</string>
+    <string name="planning_failed_rate">The planning provider received too many requests. It will retry shortly.</string>
+</resources>

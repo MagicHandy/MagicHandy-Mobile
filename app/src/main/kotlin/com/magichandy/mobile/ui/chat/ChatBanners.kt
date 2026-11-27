@@ -11,6 +11,8 @@ import com.magichandy.mobile.R
 import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.Banner
 import com.magichandy.mobile.core.api.ConnectionKind
+import com.magichandy.mobile.core.api.ProviderReplyFailure
+import com.magichandy.mobile.core.api.ProviderReplyFailure.Reason
 import com.magichandy.mobile.core.api.RunPhase
 import com.magichandy.mobile.core.api.StartRefusal
 import com.magichandy.mobile.core.api.StopOutcome
@@ -45,12 +47,43 @@ fun ChatBanners(
                         title = stringResource(R.string.banner_held_title),
                         body =
                             stringResource(
-                                if (state.run.phase == RunPhase.Playing) {
+                                if (
+                                    state.run.phase == RunPhase.Playing ||
+                                        state.run.phase == RunPhase.Edging
+                                ) {
                                     R.string.banner_held_playing
                                 } else {
                                     R.string.banner_held_stopped
                                 }
                             ),
+                    )
+                Banner.ResumePositionNotReached ->
+                    BannerView(
+                        BannerTone.Warn,
+                        stringResource(R.string.banner_resume_position_title),
+                        stringResource(R.string.banner_resume_position_body),
+                    )
+                is Banner.PlanningFailed ->
+                    BannerView(
+                        tone = BannerTone.Warn,
+                        title = stringResource(R.string.banner_held_title),
+                        body =
+                            stringResource(
+                                R.string.banner_failed_body,
+                                planningFailureText(banner.failure),
+                                stringResource(
+                                    if (
+                                        state.run.phase == RunPhase.Playing ||
+                                            state.run.phase == RunPhase.Edging
+                                    ) {
+                                        R.string.banner_failed_playing
+                                    } else {
+                                        R.string.banner_failed_stopped
+                                    }
+                                ),
+                            ),
+                        actionLabel = stringResource(R.string.banner_failed_action),
+                        onAction = { onIntent(UserIntent.ResumeAutopilot) },
                     )
                 is Banner.CheckInDue -> CheckInBanner(banner, onIntent)
                 is Banner.StartRefused ->
@@ -59,6 +92,25 @@ fun ChatBanners(
         }
     }
 }
+
+/** Why the planning model refused Autopilot, and where to fix it. */
+@Composable
+private fun planningFailureText(failure: ProviderReplyFailure): String =
+    stringResource(
+        when (failure.reason) {
+            Reason.ContextLimit -> R.string.provider_context_limit
+            Reason.CredentialsRejected -> R.string.reply_provider_credentials
+            Reason.BillingRequired -> R.string.planning_failed_billing
+            Reason.RateLimited -> R.string.planning_failed_rate
+            Reason.SignInRequired -> R.string.planning_failed_sign_in
+            Reason.PermissionDenied -> R.string.planning_failed_permission
+            Reason.UsageLimit -> R.string.planning_failed_limit
+            Reason.ModelUnavailable -> R.string.planning_failed_model
+            Reason.RequestRejected -> R.string.planning_failed_request
+            Reason.ServiceUnavailable -> R.string.planning_failed_service
+            Reason.UnexpectedResponse -> R.string.planning_failed_reply
+        }
+    )
 
 @Composable
 internal fun CheckInBanner(banner: Banner.CheckInDue, onIntent: (UserIntent) -> Unit) {

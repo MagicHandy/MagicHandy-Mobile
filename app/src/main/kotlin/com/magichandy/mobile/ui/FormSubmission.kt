@@ -72,17 +72,20 @@ fun rememberFormSubmission(submit: suspend (form: FormIntent) -> FormResult): Fo
  *
  * @param duplicate the words for [FormReason.Duplicate] where the general ones don't fit, such as a
  *   name another device already has.
+ * @param words a page's own words for a reason, such as OpenRouter's for a key it didn't accept;
+ *   null keeps the general ones.
  */
 @Composable
 fun FormRefusal(
     submission: FormSubmission,
     modifier: Modifier = Modifier,
     @StringRes duplicate: Int? = null,
+    words: (FormReason) -> Int? = { null },
 ) {
     val reason = submission.refusal ?: return
+    val own = words(reason) ?: duplicate.takeIf { reason == FormReason.Duplicate }
     Text(
-        if (reason == FormReason.Duplicate && duplicate != null) stringResource(duplicate)
-        else Words.formReason(reason),
+        if (own != null) stringResource(own) else Words.formReason(reason),
         style = MagicHandyTheme.type.small,
         color = MagicHandyTheme.colors.dangerText,
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },

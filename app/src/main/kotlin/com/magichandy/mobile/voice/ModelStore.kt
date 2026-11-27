@@ -13,9 +13,15 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -24,14 +30,17 @@ import okhttp3.Request
 class Fetched(val code: Int, val body: InputStream, private val onClose: () -> Unit = {}) :
     Closeable {
     override fun close() {
-        body.close()
-        onClose()
+        try {
+            body.close()
+        } finally {
+            onClose()
+        }
     }
 }
 
 /** Opens [url], asking for the bytes from [from] on when [from] is above zero. */
 fun interface Fetcher {
-    fun open(url: String, from: Long): Fetched
+    suspend fun open(url: String, from: Long): Fetched
 }
 
 /**
@@ -48,14 +57,39 @@ class HttpsFetcher(
             .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 ) : Fetcher {
-    override fun open(url: String, from: Long): Fetched {
+    override suspend fun open(url: String, from: Long): Fetched {
         val request =
             Request.Builder()
                 .url(url)
                 .apply { if (from > 0) header("Range", "bytes=$from-") }
                 .build()
-        val response = client.newCall(request).execute()
-        return Fetched(response.code, response.body.byteStream()) { response.close() }
+        val call = client.newCall(request)
+        // Keep cancellation attached while execute or a body read is blocked. The file writer
+        // remains on its owning IO coroutine until the read and its finally blocks have finished.
+        val cancellation =
+            CoroutineScope(currentCoroutineContext()).launch(
+                Dispatchers.IO,
+                start = CoroutineStart.UNDISPATCHED,
+            ) {
+                try {
+                    awaitCancellation()
+                } finally {
+                    call.cancel()
+                }
+            }
+        try {
+            val response = call.execute()
+            return Fetched(response.code, response.body.byteStream()) {
+                try {
+                    response.close()
+                } finally {
+                    cancellation.cancel()
+                }
+            }
+        } catch (failure: Throwable) {
+            cancellation.cancel()
+            throw failure
+        }
     }
 
     private companion object {
@@ -93,6 +127,8 @@ class ModelStore(
     private val fetcher: Fetcher = HttpsFetcher(),
     private val freeBytes: () -> Long = { Long.MAX_VALUE },
 ) {
+    private val writer = Mutex()
+
     fun file(model: ModelFile): File = File(root, model.path)
 
     fun has(model: ModelFile): Boolean = file(model).let { it.isFile && it.length() == model.bytes }
@@ -123,32 +159,37 @@ class ModelStore(
      */
     suspend fun download(models: List<ModelFile>, onProgress: (done: Long, total: Long) -> Unit) =
         withContext(Dispatchers.IO) {
-            val needed = needed(models)
-            val free = freeBytes()
-            if (needed > 0 && free < needed + HEADROOM_BYTES) {
-                throw DownloadFailure.NotEnoughSpace(needed + HEADROOM_BYTES, free)
-            }
-            val total = models.sumOf { it.bytes }
-            var done = models.filter(::has).sumOf { it.bytes }
-            onProgress(done, total)
-            for (model in models) {
-                if (has(model)) continue
-                val before = done
-                fetchOne(model) { present ->
-                    done = before + present
-                    onProgress(done, total)
+            writer.withLock {
+                val needed = needed(models)
+                val free = freeBytes()
+                if (needed > 0 && free < needed + HEADROOM_BYTES) {
+                    throw DownloadFailure.NotEnoughSpace(needed + HEADROOM_BYTES, free)
                 }
-                done = before + model.bytes
+                val total = models.sumOf { it.bytes }
+                var done = models.filter(::has).sumOf { it.bytes }
+                onProgress(done, total)
+                for (model in models) {
+                    if (has(model)) continue
+                    val before = done
+                    fetchOne(model) { present ->
+                        done = before + present
+                        onProgress(done, total)
+                    }
+                    done = before + model.bytes
+                }
             }
         }
 
     /** Deletes [models], partial downloads included. */
-    fun delete(models: Collection<ModelFile>) {
-        for (model in models) {
-            file(model).delete()
-            part(model).delete()
+    suspend fun delete(models: Collection<ModelFile>) =
+        withContext(Dispatchers.IO) {
+            writer.withLock {
+                for (model in models) {
+                    file(model).delete()
+                    part(model).delete()
+                }
+            }
         }
-    }
 
     private fun part(model: ModelFile) = File(file(model).path + ".part")
 
@@ -157,9 +198,7 @@ class ModelStore(
         val part = part(model)
         target.parentFile?.mkdirs()
         if (part.length() > model.bytes) part.delete()
-        val digest = MessageDigest.getInstance("SHA-256")
         var present = if (part.isFile) part.length() else 0L
-        if (present > 0) part.inputStream().use { digest.add(it) }
         onPresent(present)
         // A part that is already whole, from a download stopped just before its rename, needs no
         // request: asking for the bytes after its end would only be refused.
@@ -169,18 +208,29 @@ class ModelStore(
                 // The server can't continue this part, as when the file changed: start over.
                 response.close()
                 part.delete()
-                digest.reset()
                 present = 0
                 response = fetcher.open(model.url, 0)
             }
-            present = response.use { receive(it, model, part, digest, present, onPresent) }
+            present = response.use { receive(it, model, part, present, onPresent) }
         }
-        val actual = hex(digest.digest())
-        if (present != model.bytes || actual != model.sha256) {
+        currentCoroutineContext().ensureActive()
+        val digest = MessageDigest.getInstance("SHA-256")
+        part.inputStream().use { digest.add(it) }
+        if (
+            present != model.bytes ||
+                part.length() != model.bytes ||
+                hex(digest.digest()) != model.sha256
+        ) {
             part.delete()
             throw DownloadFailure.Damaged(model.path)
         }
-        Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        currentCoroutineContext().ensureActive()
+        Files.move(
+            part.toPath(),
+            target.toPath(),
+            StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING,
+        )
     }
 
     /**
@@ -191,7 +241,6 @@ class ModelStore(
         response: Fetched,
         model: ModelFile,
         part: File,
-        digest: MessageDigest,
         from: Long,
         onPresent: (Long) -> Unit,
     ): Long {
@@ -200,7 +249,6 @@ class ModelStore(
             // The server ignored the range and sent the whole file: start over.
             present > 0 && response.code == HTTP_OK -> {
                 present = 0
-                digest.reset()
             }
             response.code != HTTP_OK && response.code != HTTP_PARTIAL ->
                 throw DownloadFailure.Refused("The download server answered " + response.code)
@@ -211,6 +259,7 @@ class ModelStore(
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val read = response.body.read(buffer)
+                    currentCoroutineContext().ensureActive()
                     if (read < 0) break
                     present += read
                     if (present > model.bytes) {
@@ -220,7 +269,6 @@ class ModelStore(
                         )
                     }
                     out.write(buffer, 0, read)
-                    digest.update(buffer, 0, read)
                     onPresent(present)
                 }
             }

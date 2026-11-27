@@ -42,6 +42,35 @@ import kotlinx.coroutines.test.runTest
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class RefusalAndEdgeTest {
     @Test
+    fun `a model Stop records the stopped turn instead of a provider failure`() = runTest {
+        val canned = SimulatedModelProvider()
+        val peer =
+            object : StructuredProvider by canned {
+                override suspend fun complete(request: ModelRequest, preview: (String) -> Unit) =
+                    TextResult.Completed(
+                        """{"tempo":null,"air_steps":null,"stop":true,"reply":"Stopping."}"""
+                    )
+            }
+        val fixture = DebugFixture(this) { it.copy(provider = { peer }) }
+        fixture.onboard()
+        val original = fixture.d.models.state.value.models.values.single()
+        fixture.d.models.save(
+            original.copy(info = original.info.copy(capability = CapabilityLevel.Simple))
+        )
+        fixture.connect(DeviceId("vacuglide"))
+        fixture.send(UserIntent.SetMotionMode(com.magichandy.mobile.core.api.MotionMode.Tempo))
+        fixture.send(UserIntent.StartMotion)
+        fixture.send(UserIntent.SendMessage("End this simulated session now."))
+        runCurrent()
+        assertEquals(RunPhase.Idle, fixture.core.state.value.run.phase)
+        assertEquals(
+            ReplyState.Interrupted(InterruptCause.MotionStopped),
+            fixture.core.state.value.chat.reply,
+        )
+        fixture.scope.cancel()
+    }
+
+    @Test
     fun `a hosted request error reaches the chat bubble without retrying or committing a reply`() =
         runTest {
             val detail = ProviderReplyFailure(ProviderReplyFailure.Reason.UsageLimit, 429)

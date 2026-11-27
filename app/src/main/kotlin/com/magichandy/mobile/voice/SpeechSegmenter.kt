@@ -4,6 +4,8 @@ import com.k2fsa.sherpa.onnx.SileroVadModelConfig
 import com.k2fsa.sherpa.onnx.TenVadModelConfig
 import com.k2fsa.sherpa.onnx.Vad
 import com.k2fsa.sherpa.onnx.VadModelConfig
+import com.magichandy.mobile.core.api.Detector
+import com.magichandy.mobile.core.api.SpeechLevel
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.log10

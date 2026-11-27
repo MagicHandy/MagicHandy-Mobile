@@ -1,6 +1,6 @@
 package com.magichandy.mobile.voicelab
 
-import com.magichandy.mobile.voice.Detector
+import com.magichandy.mobile.core.api.Detector
 import com.magichandy.mobile.voice.ModelFile
 import com.magichandy.mobile.voice.ModelFiles
 import com.magichandy.mobile.voice.ParakeetFiles

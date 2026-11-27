@@ -80,12 +80,23 @@ public sealed interface Banner {
     /** The model connection dropped during Autopilot. [RunState.phase] says what still plays. */
     public data object PlanningHeld : Banner
 
+    /**
+     * The planning model refused Autopilot's request for a reason that trying again won't fix, such
+     * as an expired sign-in or a model the account can't use. Autopilot holds without retrying
+     * until the model connection changes or the person tries again with
+     * [UserIntent.ResumeAutopilot]. [RunState.phase] says what still plays.
+     */
+    public data class PlanningFailed(public val failure: ProviderReplyFailure) : Banner
+
     /** A VacuGlide check-in is due. No answer within [answerWithin] stops the run. */
     public data class CheckInDue(
         public val device: DeviceId,
         public val name: String,
         public val answerWithin: Duration,
     ) : Banner
+
+    /** A resume lead-in failed to reach its target. The connected roster is being held paused. */
+    public data object ResumePositionNotReached : Banner
 
     /** A start was refused before any motion. */
     public data class StartRefused(public val cause: StartRefusal) : Banner

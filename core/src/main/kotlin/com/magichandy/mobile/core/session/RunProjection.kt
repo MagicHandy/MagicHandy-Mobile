@@ -1,16 +1,46 @@
 package com.magichandy.mobile.core.session
 
 import com.magichandy.mobile.core.api.AppState
+import com.magichandy.mobile.core.api.Banner
 import com.magichandy.mobile.core.api.DeviceFamily
 import com.magichandy.mobile.core.api.DeviceId
 import com.magichandy.mobile.core.api.DeviceStatus
 import com.magichandy.mobile.core.api.DeviceSummary
 import com.magichandy.mobile.core.api.InterruptedRun
+import com.magichandy.mobile.core.api.Percent
 import com.magichandy.mobile.core.api.RunMembership
 import com.magichandy.mobile.core.api.RunPhase
+import com.magichandy.mobile.core.api.RunState
 import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.motion.EngineState
 import com.magichandy.mobile.core.ports.RunJournal
+
+internal fun EngineState.hasTempoLead(preferred: DeviceId?): Boolean {
+    val id = preferred?.takeIf { it in members } ?: members.firstOrNull()
+    return owners[id]?.device?.family == DeviceFamily.VacuGlide
+}
+
+/**
+ * Compare the newest accepted target with the last batch actually dispatched to the lead device.
+ */
+internal fun RunState.withPendingPace(engine: EngineState, tempoLead: Boolean): RunState {
+    val next = engine.score?.score?.speed?.coerceAtMost(limits.topSpeed.value)
+    val pending =
+        if (
+            phase != RunPhase.Idle &&
+                phase != RunPhase.Paused &&
+                engine.members.isNotEmpty() &&
+                engine.pausedPosition == null &&
+                !tempoLead &&
+                !engine.edgeRequested &&
+                next != null &&
+                next > 0 &&
+                next != commandedPace?.value
+        )
+            Percent(next)
+        else null
+    return if (pending != pendingPace) copy(pendingPace = pending) else this
+}
 
 /** Project physical evidence independently from the motion phase shown by the UI. */
 internal fun AppState.withRunEvidence(
@@ -20,6 +50,18 @@ internal fun AppState.withRunEvidence(
 ): AppState {
     val updated =
         copy(
+            run =
+                run.withPendingPace(
+                    engine,
+                    engine.hasTempoLead(lead),
+                ),
+            banners =
+                when {
+                    !engine.resumePositionMissed || !engine.canResume ->
+                        banners - Banner.ResumePositionNotReached
+                    Banner.ResumePositionNotReached in banners -> banners
+                    else -> listOf(Banner.ResumePositionNotReached) + banners
+                },
             stopReceipt = engine.receipt,
             interruptedRun = restored?.let { interrupted(it, engine) },
         )
@@ -29,6 +71,7 @@ internal fun AppState.withRunEvidence(
                 run.copy(
                     phase = RunPhase.Idle,
                     commandedPace = null,
+                    pendingPace = null,
                     source = null,
                     isPlanningHeld = false,
                 ),
@@ -36,7 +79,7 @@ internal fun AppState.withRunEvidence(
         )
     if (engine.pausedPosition == null) return updated
     return updated.copy(
-        run = run.copy(phase = RunPhase.Paused, commandedPace = null),
+        run = run.copy(phase = RunPhase.Paused, commandedPace = null, pendingPace = null),
         devices =
             devices.copy(
                 devices =

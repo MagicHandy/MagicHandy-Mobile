@@ -46,6 +46,11 @@
     <string name="chat_empty">打个招呼，或者告诉%1$s你想要什么。</string>
     <string name="author_you">你</string>
     <string name="time_now">刚刚</string>
+    <string name="pace_next">下一节奏 %1$s</string>
+    <string name="receipt_sweeps">行程 %1$d–%2$d%%</string>
+    <string name="receipt_pattern_range">行程范围 %1$d–%2$d%%</string>
+    <string name="receipt_phrase">行程模式 %1$s</string>
+    <string name="receipt_stroke_group">%1$d × %2$d–%3$d%%</string>
     <string name="receipt_pace_change">节奏 %1$d → %2$d</string>
     <string name="receipt_pace">节奏 %1$d</string>
     <string name="receipt_stroke">行程 %1$d–%2$d</string>
@@ -410,12 +415,8 @@
     <string name="server_failure_not_model_server">有服务回应了，但它不是模型服务器。</string>
     <string name="server_failure_no_models">服务器上还没有模型。请先在服务器上下载一个，然后重新检查。</string>
     <string name="server_failure_not_private">本地服务器只能解析为私有网络地址。请检查服务器地址。</string>
-    <string name="openrouter_lead">使用你自己的 API 密钥，通过 OpenRouter 聊天。密钥会加密保存在本机。</string>
     <string name="field_api_key">API 密钥</string>
     <string name="field_model">模型</string>
-    <string name="field_model_hint">提供商/模型</string>
-    <string name="openrouter_reasoning">推理</string>
-    <string name="openrouter_reasoning_desc">关闭推理时，高级会使用不含推理的约定。</string>
     <string name="chatgpt_lead">在浏览器中用你的 ChatGPT 账号登录。MagicHandy 与桌面版一样，在高级等级下使用 GPT-6.1 Terra。</string>
     <string name="chatgpt_sign_in">使用 ChatGPT 继续</string>
     <string name="chatgpt_waiting">正在登录 ChatGPT…</string>
@@ -706,4 +707,10 @@
     <string name="handy_cloud_service">Handy Cloud 暂时不可用。请检查网络后重新连接。</string>
     <string name="handy_cloud_reply">无法识别 Handy Cloud 的回复。请检查固件版本后重新连接。</string>
     <string name="handy_cloud_idle">Handy 未确认已空闲。请在设备上停止后重新连接。</string>
+    <string name="reply_provider_credentials">服务商拒绝了凭据。请在模型设置中检查 API 密钥或服务器身份验证。</string>
+    <string name="reply_provider_billing">服务商要求付款或充值。请先检查账单，再重新发送。</string>
+    <string name="reply_provider_rate">请求过于频繁。请稍后再发。</string>
+    <string name="banner_resume_position_title">已暂停</string>
+    <string name="banner_resume_position_body">滑块在到达起始位置前已停止。请确认滑块可以自由移动，然后点按“继续”。</string>
+    <string name="provider_context_limit">此请求超出了模型的上下文上限。请在“模型”中选择上下文较大的模型。</string>
 </resources>

@@ -8,6 +8,7 @@ import com.magichandy.mobile.core.api.FormResult
 import com.magichandy.mobile.core.api.ModelConnection
 import com.magichandy.mobile.core.api.Personality
 import com.magichandy.mobile.core.api.ProviderKind
+import com.magichandy.mobile.core.api.ProviderReplyFailure
 import com.magichandy.mobile.core.api.ReplyLength
 import com.magichandy.mobile.core.api.Secret
 import com.magichandy.mobile.core.api.UserIntent
@@ -81,7 +82,7 @@ internal class CompatibleProviderTest {
                     assertEquals("Bearer synthetic", r.header("Authorization"))
                     val body =
                         if (r.url.encodedPath.endsWith("models"))
-                            """{"data":[{"id":"sample","reasoning":{"mandatory":false},"supported_parameters":["structured_outputs","max_tokens"]}]}"""
+                            """{"data":[{"id":"sample","reasoning":{"mandatory":false},"supported_parameters":["structured_outputs","max_tokens","reasoning"]}]}"""
                         else {
                             val buf = Buffer()
                             requireNotNull(r.body).writeTo(buf)
@@ -320,7 +321,7 @@ internal class CompatibleProviderTest {
                 },
             )
             assertEquals(
-                TextResult.Interrupted,
+                TextResult.Failed(ProviderReplyFailure(ProviderReplyFailure.Reason.ContextLimit)),
                 ollama.complete(
                     ModelRequest(
                         listOf(

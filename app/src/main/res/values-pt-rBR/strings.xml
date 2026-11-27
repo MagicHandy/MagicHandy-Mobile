@@ -46,6 +46,11 @@
     <string name="chat_empty">Diga oi ou conte a %1$s o que você quer.</string>
     <string name="author_you">Você</string>
     <string name="time_now">agora</string>
+    <string name="pace_next">Próximo ritmo %1$s</string>
+    <string name="receipt_sweeps">Percursos de %1$d a %2$d%%</string>
+    <string name="receipt_pattern_range">Curso %1$d–%2$d%%</string>
+    <string name="receipt_phrase">Padrão de movimento %1$s</string>
+    <string name="receipt_stroke_group">%1$d × %2$d–%3$d%%</string>
     <string name="receipt_pace_change">Ritmo %1$d → %2$d</string>
     <string name="receipt_pace">Ritmo %1$d</string>
     <string name="receipt_stroke">Curso %1$d–%2$d</string>
@@ -414,12 +419,8 @@
     <string name="server_failure_not_model_server">Algo respondeu, mas não é um servidor de modelos.</string>
     <string name="server_failure_no_models">O servidor ainda não tem modelos. Baixe um no servidor e verifique de novo.</string>
     <string name="server_failure_not_private">Um servidor local só pode usar endereços de rede privados. Verifique o endereço do servidor.</string>
-    <string name="openrouter_lead">Converse pelo OpenRouter com a sua própria chave da API. A chave fica guardada com criptografia neste celular.</string>
     <string name="field_api_key">Chave da API</string>
     <string name="field_model">Modelo</string>
-    <string name="field_model_hint">provedor/modelo</string>
-    <string name="openrouter_reasoning">Raciocínio</string>
-    <string name="openrouter_reasoning_desc">Com o raciocínio desativado, o Avançado usa o contrato sem raciocínio.</string>
     <string name="chatgpt_lead">Entre com a sua conta do ChatGPT no navegador. O MagicHandy usa o GPT-6.1 Terra no Avançado, como o app para computador.</string>
     <string name="chatgpt_sign_in">Continuar com o ChatGPT</string>
     <string name="chatgpt_waiting">Entrando no ChatGPT…</string>
@@ -718,4 +719,10 @@
     <string name="handy_cloud_service">O Handy Cloud está indisponível. Confira a rede e reconecte.</string>
     <string name="handy_cloud_reply">O Handy Cloud enviou uma resposta desconhecida. Confira a versão do firmware e reconecte.</string>
     <string name="handy_cloud_idle">O Handy não confirmou que está parado. Pare-o no próprio dispositivo e reconecte.</string>
+    <string name="reply_provider_credentials">O provedor rejeitou as credenciais. Confira a chave de API ou a autenticação do servidor em Modelos.</string>
+    <string name="reply_provider_billing">O provedor exige pagamento ou créditos. Confira a cobrança antes de reenviar.</string>
+    <string name="reply_provider_rate">Muitas solicitações. Aguarde antes de reenviar.</string>
+    <string name="banner_resume_position_title">Sessão pausada</string>
+    <string name="banner_resume_position_body">O cursor parou antes de chegar à posição inicial. Verifique se ele pode se mover livremente e toque em Retomar.</string>
+    <string name="provider_context_limit">Esta solicitação excede o contexto do modelo. Escolha um modelo com mais contexto em Modelos.</string>
 </resources>

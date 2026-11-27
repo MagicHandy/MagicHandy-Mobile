@@ -5,14 +5,6 @@ import kotlin.math.log10
 import kotlin.math.pow
 
 /**
- * How loud speech reached the phone and how much it was raised.
- *
- * @property inputDb the speech's level from the microphone, in dBFS.
- * @property gainDb the gain applied before the detector and the recognizer heard it.
- */
-data class SpeechLevel(val inputDb: Float, val gainDb: Float)
-
-/**
  * Raises quiet speech to a working level before the speech detector and the engines hear it.
  *
  * Android's speech-recognition path must have no automatic gain (CDD 5.4), and its sensitivity puts

@@ -9,6 +9,7 @@ import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UnconfirmedCause
 import com.magichandy.mobile.core.motion.MotionEngine
 import com.magichandy.mobile.core.motion.PlaybackPosition
+import com.magichandy.mobile.core.motion.PlaybackStream
 import com.magichandy.mobile.core.motion.StopTarget
 import com.magichandy.mobile.core.ports.Clock
 import com.magichandy.mobile.core.ports.DeviceRef
@@ -163,7 +164,8 @@ internal class RunSafety(
         engine.stop(
             null,
             targets = { state ->
-                record.devices
+                (record.devices + returning.values.map { it.ref })
+                    .distinctBy { it.id }
                     .filterNot {
                         it.id !in returning &&
                             state.journal?.runId == record.runId &&
@@ -174,7 +176,7 @@ internal class RunSafety(
                         returning[ref.id]?.let { trackReturn(target, it) } ?: target
                     }
             },
-            forceRetry = record.devices.map { it.id }.toSet(),
+            forceRetry = record.devices.map { it.id }.toSet() + returning.keys,
             journal = record,
         )
     }
@@ -187,11 +189,22 @@ internal class RunSafety(
             }
         )
 
-    fun emergencyStop(source: StopSource) {
+    fun emergencyStop(
+        source: StopSource,
+        expected: Epoch? = null,
+        onFenced: ((Epoch) -> Unit)? = null,
+    ) {
+        val obligations = lostPersistent.value
         engine.stop(
             source,
+            expected = expected,
+            forceRetry = obligations.keys,
+            onFenced = onFenced,
             targets = { state ->
-                state.owners.values.map(::StopTarget) +
+                state.owners.values.map { owner ->
+                    val target = StopTarget(owner)
+                    obligations[owner.device.id]?.let { trackReturn(target, it) } ?: target
+                } +
                     state.evidence
                         ?.outcomes
                         .orEmpty()
@@ -204,7 +217,7 @@ internal class RunSafety(
                         .map {
                             savedTarget(DeviceRef(it.device, it.name, it.family, it.connection))
                         } +
-                    lostPersistent.value.values
+                    obligations.values
                         .filter { it.ref.id !in state.owners && it.ref.id !in state.reconciled }
                         .map { savedTarget(it.ref) }
             },
@@ -332,12 +345,22 @@ internal class RunSafety(
             }
         }
 
-    suspend fun pause(expected: Epoch, position: PlaybackPosition) {
-        val record = engine.pause(expected, position) ?: return
-        withContext(storage) {
+    suspend fun pause(
+        expected: Epoch,
+        position: PlaybackPosition,
+        missedResume: PlaybackStream? = null,
+    ) {
+        val record = engine.pause(expected, position, missedResume) ?: return
+        // A failed resume pauses from the output job that this same fence cancels.
+        withContext(NonCancellable + storage) {
             serial.withLock {
-                if (engine.epoch == expected && engine.state.value.pausedPosition != null)
-                    transition(record, RunIntent.Paused)
+                val current = engine.state.value
+                if (
+                    current.epoch == expected &&
+                        current.journal?.runId == record.runId &&
+                        current.pausedPosition != null
+                )
+                    transition(current.journal, RunIntent.Paused)
             }
         }
     }
@@ -439,7 +462,14 @@ internal class RunSafety(
                     engine.stop(
                         null,
                         expected = state.epoch,
-                        targets = { returning.values.map { trackReturn(savedTarget(it.ref), it) } },
+                        targets = { live ->
+                            returning.values.map { obligation ->
+                                val target =
+                                    live.owners[obligation.ref.id]?.let(::StopTarget)
+                                        ?: savedTarget(obligation.ref)
+                                trackReturn(target, obligation)
+                            }
+                        },
                         forceRetry = returning.keys,
                     )
                 }

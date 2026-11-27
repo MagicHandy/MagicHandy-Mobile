@@ -18,6 +18,8 @@ public data class ModelsState(
     public val refusalFallback: ConnectionId? = null,
     /** Advances after a new or returning ChatGPT sign-in is saved by this process. */
     public val completedSignIns: Long = 0,
+    /** OpenRouter's catalog, loaded by [UserIntent.LoadOpenRouterModels]. */
+    public val routerCatalog: RouterCatalog = RouterCatalog.Idle,
 ) {
     /** The active ChatGPT connection needs a fresh browser sign-in before it can serve chat. */
     public val chatNeedsSignIn: Boolean
@@ -34,6 +36,8 @@ public data class ModelsState(
  * @property model the full model name, such as "GPT-6.1 Terra" or "gemma4:12b".
  * @property shortName the name the UI shows in tight places, such as "Terra".
  * @property isEncrypted false for plain HTTP to a server on the local network.
+ * @property reasoningEffort OpenRouter's level while [isReasoningOn]. Null lets the model choose,
+ *   as connections saved before levels existed do.
  */
 @kotlinx.serialization.Serializable
 public data class ModelConnection(
@@ -46,6 +50,7 @@ public data class ModelConnection(
     public val isReasoningOn: Boolean,
     public val isEncrypted: Boolean,
     public val status: ConnectionStatus,
+    public val reasoningEffort: ReasoningEffort? = null,
 )
 
 /** The v1 providers (plan §9.1). */

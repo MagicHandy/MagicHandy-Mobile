@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- OpenRouter page (boards V-OpenRouterSetup and V-OpenRouterSettings) -->
+    <string name="router_lead">Use one OpenRouter account to choose from hundreds of models. You pay OpenRouter for what you use.</string>
+    <string name="router_key_hint">Create or copy a key on openrouter.ai under Keys.</string>
+    <string name="router_key_saved">Saved key</string>
+    <string name="router_key_keep">Leave this empty to keep the saved key.</string>
+    <string name="router_model_choose">Choose a model</string>
+    <string name="router_model_change">Model: %1$s. Change</string>
+    <string name="router_price">About %1$s per 100 replies</string>
+    <string name="router_price_free">Free</string>
+    <string name="router_privacy">Your key is stored encrypted on this phone. MagicHandy only uses providers that say they don\'t keep or train on your chats.</string>
+    <string name="router_loading">Loading models…</string>
+    <string name="router_unreachable">Couldn\'t reach OpenRouter. Check your internet connection.</string>
+    <string name="router_try_again">Try again</string>
+    <string name="router_remove">Remove this connection</string>
+    <string name="router_remove_title">Remove %1$s?</string>
+    <string name="router_remove_body">Its key is deleted from this phone. Your keys on openrouter.ai don\'t change.</string>
+    <string name="router_remove_confirm">Remove</string>
+    <string name="back_to_openrouter">Back to OpenRouter</string>
+
+    <!-- Reasoning -->
+    <string name="router_reasoning">Reasoning</string>
+    <string name="router_reasoning_off">Off</string>
+    <string name="router_reasoning_on">On</string>
+    <string name="router_level_minimal">Minimal</string>
+    <string name="router_level_low">Low</string>
+    <string name="router_level_medium">Medium</string>
+    <string name="router_level_high">High</string>
+    <string name="router_level_extra_high">Extra high</string>
+    <string name="router_level_max">Max</string>
+    <string name="router_reasoning_hint">Motion waits for the full reply, so Off is fastest.</string>
+    <string name="router_reasoning_default">Motion waits for the full reply, so Off is fastest. This model defaults to %1$s.</string>
+    <string name="router_reasoning_required">This model requires reasoning. Lower levels reply faster and cost less.</string>
+    <string name="router_reasoning_always">This model always uses reasoning.</string>
+    <string name="router_reasoning_applies">Applies from your next message.</string>
+
+    <!-- Refusals on the OpenRouter page -->
+    <string name="router_refused_key">OpenRouter didn\'t accept this key. Check it, or create a new one on openrouter.ai.</string>
+    <string name="router_refused_model">OpenRouter can\'t run that model for MagicHandy. Choose another one.</string>
+    <string name="router_refused_unreachable">Couldn\'t reach OpenRouter. Check your internet connection and try again.</string>
+    <string name="router_refused_duplicate">That model is already saved with this key.</string>
+
+    <!-- Choosing a model (board V-OpenRouterModels) -->
+    <string name="router_pick_title">Choose a model</string>
+    <string name="router_search">Search models</string>
+    <string name="router_search_hint">Name or ID</string>
+    <string name="router_search_clear">Clear search</string>
+    <string name="router_sort_popular">Popular</string>
+    <string name="router_sort_price">Lowest price</string>
+    <string name="router_filter_optional">Reasoning optional</string>
+    <string name="router_price_note">Prices are estimates for 100 replies. Reasoning costs extra.</string>
+    <string name="router_suggested_title">Suggested for motion</string>
+    <string name="router_all_title">All models</string>
+    <string name="router_no_match">No models match.</string>
+    <string name="router_tag_optional">Reasoning optional</string>
+    <string name="router_tag_required">Reasoning required</string>
+    <string name="router_tested_deepseek">Quick and low cost. Best with reasoning off.</string>
+    <string name="router_tested_terra">The most reliable motion in our tests, but slower.</string>
+    <string name="router_manual">Enter a model ID</string>
+    <string name="router_manual_use">Use this model</string>
+    <string name="router_list_note">Only models that work with MagicHandy, through providers that don\'t keep your chats, are listed.</string>
+
+    <!-- Models -->
+    <string name="connection_offline">Offline</string>
+    <string name="router_connection_line">OpenRouter · %1$s · Reasoning: %2$s</string>
+    <string name="router_reasoning_none">This model doesn\'t use reasoning.</string>
+    <string name="router_model_default">Model default</string>
+</resources>

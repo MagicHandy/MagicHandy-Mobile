@@ -28,7 +28,8 @@ import com.magichandy.mobile.ui.theme.MagicHandyTheme
 
 /**
  * A labelled single-line text field. A secret field hides its text and turns off suggestions, so
- * keys and tokens never reach the keyboard's history.
+ * keys and tokens never reach the keyboard's history. [isVerbatim] turns off autocorrect for text
+ * that must stay exactly as typed, such as a model ID.
  */
 @Composable
 fun TextInput(
@@ -41,6 +42,7 @@ fun TextInput(
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Done,
     onImeAction: () -> Unit = {},
+    isVerbatim: Boolean = false,
 ) {
     val colors = MagicHandyTheme.colors
     val shape = MagicHandyTheme.shapes.control
@@ -63,7 +65,7 @@ fun TextInput(
                 KeyboardOptions(
                     keyboardType = if (isSecret) KeyboardType.Password else keyboardType,
                     imeAction = imeAction,
-                    autoCorrectEnabled = !isSecret,
+                    autoCorrectEnabled = !isSecret && !isVerbatim,
                     capitalization = KeyboardCapitalization.None,
                 ),
             keyboardActions = KeyboardActions(onAny = { onImeAction() }),

@@ -101,6 +101,7 @@ internal class ResponsesProviderTest {
                 Triple(403, "subscription_sharing_user_not_eligible", Reason.PermissionDenied),
                 Triple(404, "model_not_found", Reason.ModelUnavailable),
                 Triple(429, "subscription_sharing_usage_limit_exceeded", Reason.UsageLimit),
+                Triple(429, "rate_limit_exceeded", Reason.RateLimited),
                 Triple(503, "unavailable", Reason.ServiceUnavailable),
             )) {
             val http = MemoryHttp { req ->
@@ -167,7 +168,10 @@ internal class ResponsesProviderTest {
             TextResult.Completed("Hello"),
             provider.stream(listOf(contract, old, correction, latest)) {},
         )
-        assertEquals(TextResult.Interrupted, provider.stream(listOf(contract, old)) {})
+        assertEquals(
+            TextResult.Failed(ProviderReplyFailure(ProviderReplyFailure.Reason.ContextLimit)),
+            provider.stream(listOf(contract, old)) {},
+        )
         assertEquals(1, tokens)
     }
 

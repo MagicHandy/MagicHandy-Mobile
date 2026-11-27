@@ -5,8 +5,6 @@ import com.magichandy.mobile.core.api.AppState
 import com.magichandy.mobile.core.api.Author
 import com.magichandy.mobile.core.api.AutopilotStatus
 import com.magichandy.mobile.core.api.ChatEntry
-import com.magichandy.mobile.core.api.CommandReceipt
-import com.magichandy.mobile.core.api.ControlKind
 import com.magichandy.mobile.core.api.EntryId
 import com.magichandy.mobile.core.api.MagicHandyCore
 import com.magichandy.mobile.core.api.MotionMode
@@ -15,12 +13,12 @@ import com.magichandy.mobile.core.api.PersonaRef
 import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.ProviderReplyFailure
 import com.magichandy.mobile.core.api.StopSource
-import com.magichandy.mobile.core.api.ValueChange
 import com.magichandy.mobile.core.chat.ChatContract
 import com.magichandy.mobile.core.chat.ConversationWindow
 import com.magichandy.mobile.core.chat.StandingWish
 import com.magichandy.mobile.core.chat.TurnAnswer
 import com.magichandy.mobile.core.chat.TurnContext
+import com.magichandy.mobile.core.chat.TurnHistory
 import com.magichandy.mobile.core.chat.structuredTurn
 import com.magichandy.mobile.core.chat.valveAllowed
 import com.magichandy.mobile.core.chat.vibration
@@ -33,6 +31,7 @@ import com.magichandy.mobile.core.ports.StructuredProvider
 import com.magichandy.mobile.core.ports.TextMessage
 import com.magichandy.mobile.core.ports.TextRole
 import com.magichandy.mobile.core.ports.current
+import com.magichandy.mobile.core.ports.recentModelEntries
 import com.magichandy.mobile.core.speakingProvider
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineStart
@@ -71,7 +70,7 @@ internal class ChatProposal(
     suspend fun complete(
         provider: StructuredProvider,
         model: SavedModel,
-        history: List<TextMessage>,
+        history: TurnHistory,
         captured: EngineState,
         persona: PersonaRef,
         memoryOn: Boolean,
@@ -89,7 +88,7 @@ internal class ChatProposal(
                 (!memoryOn || d.settings.state.value.values.memoryOn) &&
                 active() &&
                 engine.epoch == captured.epoch &&
-                model == d.models.state.value.models[d.models.state.value.chat]
+                model.acceptsInFlightReply(d.models.state.value.let { it.models[it.chat] })
         }
         fun current(): Boolean {
             val now = engine.state.value
@@ -127,7 +126,7 @@ internal class ChatProposal(
                     else emptyList(),
                 style = settings.style,
                 persona = persona,
-                recentRequests = recentRequests(state, history),
+                recentRequests = recentRequests(state, history.recent),
                 vibrator = state.vibratorContext(),
                 tempo = captured.tempo?.plan?.score,
                 previousTempo = captured.previousTempo,
@@ -141,16 +140,22 @@ internal class ChatProposal(
             t: TurnContext,
             fallbackOnly: Boolean = false,
         ): ModelRequest? {
-            val window = ConversationWindow.named(m.info.capability, m.contextTokens)
-            val stored = state.chat.entries.count { it is ChatEntry.Message }
+            val window = ConversationWindow.forModel(m)
+            val stored = state.chat.entries.recentModelEntries().count { it is ChatEntry.Message }
             return ChatContract.compose(
                 t,
-                if (fallbackOnly) history.takeLast(1) else history,
+                if (fallbackOnly) history.recent.takeLast(1) else history.messages,
                 window.contextTokens,
-                if (fallbackOnly) 0 else (stored - history.size).coerceAtLeast(0),
+                if (fallbackOnly) 0
+                else (stored - history.recent.size).coerceAtLeast(if (history.hasGap) 1 else 0),
+                hasHistoryGap = history.hasGap && !fallbackOnly,
             )
         }
-        val primaryRequest = composeRequest(model, turn) ?: return ProposalCompletion.Failed
+        val tooLarge =
+            ProposalCompletion.ProviderFailed(
+                ProviderReplyFailure(ProviderReplyFailure.Reason.ContextLimit)
+            )
+        val primaryRequest = composeRequest(model, turn) ?: return tooLarge
         var answer =
             structuredTurn(
                 provider,
@@ -183,8 +188,7 @@ internal class ChatProposal(
                     recentRequests = null,
                 )
             val localRequest =
-                composeRequest(alternate, localContext, fallbackOnly = true)
-                    ?: return ProposalCompletion.Failed
+                composeRequest(alternate, localContext, fallbackOnly = true) ?: return tooLarge
             if (!current()) return ProposalCompletion.Failed
             val activeAttempt = AtomicBoolean(true)
             val fallbackAdmitted = { activeAttempt.get() && chatCurrent() }
@@ -230,16 +234,11 @@ internal class ChatProposal(
                         )
                 )
                     return@withContext null
-                val changes =
-                    if (score == null) emptyList()
-                    else
-                        listOf(
-                            ValueChange(
-                                ControlKind.Pace,
-                                state.run.commandedPace?.value,
-                                score.speed,
-                            )
-                        )
+                val previous = captured.score?.score
+                val priorPace =
+                    previous?.speed?.coerceAtMost(state.run.limits.topSpeed.value)
+                        ?: state.run.commandedPace?.value
+                val motionReceipt = score?.strokeReceipt(previous, priorPace, state.run.limits)
                 proposal.vibration?.let {
                     if (!devices.playback.applyVibration(captured.epoch, it, MotionSource.Chat))
                         return@withContext null
@@ -259,12 +258,21 @@ internal class ChatProposal(
                         )
                 )
                     return@withContext null
+                val accepted = engine.state.value
+                if (
+                    score != null && accepted.score?.score != captured.score?.score ||
+                        proposal.tempo != null &&
+                            accepted.tempo?.plan?.score != captured.tempo?.plan?.score ||
+                        accepted.airBalance != captured.airBalance ||
+                        proposal.vibration != null && accepted.vibration != captured.vibration
+                )
+                    planner.chatChangedMotion()
                 ChatEntry.Message(
                     EntryId(java.util.UUID.randomUUID().toString()),
                     d.clock.now(),
                     Author.Persona,
                     proposal.reply,
-                    CommandReceipt(changes).takeIf { changes.isNotEmpty() },
+                    motionReceipt,
                 )
             }
         return receipt?.let(ProposalCompletion::Completed) ?: ProposalCompletion.Failed
@@ -316,8 +324,7 @@ internal class ChatProposal(
         if (count == 0) return null
         val rows =
             state.chat.entries
-                .asReversed()
-                .asSequence()
+                .recentModelEntries()
                 .filterIsInstance<ChatEntry.Message>()
                 .filter { it.author == Author.You }
                 .drop(1)
@@ -339,4 +346,19 @@ internal class ChatProposal(
         val localProviders =
             setOf(ProviderKind.Ollama, ProviderKind.LlamaCpp, ProviderKind.OpenAiCompatible)
     }
+}
+
+/**
+ * Reasoning and capability are snapshotted per turn. Switching account, model or credential revokes
+ * it.
+ */
+private fun SavedModel.acceptsInFlightReply(selected: SavedModel?): Boolean {
+    if (this == selected) return true
+    return info.provider == ProviderKind.OpenRouter &&
+        selected != null &&
+        selected.info.provider == info.provider &&
+        selected.info.id == info.id &&
+        selected.info.model == info.model &&
+        selected.credential == credential &&
+        selected.info.status == info.status
 }

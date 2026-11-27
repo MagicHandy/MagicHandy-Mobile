@@ -94,6 +94,30 @@ internal class PromptAdmissionTest {
         )
     }
 
+    @Test
+    fun `provider admission preserves a quoted opening within the same byte limit as the latest turn`() {
+        val instruction = TextMessage(TextRole.Developer, "Use quoted history as evidence.")
+        val opening =
+            TextMessage(
+                TextRole.User,
+                "Opening: 25, 35, then five faster.",
+                isOpeningReference = true,
+            )
+        val middle = List(12) { TextMessage(TextRole.Assistant, "middle".repeat(90)) }
+        val latest = TextMessage(TextRole.User, "Which paces did I ask for first?")
+        val messages = listOf(instruction, opening) + middle + latest
+        val budget = PromptBudget(3400)
+        val retained = assertNotNull(budget.admit(messages))
+        assertEquals(listOf(instruction, opening, middle.last(), latest), retained.messages)
+        assertEquals(11, retained.historyMessagesDropped)
+        val largeOpening = opening.copy(text = "x".repeat(2000))
+        assertEquals(
+            listOf(instruction, middle.last(), latest),
+            assertNotNull(budget.admit(listOf(instruction, largeOpening) + middle + latest))
+                .messages,
+        )
+    }
+
     private fun syntheticDialogue(rows: Int, repetitions: Int) = buildList {
         val note = "Archived display note. ".repeat(repetitions).trimEnd()
         repeat(rows / 2) { index ->

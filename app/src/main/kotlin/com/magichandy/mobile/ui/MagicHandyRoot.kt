@@ -25,6 +25,7 @@ import com.magichandy.mobile.core.api.MagicHandyCore
 import com.magichandy.mobile.core.api.StartupState
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UserIntent
+import com.magichandy.mobile.core.api.VoiceControls
 import com.magichandy.mobile.ui.chat.ChatScreen
 import com.magichandy.mobile.ui.components.AppFrame
 import com.magichandy.mobile.ui.components.BottomTabs
@@ -67,7 +68,6 @@ import com.magichandy.mobile.ui.voice.VoiceAnnouncer
 import com.magichandy.mobile.ui.voice.VoiceSettingsScreen
 import com.magichandy.mobile.ui.voice.VoiceUi
 import com.magichandy.mobile.ui.voice.rememberVoiceUi
-import com.magichandy.mobile.voice.VoiceControls
 
 /**
  * The whole UI. It observes [core] and sends it intents; Stop goes straight to the core.
@@ -78,7 +78,7 @@ import com.magichandy.mobile.voice.VoiceControls
 @Composable
 fun MagicHandyRoot(
     core: MagicHandyCore,
-    voice: VoiceControls = NoVoice,
+    voice: VoiceControls = core.voice,
     openLive: Boolean = false,
     onLiveOpened: () -> Unit = {},
 ) {
@@ -434,6 +434,7 @@ private fun RouteContent(
                         addServer = { nav.push(Route.AddServer) },
                         addOpenRouter = { nav.push(Route.OpenRouterSetup) },
                         addChatGpt = { nav.push(Route.ChatGptSetup) },
+                        openRouterConnection = { nav.push(Route.OpenRouterConnection(it)) },
                     ),
             )
         Route.AddServer ->
@@ -447,11 +448,28 @@ private fun RouteContent(
             )
         Route.OpenRouterSetup ->
             OpenRouterScreen(
+                state.models,
                 calls.submit,
+                onIntent,
                 onBack = { nav.pop() },
                 origin = origin,
                 onSaved = { nav.providerSaved() },
             )
+        is Route.OpenRouterConnection -> {
+            val connection = state.models.connections.firstOrNull { it.id == route.connection }
+            if (connection == null) {
+                // Removed, here or elsewhere: there's nothing left to change.
+                LaunchedEffect(route) { nav.pop() }
+            } else {
+                OpenRouterScreen(
+                    state.models,
+                    calls.submit,
+                    onIntent,
+                    onBack = { nav.pop() },
+                    editing = connection,
+                )
+            }
+        }
         Route.ChatGptSetup ->
             ChatGptScreen(
                 state,

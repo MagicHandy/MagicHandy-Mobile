@@ -43,6 +43,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import com.magichandy.mobile.core.api.Detector
+import com.magichandy.mobile.core.api.MicSource
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.Banner
 import com.magichandy.mobile.ui.components.BannerTone
@@ -62,8 +64,6 @@ import com.magichandy.mobile.ui.components.ValueMenu
 import com.magichandy.mobile.ui.components.segmentedWidthFor
 import com.magichandy.mobile.ui.devices.CheckBox
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
-import com.magichandy.mobile.voice.Detector
-import com.magichandy.mobile.voice.MicSource
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -135,14 +135,12 @@ internal data class RpcReply(
     val isBlank: Boolean = false,
 ) {
     /**
-     * Whether this correlated reply accepts [command]: it carries no error, and either the
-     * command's own result or no result. Firmware answers a request without a result type, such as
-     * RPC 715, with a blank response (handy_rpc.proto: "not all requests will have a result, and
-     * just return a blank response"). A result for another method, or more than one result, never
-     * acknowledges a command.
+     * Accept only the expected result. Firmware may return a correlated ID alone to StopCurrentMode
+     * (RPC 715), whose schema defines no result.
      */
     fun acknowledges(command: HandyCommand): Boolean =
-        !rejected && (isBlank || method == command.method)
+        !rejected &&
+            (method == command.method || isBlank && command == HandyCommand.StopCurrentMode)
 }
 
 internal data class HandyPlaybackReport(val stream: Long, val state: HandyPlayback)

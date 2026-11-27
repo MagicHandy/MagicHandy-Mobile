@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.magichandy.mobile.core.api.Palette
-import com.magichandy.mobile.voice.SpeechLevel
+import com.magichandy.mobile.core.api.SpeechLevel
 import com.magichandy.mobile.voicelab.EngineResult
 import com.magichandy.mobile.voicelab.Fetch
 import com.magichandy.mobile.voicelab.KitMode

@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.Notification
 import android.content.Intent
 import android.os.Looper
+import com.magichandy.mobile.core.api.AutopilotStatus
 import com.magichandy.mobile.core.api.MagicHandyCore
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.createMagicHandyCore
@@ -57,6 +58,19 @@ internal class SyntheticApp : Application(), CoreOwner {
 internal class ServiceTest {
     private val app: SyntheticApp
         get() = RuntimeEnvironment.getApplication() as SyntheticApp
+
+    @Test
+    fun aPendingActivePlanKeepsTheCpuAwakeAndAStationaryHeldPlanReleasesIt() {
+        val state = app.core.state.value
+        for (status in AutopilotStatus.entries) {
+            val view =
+                serviceView(state.copy(autopilot = state.autopilot.copy(status = status)), "")
+            assertEquals(
+                status == AutopilotStatus.Active,
+                view.needsWake,
+            )
+        }
+    }
 
     @Test
     fun publicNotificationCarriesOnlyActiveAndExplicitStop() {

@@ -35,7 +35,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.DownloadPhase
 import com.magichandy.mobile.core.api.SendBlock
+import com.magichandy.mobile.core.api.VoiceListening
 import com.magichandy.mobile.ui.components.AppButton
 import com.magichandy.mobile.ui.components.AppIcons
 import com.magichandy.mobile.ui.components.DotTone
@@ -43,8 +45,6 @@ import com.magichandy.mobile.ui.components.IconAction
 import com.magichandy.mobile.ui.components.StatusDot
 import com.magichandy.mobile.ui.components.topHairline
 import com.magichandy.mobile.ui.theme.MagicHandyTheme
-import com.magichandy.mobile.voice.DownloadPhase
-import com.magichandy.mobile.voice.VoiceListening
 import kotlin.math.roundToInt
 
 /**

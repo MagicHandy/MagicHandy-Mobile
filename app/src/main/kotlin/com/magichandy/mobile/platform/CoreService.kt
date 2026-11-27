@@ -54,6 +54,7 @@ class CoreService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         shutdown?.cancel()
+        observer?.cancel()
         val core = owner.core
         val notices = CoreNotice(this)
         try {
@@ -65,25 +66,28 @@ class CoreService : Service() {
             )
         } catch (_: SecurityException) {
             owner.host.serviceDestroyed(core)
+            setWake(false)
             stopSelf(startId)
             return START_NOT_STICKY
         } catch (_: IllegalStateException) {
             owner.host.serviceDestroyed(core)
+            setWake(false)
             stopSelf(startId)
             return START_NOT_STICKY
         }
         owner.host.finished(true)
-        observer?.cancel()
         observer = scope.launch {
             core.state
                 .map { state -> serviceView(state, notices.privateText(state)) }
                 .distinctUntilChanged()
                 .collect { view ->
                     if (!view.active) {
+                        setWake(false)
                         owner.host.finished(false)
                         stopSelf(startId)
+                        this@launch.cancel()
                     } else {
-                        setWake(view.playing)
+                        setWake(view.needsWake)
                         notices.update(view.text)
                     }
                 }
@@ -154,7 +158,7 @@ class StopActionReceiver : BroadcastReceiver() {
  */
 internal data class ServiceView(
     val active: Boolean,
-    val playing: Boolean,
+    val needsWake: Boolean,
     val text: String,
     val canNotify: Boolean,
 )
@@ -162,7 +166,9 @@ internal data class ServiceView(
 internal fun serviceView(state: AppState, text: String): ServiceView =
     ServiceView(
         active = state.needsHost,
-        playing = state.run.phase in setOf(RunPhase.Playing, RunPhase.Edging),
+        needsWake =
+            state.run.phase in setOf(RunPhase.Playing, RunPhase.Edging) ||
+                state.autopilot.status == AutopilotStatus.Active,
         text = text,
         canNotify = state.app.notificationsAllowed,
     )

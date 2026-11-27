@@ -3,6 +3,9 @@ package com.magichandy.mobile.core.motion
 import com.magichandy.mobile.core.api.StopOutcome
 import com.magichandy.mobile.core.api.StopSource
 import com.magichandy.mobile.core.api.UnconfirmedCause
+import com.magichandy.mobile.core.ports.DeviceTransport
+import com.magichandy.mobile.core.ports.MotionBatch
+import com.magichandy.mobile.core.ports.OutputFence
 import com.magichandy.mobile.core.ports.StopEvidence
 import com.magichandy.mobile.core.ports.WriteResult
 import kotlin.test.Test
@@ -22,6 +25,50 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class MotionEngineTest {
+    @Test
+    fun `Pause repeats halt after a confirmed late write and keeps the roster until that halt settles`() =
+        runTest {
+            val fixture = EngineFixture(this)
+            val engine = fixture.engine
+            val peer = FakeOwner("pause")
+            val written = CompletableDeferred<Unit>()
+            val halted = CompletableDeferred<Unit>()
+            peer.onStop = {
+                if (peer.stops == 2) halted.await()
+                StopEvidence.Acknowledged
+            }
+            val owner =
+                object : DeviceTransport by peer {
+                    override suspend fun write(
+                        batch: MotionBatch,
+                        fence: OutputFence,
+                    ): WriteResult {
+                        written.await()
+                        return WriteResult.Accepted
+                    }
+                }
+            engine.attach(owner)
+            val epoch = engine.epoch
+            assertTrue(engine.admit(epoch, listOf(owner)))
+            val stream = engine.stream(epoch)
+            engine.launchWork(epoch, WorkKind.Output, fixture.dispatcher) {
+                engine.write(stream, owner, batch)
+            }
+            runCurrent()
+            engine.pause(epoch, PlaybackPosition())
+            runCurrent()
+            assertEquals(1, peer.stops)
+            written.complete(Unit)
+            runCurrent()
+            assertEquals(2, peer.stops)
+            assertEquals(epoch, engine.epoch)
+            assertFalse(engine.state.value.canResume)
+            halted.complete(Unit)
+            runCurrent()
+            assertTrue(engine.state.value.canResume)
+            assertTrue(owner.device.id !in engine.state.value.retired)
+        }
+
     @Test
     fun `global emergency supersedes an isolated owner Stop already awaiting its reply`() =
         runTest {

@@ -95,8 +95,20 @@ internal class DevicePlayback(
         )
             return false
         val request = ScoreRequest(score, source, plan)
-        if (before.members.isNotEmpty())
-            return before.journal?.let { engine.selectScore(epoch, it, request) } == true
+        if (before.members.isNotEmpty()) {
+            if (before.journal?.let { engine.selectScore(epoch, it, request) } != true) return false
+            ui.update { state ->
+                val live = engine.state.value
+                state.copy(
+                    run =
+                        state.run.withPendingPace(
+                            live,
+                            live.hasTempoLead(lead()),
+                        )
+                )
+            }
+            return true
+        }
         if (engine.state.value.members.isNotEmpty()) return false
         start(epoch, null, request)
         return engine.state.value.score === request
@@ -208,6 +220,28 @@ internal class DevicePlayback(
         }
     }
 
+    fun hasRunRoster(): Boolean {
+        val live = engine.state.value
+        return live.members.isNotEmpty() ||
+            selectedDevices(ui.value, null, null).any { it in live.owners }
+    }
+
+    private fun selectedDevices(
+        state: AppState,
+        test: DeviceId?,
+        only: Set<DeviceId>?,
+    ): List<DeviceId> =
+        state.devices.devices
+            .filter {
+                it.status == DeviceStatus.Connected &&
+                    (only == null || it.id in only) &&
+                    (test != null ||
+                        state.settings.motionMode != MotionMode.Tempo ||
+                        it.family == DeviceFamily.VacuGlide) &&
+                    if (test != null) it.id == test else it.membership != RunMembership.NotInRun
+            }
+            .map { it.id }
+
     suspend fun start(
         epoch: Epoch,
         test: DeviceId?,
@@ -228,17 +262,7 @@ internal class DevicePlayback(
             return
         }
         val state = ui.value
-        val ids =
-            state.devices.devices
-                .filter {
-                    it.status == DeviceStatus.Connected &&
-                        (only == null || it.id in only) &&
-                        (test != null ||
-                            state.settings.motionMode != MotionMode.Tempo ||
-                            it.family == DeviceFamily.VacuGlide) &&
-                        if (test != null) it.id == test else it.membership != RunMembership.NotInRun
-                }
-                .map { it.id }
+        val ids = selectedDevices(state, test, only)
         val leadId = lead()?.takeIf { it in ids } ?: ids.firstOrNull()
         val owners = ids.mapNotNull(engine.state.value.owners::get)
         when (
@@ -299,7 +323,8 @@ internal class DevicePlayback(
         when (val decision = safety.resume(expected)) {
             is StartDecision.Refused -> refused(decision.cause)
             StartDecision.Superseded -> Unit
-            StartDecision.Admitted -> play(expected, owners, lead(), false, position)
+            StartDecision.Admitted ->
+                play(expected, owners, lead(), false, position, resuming = true)
         }
     }
 
@@ -309,10 +334,15 @@ internal class DevicePlayback(
         leadId: DeviceId?,
         test: Boolean,
         position: PlaybackPosition,
+        resuming: Boolean = false,
     ) {
         val ids = owners.map { it.device.id }.toSet()
         val stream = engine.stream(epoch)
-        playback.play(stream, owners, calibration(ids), test, position) { batch, target ->
+        val onStoppedAway: (suspend () -> Unit)? =
+            if (resuming) suspend { safety.pause(epoch, position, stream) } else null
+        playback.play(stream, owners, calibration(ids), test, position, onStoppedAway) {
+            batch,
+            target ->
             showPlaying(
                 stream,
                 ids,
@@ -348,14 +378,16 @@ internal class DevicePlayback(
                 if (tempoLead) (leadRow.output as? DeviceOutput.Tempo)?.tempo else batch.pace
             state.copy(
                 run =
-                    state.run.copy(
-                        phase = if (target.holding) RunPhase.Edging else RunPhase.Playing,
-                        source =
-                            if (tempoLead) engine.state.value.tempo?.source ?: target.source
-                            else target.source,
-                        commandedPace = commandedPace,
-                        recentChanges = state.run.recordChanges(d.clock.now(), target, batch),
-                    ),
+                    state.run
+                        .copy(
+                            phase = if (target.holding) RunPhase.Edging else RunPhase.Playing,
+                            source =
+                                if (tempoLead) engine.state.value.tempo?.source ?: target.source
+                                else target.source,
+                            commandedPace = commandedPace,
+                            recentChanges = state.run.recordChanges(d.clock.now(), target, batch),
+                        )
+                        .withPendingPace(engine.state.value, tempoLead),
                 devices = state.devices.copy(devices = rows),
                 banners = state.banners.filterNot { it is Banner.StartRefused },
             )

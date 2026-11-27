@@ -68,6 +68,24 @@ internal class RunSafetyTest {
     }
 
     @Test
+    fun `a live VacuGlide satisfies its return Stop through the footer or journal-less recovery`() =
+        runTest {
+            for (footer in listOf(false, true)) {
+                val s = Scenario(this)
+                val safety = s.safety()
+                runCurrent()
+                val vacu = FakeOwner("vacu", ConnectionKind.Bluetooth, DeviceFamily.VacuGlide)
+                safety.lost(vacu.device)
+                s.engine.attach(vacu)
+                if (footer) safety.emergencyStop(StopSource.AppFooter)
+                else safety.retryRecovery(vacu.device.id)
+                runCurrent()
+                assertEquals(1, vacu.stops)
+                assertFalse(safety.awaitsReturn(vacu.device.id))
+            }
+        }
+
+    @Test
     fun `Stop crosses a suspended Resume journal transition and a late commit cannot reopen output`() =
         runTest {
             val s = Scenario(this)

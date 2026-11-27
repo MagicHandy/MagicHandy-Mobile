@@ -619,6 +619,54 @@
       "h": 844,
       "title": "Voice model: the picker from Settings",
       "page": "v1"
+    },
+    "V-OpenRouterConnect.dc.html": {
+      "x": 0,
+      "y": 16260,
+      "w": 390,
+      "h": 844,
+      "title": "OpenRouter: sign in with OpenRouter (later)",
+      "page": "v1"
+    },
+    "V-OpenRouterModels.dc.html": {
+      "x": 470,
+      "y": 16260,
+      "w": 390,
+      "h": 844,
+      "title": "OpenRouter: choose a model",
+      "page": "v1"
+    },
+    "V-OpenRouterSetup.dc.html": {
+      "x": 940,
+      "y": 16260,
+      "w": 390,
+      "h": 844,
+      "title": "OpenRouter: adding a model",
+      "page": "v1"
+    },
+    "V-OpenRouterSettings.dc.html": {
+      "x": 1410,
+      "y": 16260,
+      "w": 390,
+      "h": 844,
+      "title": "OpenRouter: a saved connection",
+      "page": "v1"
+    },
+    "V-OpenRouterReasoning.dc.html": {
+      "x": 1880,
+      "y": 16260,
+      "w": 390,
+      "h": 844,
+      "title": "OpenRouter: reasoning from Chat",
+      "page": "v1"
+    },
+    "V-OpenRouterProblem.dc.html": {
+      "x": 2350,
+      "y": 16260,
+      "w": 390,
+      "h": 844,
+      "title": "OpenRouter: a reply that failed (after the error fixes)",
+      "page": "v1"
     }
   },
   "order": [
@@ -683,7 +731,13 @@
     "V-VoiceModelC.dc.html",
     "V-VoiceModelD.dc.html",
     "V-VoiceAdvanced.dc.html",
-    "V-VoiceModelSwitch.dc.html"
+    "V-VoiceModelSwitch.dc.html",
+    "V-OpenRouterConnect.dc.html",
+    "V-OpenRouterModels.dc.html",
+    "V-OpenRouterSetup.dc.html",
+    "V-OpenRouterSettings.dc.html",
+    "V-OpenRouterReasoning.dc.html",
+    "V-OpenRouterProblem.dc.html"
   ],
   "notes": {
     "v1Core": {
@@ -828,6 +882,14 @@
       "text": "Voice input · choosing the model (B built) and hidden settings · Nov 25",
       "kind": "title1",
       "maxW": 3210,
+      "page": "v1"
+    },
+    "v1OpenRouter": {
+      "x": 0,
+      "y": 16000,
+      "text": "OpenRouter · model search and reasoning levels, built on a branch · sign-in and failures later · Nov 27",
+      "kind": "title1",
+      "maxW": 2740,
       "page": "v1"
     }
   },

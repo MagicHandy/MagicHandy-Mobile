@@ -62,6 +62,11 @@
     <string name="chat_empty">Say hello, or tell %1$s what you\'d like.</string>
     <string name="author_you">You</string>
     <string name="time_now">now</string>
+    <string name="pace_next">Next pace %1$s</string>
+    <string name="receipt_sweeps">Sweeps %1$d–%2$d%%</string>
+    <string name="receipt_pattern_range">Stroke range %1$d–%2$d%%</string>
+    <string name="receipt_phrase">Stroke pattern %1$s</string>
+    <string name="receipt_stroke_group">%1$d × %2$d–%3$d%%</string>
     <string name="receipt_pace_change">Pace %1$d → %2$d</string>
     <string name="receipt_pace">Pace %1$d</string>
     <string name="receipt_stroke">Stroke %1$d–%2$d</string>
@@ -443,12 +448,8 @@
     <string name="server_failure_not_model_server">Something answered, but it isn\'t a model server.</string>
     <string name="server_failure_no_models">The server has no models yet. Pull one on the server, then check again.</string>
     <string name="server_failure_not_private">A local server must resolve only to private network addresses. Check the server address.</string>
-    <string name="openrouter_lead">Chat through OpenRouter with your own API key. The key is stored encrypted on this phone.</string>
     <string name="field_api_key">API key</string>
     <string name="field_model">Model</string>
-    <string name="field_model_hint">provider/model</string>
-    <string name="openrouter_reasoning">Reasoning</string>
-    <string name="openrouter_reasoning_desc">With reasoning off, Advanced uses its no-reasoning contract.</string>
     <string name="chatgpt_lead">Sign in with your ChatGPT account in the browser. MagicHandy uses GPT-6.1 Terra at Advanced, as the desktop app does.</string>
     <string name="chatgpt_sign_in">Continue with ChatGPT</string>
     <string name="chatgpt_waiting">Signing in to ChatGPT…</string>
@@ -760,4 +761,10 @@
     <string name="handy_cloud_reply">Handy Cloud returned an unrecognized reply. Check the firmware version and reconnect.</string>
     <string name="handy_cloud_idle">The Handy did not confirm idle. Stop it locally, then reconnect.</string>
     <string name="handy_cloud_code" translatable="false">Handy %1$s</string>
+    <string name="reply_provider_credentials">The provider rejected the credentials. Check the API key or server authentication in Models.</string>
+    <string name="reply_provider_billing">The provider requires payment or credits. Check billing before resending.</string>
+    <string name="reply_provider_rate">Too many requests. Wait before resending.</string>
+    <string name="banner_resume_position_title">Run paused</string>
+    <string name="banner_resume_position_body">The slider stopped before reaching its starting position. Check that it can move freely, then tap Resume.</string>
+    <string name="provider_context_limit">This request exceeds the model’s context window. Choose a model with a larger context in Models.</string>
 </resources>

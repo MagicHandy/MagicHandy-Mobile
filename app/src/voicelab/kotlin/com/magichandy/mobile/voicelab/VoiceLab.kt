@@ -12,20 +12,22 @@ import android.util.Log
 import androidx.core.content.edit
 import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
+import com.magichandy.mobile.core.api.Detector
+import com.magichandy.mobile.core.api.MicSource
+import com.magichandy.mobile.core.api.SpeechLevel
 import com.magichandy.mobile.core.api.isChatStopMessage
 import com.magichandy.mobile.voice.CaptureEnd
-import com.magichandy.mobile.voice.Detector
 import com.magichandy.mobile.voice.MicCapture
-import com.magichandy.mobile.voice.MicSource
 import com.magichandy.mobile.voice.ModelStore
 import com.magichandy.mobile.voice.SAMPLE_RATE
 import com.magichandy.mobile.voice.SILENCE_DB
-import com.magichandy.mobile.voice.SpeechLevel
 import com.magichandy.mobile.voice.SpeechSegmenter
 import com.magichandy.mobile.voice.Transcription
 import com.magichandy.mobile.voice.Utterance
 import com.magichandy.mobile.voice.levelDb
 import com.magichandy.mobile.voice.loudness
+import com.magichandy.mobile.voice.model
+import com.magichandy.mobile.voice.onThisPhone
 import com.magichandy.mobile.voice.toFloats
 import com.magichandy.mobile.voice.toPcm
 import java.io.File
@@ -1008,6 +1010,8 @@ class VoiceLab private constructor(private val context: Application) : LabAction
                 CaptureEnd.Stopped -> null
                 CaptureEnd.Silenced ->
                     "Android gave the microphone to a call or another app, so recording stopped."
+                CaptureEnd.InputChanged ->
+                    "The built-in microphone is unavailable. Check the input route and start again."
                 CaptureEnd.Failed -> "The microphone stopped working, so recording stopped."
             }
 

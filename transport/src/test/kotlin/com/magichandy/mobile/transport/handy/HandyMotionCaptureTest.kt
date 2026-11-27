@@ -124,7 +124,9 @@ internal class HandyMotionCaptureTest {
                 else UserIntent.SendMessage("Use steady full sweeps.")
             )
             awaitCallback { trace.events.any { it.op == "play" } }
-            advanceTimeBy(13250)
+            val steadyMillis = System.getenv("MAGICHANDY_WIRE_STEADY_MS")?.toLong() ?: 13250L
+            require(steadyMillis >= 13250)
+            advanceTimeBy(steadyMillis)
             runCurrent()
             val beforeChange =
                 trace.events.last { it.op == "add" }.points.last().jsonArray[0].jsonPrimitive.long
@@ -136,16 +138,24 @@ internal class HandyMotionCaptureTest {
                 if (scenario == "manual") UserIntent.SetEdge(true)
                 else UserIntent.SendMessage("Change to shorter strokes near the top.")
             )
+            if (scenario == "chat") {
+                val accepted = f.core.state.value.run
+                assertEquals(25, accepted.commandedPace?.value)
+                assertEquals(32, accepted.pendingPace?.value)
+            }
             advanceTimeBy(7400)
             runCurrent()
             assertEquals(
                 if (scenario == "manual") RunPhase.Edging else RunPhase.Playing,
                 f.core.state.value.run.phase,
             )
+            if (scenario == "chat") assertEquals(32, f.core.state.value.run.commandedPace?.value)
+            assertEquals(null, f.core.state.value.run.pendingPace)
             val stop = testScheduler.currentTime
             trace.record("action") { put("name", "stop") }
             f.core.emergencyStop(StopSource.AppFooter)
             awaitCallback { f.core.state.value.stopReceipt?.isAllConfirmed == true }
+            assertEquals(null, f.core.state.value.run.pendingPace)
             val completed = trace.events.toList()
             advanceTimeBy(6000)
             runCurrent()
@@ -200,8 +210,9 @@ internal class HandyMotionCaptureTest {
         fun time(point: JsonArray) = point[0].jsonPrimitive.long
         fun position(point: JsonArray) = point[1].jsonPrimitive.int
         // The Original Handy's sparse fit at 25%, measured before the retarget. Desktop alpha.89
-        // sends 56 over Cloud and its precise 149 over Bluetooth; Android sends 56 on both.
-        assertEquals(56, points.count { time(it) < 12000 })
+        // sends 56 over Cloud and its precise 149 over Bluetooth. Android adds sparse BLE
+        // turnaround points.
+        assertEquals(if (route == "ble") 83 else 56, points.count { time(it) < 12000 })
         assertTrue(points.zipWithNext().all { (a, b) -> time(a) < time(b) })
         assertTrue(points.all { position(it) in 0..100 })
         assertTrue(time(points.last()) > stop - play.getValue("at_ms").jsonPrimitive.long)

@@ -27,6 +27,7 @@ import com.magichandy.mobile.core.ports.RunJournal
 import com.magichandy.mobile.core.ports.SavedModel
 import com.magichandy.mobile.core.ports.SecretHandle
 import com.magichandy.mobile.core.ports.TilePresence
+import com.magichandy.mobile.core.ports.recentModelEntries
 import com.magichandy.mobile.platform.storage.AndroidVault
 import com.magichandy.mobile.platform.storage.AtomicBytes
 import com.magichandy.mobile.platform.storage.Document
@@ -50,6 +51,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -435,5 +437,77 @@ internal class StorageTest {
         assertEquals(Secret("newer synthetic secret"), vault.get(handle))
         vault.remove(handle)
         assertNull(vault.get(handle))
+    }
+
+    @org.junit.Test
+    fun olderHistoryLoadsFromTheCurrentCursor() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val db = Room.inMemoryDatabaseBuilder(context, PlatformDatabase::class.java).build()
+        try {
+            val stores = RoomStores(db, scope)
+            val id = ChatId("synthetic-history")
+            val at = Instant.fromEpochMilliseconds(0)
+            stores.chats.create(ChatSummary(id, "Synthetic history", "Companion", at))
+            repeat(520) { i ->
+                val entry =
+                    ChatEntry.Message(EntryId("entry-" + i), at, Author.You, "line " + i, null)
+                check(stores.chats.append(id, entry, PersonaId(""), emptyList()) { true })
+            }
+            val exists =
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    db.records().entry("entry-0") != null
+                }
+            stores.chats.loadPage(id)
+            val shown = stores.chats.state.value.chats.getValue(id).messages
+            assertTrue(exists)
+            assertEquals(513, shown.size)
+            assertEquals("entry-7", shown.first().id.value)
+            val opening = stores.chats.opening(id, 4).map { it.id.value }
+            assertEquals((0..3).map { "entry-$it" }, opening)
+            assertTrue(stores.chats.opening(ChatId("another-conversation"), 4).isEmpty())
+            assertEquals(shown, stores.chats.state.value.chats.getValue(id).messages)
+            assertTrue(stores.chats.state.value.chats.getValue(id).hasOlderMessages)
+            stores.chats.loadOlder(id, shown.first().id)
+            stores.chats.loadOlder(id, shown.first().id)
+            val full = stores.chats.state.value.chats.getValue(id)
+            assertEquals((0 until 520).map { "entry-" + it }, full.messages.map { it.id.value })
+            assertFalse(full.hasOlderMessages)
+            assertEquals(
+                shown.recentModelEntries().toList(),
+                full.messages.recentModelEntries().toList(),
+            )
+        } finally {
+            scope.cancel()
+            db.close()
+        }
+    }
+
+    @org.junit.Test
+    fun legacyBlankTitleIsRestoredFromTheFirstUserMessage() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val db = Room.inMemoryDatabaseBuilder(context, PlatformDatabase::class.java).build()
+        try {
+            val stores = RoomStores(db, scope)
+            val id = ChatId("legacy")
+            val summary = ChatSummary(id, "", "Companion", at)
+            stores.chats.create(summary)
+            for ((i, author) in listOf(Author.Persona, Author.You, Author.You).withIndex()) {
+                val entry = ChatEntry.Message(EntryId("legacy-$i"), at, author, "Message $i", null)
+                check(stores.chats.append(id, entry, PersonaId(""), emptyList()) { true })
+            }
+            withContext(Dispatchers.IO) {
+                val old = requireNotNull(db.records().header(id.value))
+                db.records().update(old.copy(payload = Json.encodeToString(summary)))
+            }
+            val restored = RoomStores(db, scope).also { it.awaitReady() }
+            assertEquals("Message 1", restored.chats.state.value.chats.getValue(id).summary.title)
+            withContext(Dispatchers.IO) {
+                val header = requireNotNull(db.records().header(id.value))
+                assertEquals("Message 1", Json.decodeFromString<ChatSummary>(header.payload).title)
+            }
+        } finally {
+            scope.cancel()
+            db.close()
+        }
     }
 }

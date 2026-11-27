@@ -90,4 +90,6 @@
 
     <string name="receipt_voice_ended">Voz terminada</string>
     <string name="receipt_and_voice_ended">%1$s · voz terminada</string>
+    <string name="voice_ended_overloaded">Se dejó de escuchar porque el reconocimiento de voz no dio abasto. Prueba con frases más cortas o con el modelo compacto.</string>
+    <string name="voice_ended_input_changed">Se dejó de escuchar porque el micrófono integrado del teléfono no está disponible. Comprueba la entrada de audio antes de volver a empezar.</string>
 </resources>

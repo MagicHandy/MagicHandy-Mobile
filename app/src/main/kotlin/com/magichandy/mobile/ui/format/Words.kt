@@ -295,7 +295,7 @@ object Words {
         byControl[ControlKind.Pace]?.let { change ->
             val from = change.from
             parts +=
-                if (from != null) {
+                if (from != null && from != change.to) {
                     stringResource(R.string.receipt_pace_change, from, change.to)
                 } else {
                     stringResource(R.string.receipt_pace, change.to)
@@ -312,6 +312,31 @@ object Words {
         }
         byControl[ControlKind.Level]?.let { parts += stringResource(R.string.receipt_level, it.to) }
         byControl[ControlKind.Tempo]?.let { parts += stringResource(R.string.receipt_tempo, it.to) }
+        receipt.pattern?.let { pattern ->
+            parts +=
+                when {
+                    pattern.groups.isEmpty() ->
+                        stringResource(R.string.receipt_pattern_range, pattern.low, pattern.high)
+                    pattern.groups.size == 1 && pattern.groups.single().count == 1 ->
+                        pattern.groups.single().let { group ->
+                            stringResource(R.string.receipt_sweeps, group.low, group.high)
+                        }
+                    else -> {
+                        val phrase =
+                            pattern.groups
+                                .map { group ->
+                                    stringResource(
+                                        R.string.receipt_stroke_group,
+                                        group.count,
+                                        group.low,
+                                        group.high,
+                                    )
+                                }
+                                .joinToString(stringResource(R.string.separator))
+                        stringResource(R.string.receipt_phrase, phrase)
+                    }
+                }
+        }
         parts += stringResource(R.string.receipt_commanded)
         return parts.joinToString(stringResource(R.string.separator))
     }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Autopilot holds after the model refused for a reason that needs a fix -->
+    <string name="banner_failed_body" formatted="true">%1$s%2$s</string>
+    <string name="banner_failed_playing">現在のセグメントは再生を続けます。</string>
+    <string name="banner_failed_stopped">モーションは保留されています。</string>
+    <string name="banner_failed_action">再試行</string>
+    <string name="planning_failed_sign_in">モデルのサインインが期限切れです。「モデル」で再度サインインしてから、再試行してください。</string>
+    <string name="planning_failed_permission">このアカウントでは計画用のモデルを使えません。「モデル」で別のモデルを選ぶか、アカウントのプランを確認してください。</string>
+    <string name="planning_failed_limit">計画用のモデルが使用量の上限に達しました。時間をおいて再試行するか、「モデル」で別のモデルを選んでください。</string>
+    <string name="planning_failed_model">計画用のモデルは、このアカウントでは現在利用できません。「モデル」で別のモデルを選んでから、再試行してください。</string>
+    <string name="planning_failed_request">プロバイダーが Autopilot のリクエストを拒否しました。「モデル」でモデルを確認してから、再試行してください。</string>
+    <string name="planning_failed_service">モデルのサービスが応答していません。</string>
+    <string name="planning_failed_reply">モデルから届いた計画を Autopilot が使えませんでした。</string>
+    <string name="planning_failed_billing">プランニングのプロバイダで支払いやクレジットが必要です。請求状況を確認してから、もう一度お試しください。</string>
+    <string name="planning_failed_rate">プランニングのプロバイダへのリクエストが多すぎます。しばらくしてから再試行します。</string>
+</resources>

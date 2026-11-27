@@ -7,6 +7,9 @@ import com.magichandy.mobile.core.api.Explicitness
 import com.magichandy.mobile.core.api.Personality
 import com.magichandy.mobile.core.api.ProviderKind
 import com.magichandy.mobile.core.api.ReactionStyle
+import com.magichandy.mobile.core.api.ReasoningChoice
+import com.magichandy.mobile.core.api.ReasoningEffort
+import com.magichandy.mobile.core.api.ReasoningOptions
 import com.magichandy.mobile.core.api.ReplyLength
 import com.magichandy.mobile.core.api.ServerCheck
 import com.magichandy.mobile.core.api.ServerCheckFailure
@@ -16,6 +19,7 @@ import com.magichandy.mobile.ui.devices.AddDeviceOrigin
 import com.magichandy.mobile.ui.devices.addDeviceReturnResources
 import com.magichandy.mobile.ui.models.ProviderOrigin
 import com.magichandy.mobile.ui.models.chatGptSignInIntent
+import com.magichandy.mobile.ui.models.choices
 import com.magichandy.mobile.ui.models.openRouterSaveIntent
 import com.magichandy.mobile.ui.models.serverCheckForAddress
 import com.magichandy.mobile.ui.models.serverSaveIntent
@@ -29,6 +33,21 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 internal class SetupFlowTest {
+    @Test
+    fun `editing a legacy automatic reasoning choice preserves the provider default`() {
+        val automatic = ReasoningChoice(true, null)
+        val options =
+            ReasoningOptions(
+                listOf(ReasoningEffort.Low, ReasoningEffort.High),
+                false,
+            )
+        assertTrue(automatic in options.choices(options.settle(true, null)))
+        assertEquals(
+            automatic,
+            options.copy(defaultLevel = ReasoningEffort.High).settle(true, null),
+        )
+    }
+
     @Test
     fun `editing the LAN address hides readiness failure and in-flight results from the previous address`() {
         val address = "fixture-a:11434"
@@ -80,7 +99,7 @@ internal class SetupFlowTest {
                 key = "synthetic-key",
                 model = "fixture/router",
                 capability = CapabilityLevel.Advanced,
-                isReasoningOn = false,
+                reasoning = ReasoningChoice(isOn = false, level = null),
                 origin = ProviderOrigin.ChooseAi,
             )
         val modelsRouter =
@@ -88,7 +107,7 @@ internal class SetupFlowTest {
                 key = "synthetic-key",
                 model = "fixture/router",
                 capability = CapabilityLevel.Advanced,
-                isReasoningOn = false,
+                reasoning = ReasoningChoice(isOn = false, level = null),
                 origin = ProviderOrigin.Models,
             )
         assertTrue(chooseAiRouter.selectForChat)

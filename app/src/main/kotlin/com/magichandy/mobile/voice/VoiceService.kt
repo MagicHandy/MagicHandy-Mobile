@@ -20,6 +20,8 @@ import android.os.RemoteException
 import android.util.Log
 import com.magichandy.mobile.MainActivity
 import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.VoiceConfig
+import com.magichandy.mobile.core.api.VoiceEnd
 import com.magichandy.mobile.core.api.VoiceModel
 import java.io.File
 
@@ -39,6 +41,9 @@ class VoiceService : Service() {
     /** Only so the main process can tell when this process dies: nothing is sent to it. */
     private val watched = Messenger(main)
     private val link = Link()
+    private val measurements by lazy {
+        if (resources.getBoolean(R.bool.voice_hidden_settings)) VoiceQaMeasurements(this) else null
+    }
     private var session: VoiceSession? = null
     private var sessionId = 0
     private var isBound = false
@@ -56,6 +61,7 @@ class VoiceService : Service() {
 
     override fun onDestroy() {
         session?.end(VoiceEnd.User)
+        measurements?.finish()
         session = null
         if (isBound) {
             isBound = false
@@ -92,6 +98,7 @@ class VoiceService : Service() {
             )
         session = next
         sessionId = id
+        measurements?.begin(model)
         next.start(after = previous)
     }
 
@@ -171,6 +178,7 @@ class VoiceService : Service() {
     private fun finished(id: Int) {
         if (session == null || sessionId != id) return
         session = null
+        measurements?.finish()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -182,7 +190,8 @@ class VoiceService : Service() {
         override fun level(loudness: Float, isHearing: Boolean, readout: String?) =
             link.send(VoiceProtocol.level(id, loudness, isHearing, readout))
 
-        override fun spokenStop() = link.send(VoiceProtocol.message(VoiceProtocol.SPOKEN_STOP, id))
+        override fun spokenStop(lastSpeechElapsedMillis: Long) =
+            link.send(VoiceProtocol.spokenStop(id, lastSpeechElapsedMillis))
 
         override fun turn(text: String) = link.send(VoiceProtocol.turn(id, text))
 

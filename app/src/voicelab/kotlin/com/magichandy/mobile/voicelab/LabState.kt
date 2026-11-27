@@ -1,8 +1,8 @@
 package com.magichandy.mobile.voicelab
 
-import com.magichandy.mobile.voice.Detector
-import com.magichandy.mobile.voice.MicSource
-import com.magichandy.mobile.voice.SpeechLevel
+import com.magichandy.mobile.core.api.Detector
+import com.magichandy.mobile.core.api.MicSource
+import com.magichandy.mobile.core.api.SpeechLevel
 import java.util.Locale
 
 /** A Parakeet build's files on this phone. */

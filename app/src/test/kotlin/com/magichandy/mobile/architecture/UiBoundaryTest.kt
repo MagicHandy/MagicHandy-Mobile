@@ -36,4 +36,15 @@ internal class UiBoundaryTest {
             .resideInAPackage("com.magichandy.mobile.transport..")
             .check(ui)
     }
+
+    @Test
+    fun `screens depend on the voice contract and never the platform recognizer or file store`() {
+        noClasses()
+            .that()
+            .resideInAPackage("com.magichandy.mobile.ui..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.magichandy.mobile.voice..")
+            .check(ui)
+    }
 }

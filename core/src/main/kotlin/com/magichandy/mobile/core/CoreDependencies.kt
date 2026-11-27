@@ -79,6 +79,8 @@ public data class CoreDependencies(
     public val androidApi: Int? = null,
     /** Await initial durable reads on platforms that load their stores asynchronously. */
     public val awaitStorage: (suspend () -> Unit)? = null,
+    /** OpenRouter's catalog and key check. Without it, OpenRouter keys and models are unchecked. */
+    public val openRouter: com.magichandy.mobile.core.ports.OpenRouterAccess? = null,
 )
 
 /** A captured name and register stay local to the debug model, including at Utility. */

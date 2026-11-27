@@ -5,6 +5,11 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.security.MessageDigest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -174,6 +179,74 @@ internal class ModelStoreTest {
         assertFalse(partFile().exists())
     }
 
+    @Test
+    fun resumeWaitsForTheCancelledWriterAndVerifiesTheActualFile() = runBlocking {
+        val bytes = "abcdef".encodeToByteArray()
+        val sha =
+            MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") {
+                "%02x".format(it)
+            }
+        val model = ModelFile("fake/data", "https://example.invalid/local-test", 6, sha)
+        val oldRead = CountDownLatch(1)
+        val newRead = CountDownLatch(1)
+        val resumeOld = CountDownLatch(1)
+        val resumeNew = CountDownLatch(1)
+        fun source(old: Boolean) =
+            object : InputStream() {
+                var call = 0
+
+                override fun read(): Int = error("Buffered read expected")
+
+                override fun read(b: ByteArray, off: Int, len: Int): Int {
+                    val part =
+                        if (old) {
+                            when (call++) {
+                                0 -> "ab"
+                                1 -> {
+                                    oldRead.countDown()
+                                    check(resumeOld.await(6, TimeUnit.SECONDS))
+                                    "cd"
+                                }
+                                else -> return -1
+                            }
+                        } else {
+                            if (call++ > 0) return -1
+                            newRead.countDown()
+                            check(resumeNew.await(6, TimeUnit.SECONDS))
+                            "cdef"
+                        }
+                    part.encodeToByteArray().copyInto(b, off)
+                    return part.length
+                }
+            }
+        val store =
+            ModelStore(
+                root,
+                Fetcher { _, from ->
+                    check(from in listOf(0L, 2L))
+                    Fetched(if (from == 0L) 200 else 206, source(from == 0L))
+                },
+            )
+        val first = launch(Dispatchers.IO) { store.download(listOf(model)) { _, _ -> } }
+        try {
+            check(oldRead.await(5, TimeUnit.SECONDS))
+            first.cancel()
+            val second = async(Dispatchers.IO) { store.download(listOf(model)) { _, _ -> } }
+            assertFalse(newRead.await(100, TimeUnit.MILLISECONDS))
+            resumeOld.countDown()
+            check(newRead.await(5, TimeUnit.SECONDS))
+            first.join()
+            resumeNew.countDown()
+            second.await()
+            assertEquals("abcdef", store.file(model).readText())
+            assertTrue(store.has(model))
+        } finally {
+            resumeOld.countDown()
+            resumeNew.countDown()
+            first.cancel()
+        }
+    }
+
     private fun partFile() = File(root, model.path + ".part")
 
     /**
@@ -189,7 +262,7 @@ internal class ModelStoreTest {
     ) : Fetcher {
         val requestedFrom = mutableListOf<Long>()
 
-        override fun open(url: String, from: Long): Fetched {
+        override suspend fun open(url: String, from: Long): Fetched {
             requestedFrom += from
             if (from > 0 && refusesRanges) return Fetched(416, ByteArrayInputStream(ByteArray(0)))
             if (from > 0 && honoursRange) {

@@ -222,17 +222,25 @@ private class BluetoothWire(
         }
         if (command is HandyCommand.Add && command.refilling && active.get()?.unhealthy == true)
             return WriteResult.Uncertain
-        var state: HandyPlayback? = null
+        var report: HandyPlaybackReport? = null
         val result =
             request(
                 command,
                 { !disconnecting.get() && allowed() },
                 received = { reply ->
-                    state = reply.playback?.takeIf { it.stream == preparedStream }?.state
+                    report = reply.playback
                 },
             )
         if (result != WriteResult.Accepted) return result
-        if (state?.rejects(command) == true) return WriteResult.Uncertain
+        if (
+            command is HandyCommand.Setup ||
+                command is HandyCommand.Add ||
+                command is HandyCommand.Play
+        ) {
+            val observed = report ?: return WriteResult.Uncertain
+            if (observed.stream != preparedStream || observed.state.rejects(command))
+                return WriteResult.Uncertain
+        }
         if (command is HandyCommand.Play) active.set(preparedStream?.let(::PlayingStream))
         return if (
             command is HandyCommand.Add && command.refilling && active.get()?.unhealthy == true

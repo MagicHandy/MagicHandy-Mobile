@@ -122,6 +122,12 @@ private fun Figure(state: AppState, onIntent: (UserIntent) -> Unit) {
                 style = MagicHandyTheme.type.small,
                 color = MagicHandyTheme.colors.muted,
             )
+            run.pendingPace?.let {
+                Text(
+                    stringResource(R.string.pace_next, Words.percent(it)),
+                    style = MagicHandyTheme.type.small,
+                )
+            }
             val phaseWord =
                 stringResource(
                     when (run.phase) {

@@ -20,16 +20,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.magichandy.mobile.R
+import com.magichandy.mobile.core.api.DownloadProblem
+import com.magichandy.mobile.core.api.VoiceControls
+import com.magichandy.mobile.core.api.VoiceEnd
+import com.magichandy.mobile.core.api.VoiceMeter
 import com.magichandy.mobile.core.api.VoiceModel
-import com.magichandy.mobile.voice.Detector
-import com.magichandy.mobile.voice.DownloadProblem
-import com.magichandy.mobile.voice.ModelStore
-import com.magichandy.mobile.voice.VoiceControls
-import com.magichandy.mobile.voice.VoiceEnd
-import com.magichandy.mobile.voice.VoiceMeter
-import com.magichandy.mobile.voice.VoiceNotice
-import com.magichandy.mobile.voice.VoiceState
-import com.magichandy.mobile.voice.files
+import com.magichandy.mobile.core.api.VoiceNotice
+import com.magichandy.mobile.core.api.VoiceState
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -107,7 +104,8 @@ fun rememberVoiceUi(
             if (isMicrophoneAllowed(context)) {
                 then()
             } else {
-                waiting = then
+                val requestedEpoch = controls.stopEpoch
+                waiting = { if (controls.stopEpoch == requestedEpoch) then() }
                 microphone.launch(Manifest.permission.RECORD_AUDIO)
             }
         },
@@ -145,8 +143,8 @@ internal fun modelName(model: VoiceModel): String =
     )
 
 /** What [model] downloads, with the speech detector. */
-internal fun downloadBytes(model: VoiceModel): Long =
-    model.files(Detector.Silero).sumOf { it.bytes }
+internal fun VoiceUi.downloadBytes(model: VoiceModel): Long =
+    state.storage[model]?.downloadBytes ?: 0L
 
 /** [bytes] as the phone shows file sizes, such as "671 MB". */
 @Composable
@@ -154,7 +152,8 @@ internal fun fileSize(bytes: Long): String =
     Formatter.formatShortFileSize(LocalContext.current, bytes)
 
 /** The space a download of [model] needs: itself and what it leaves free. */
-internal fun neededBytes(model: VoiceModel): Long = downloadBytes(model) + ModelStore.HEADROOM_BYTES
+internal fun VoiceUi.neededBytes(model: VoiceModel): Long =
+    state.storage[model]?.requiredFreeBytes ?: 0L
 
 @Composable
 internal fun problemText(problem: DownloadProblem): String =
@@ -182,7 +181,8 @@ internal fun noticeStep(notice: VoiceNotice): NoticeStep =
     when (notice.reason) {
         VoiceEnd.MicDenied -> NoticeStep.OpenSettings
         VoiceEnd.ModelMissing -> NoticeStep.DownloadAgain
-        VoiceEnd.ModelFailed ->
+        VoiceEnd.ModelFailed,
+        VoiceEnd.Overloaded ->
             if (notice.model == VoiceModel.Full) NoticeStep.SwitchToCompact
             else NoticeStep.StartAgain
         else -> NoticeStep.StartAgain
@@ -192,6 +192,8 @@ internal fun noticeStep(notice: VoiceNotice): NoticeStep =
 internal fun noticeText(notice: VoiceNotice): String =
     stringResource(
         when (notice.reason) {
+            VoiceEnd.Overloaded -> R.string.voice_ended_overloaded
+            VoiceEnd.InputChanged -> R.string.voice_ended_input_changed
             VoiceEnd.Quiet -> R.string.voice_ended_quiet
             VoiceEnd.MicTaken -> R.string.voice_ended_mic_taken
             VoiceEnd.MicDenied -> R.string.voice_ended_mic_denied
